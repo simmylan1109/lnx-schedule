@@ -10,3 +10,5 @@ captures/
 .cxx/
 edge-tmp*/
 .superpowers/
+.kotlin/
+*.hprof
