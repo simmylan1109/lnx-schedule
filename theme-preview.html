@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lnx · 4 套主题预览</title>
+<style>
+  :root{
+    --page-bg:#F2F3F5; --card-bg:#FFFFFF; --card-border:#E6E8EB;
+    --head-text:#1B1D21; --head-sub:#6B7280; --toggle-bg:#E8EAED; --toggle-on:#FFFFFF;
+  }
+  [data-mode="dark"]{
+    --page-bg:#101114; --card-bg:#1A1C20; --card-border:#2A2D33;
+    --head-text:#F2F3F5; --head-sub:#9AA0A8; --toggle-bg:#2A2D33; --toggle-on:#3A3E46;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--page-bg); color:var(--head-text);
+    padding:32px 24px 48px; transition:background .3s,color .3s;
+  }
+  .head{max-width:1440px;margin:0 auto 8px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .head h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+  .head h1 em{font-style:normal;color:#F86B3D}
+  .head .sub{font-size:13px;color:var(--head-sub);margin-top:6px}
+  .toggle{display:flex;background:var(--toggle-bg);border-radius:999px;padding:4px;gap:4px}
+  .toggle button{
+    border:none;background:transparent;color:var(--head-sub);font-size:13px;
+    padding:7px 18px;border-radius:999px;cursor:pointer;font-family:inherit;transition:all .2s;
+  }
+  .toggle button.on{background:var(--toggle-on);color:var(--head-text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .note{max-width:1440px;margin:0 auto 24px;font-size:13px;color:var(--head-sub)}
+  .grid{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:28px}
+  .card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:20px;padding:20px;transition:background .3s,border-color .3s}
+  .card h3{font-size:17px;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;background:#F86B3D;color:#fff;border-radius:999px;padding:2px 10px;font-weight:600}
+  .persona{font-size:13px;color:var(--head-sub);margin-bottom:14px}
+  .traits{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .traits span{font-size:11.5px;background:var(--toggle-bg);color:var(--head-sub);border-radius:999px;padding:4px 10px}
+  .pal{display:flex;gap:6px;margin-top:12px;align-items:center}
+  .pal i{width:18px;height:18px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+  .pal small{font-size:11px;color:var(--head-sub);margin-left:4px}
+
+  /* ───── 手机模型 ───── */
+  .phone{
+    width:100%;height:680px;border-radius:26px;overflow:hidden;position:relative;
+    box-shadow:0 8px 28px rgba(0,0,0,.14);display:flex;flex-direction:column;
+    font-size:12px;user-select:none;
+  }
+  .p-topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
+  .p-title{font-weight:600;font-size:14px}
+  .p-actions{display:flex;gap:10px;font-size:12px;opacity:.9;align-items:center}
+  .p-actions svg{display:block}
+  .p-tabs{display:flex;gap:4px;padding:0 12px 8px}
+  .p-tabs span{flex:1;text-align:center;padding:6px 0;border-radius:999px;cursor:default}
+  .p-week{display:flex;padding:0 0 6px}
+  .p-day{flex:1;text-align:center;padding:4px 0}
+  .p-day .dow{display:block;font-size:10px;opacity:.65;margin-bottom:3px}
+  .p-day .dnum{display:inline-block;width:24px;height:24px;line-height:24px;border-radius:50%;font-size:12px}
+  .p-day.today .dnum{font-weight:700;box-shadow:0 0 0 2px var(--ring)}
+  .p-allday{padding:0 8px 8px;display:flex;gap:4px}
+  .chip{font-size:10.5px;padding:3px 10px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .p-body{flex:1;display:flex;overflow:hidden;position:relative;padding-top:10px}
+  .p-gutter{width:38px;position:relative;flex-shrink:0}
+  .p-gutter span{position:absolute;right:6px;font-size:9.5px;color:var(--gutter);transform:translateY(-50%)}
+  .p-grid{flex:1;position:relative}
+  .hl{position:absolute;left:0;right:0;height:1px;background:var(--grid)}
+  .ev{position:absolute;left:2px;right:5px;padding:3px 6px;overflow:hidden;cursor:default}
+  .ev b{display:block;font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev i{font-style:normal;font-size:9px;opacity:.75;display:block;white-space:nowrap}
+  .now{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--now);z-index:5}
+  .now::before{content:"";position:absolute;left:-3px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--now)}
+  .now em{position:absolute;left:6px;top:-15px;font-style:normal;font-size:8.5px;color:var(--now);font-weight:700}
+  .fab{
+    position:absolute;right:14px;bottom:16px;width:48px;height:48px;border-radius:var(--fab-r,999px);
+    background:var(--fab);color:var(--fab-txt);display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:300;box-shadow:0 6px 16px rgba(0,0,0,.28);z-index:6;
+  }
+
+  /* ───── 主题 1:Material You ───── */
+  .t-m3{background:var(--bg);color:var(--text);--fab-r:999px}
+  .t-m3{--bg:#FEF7FF;--text:#1D1B20;--text2:#49454F;--acc:#6750A4;--tabbg:#E8DEF8;--tabtxt:#1D192B;--grid:#E5DFEA;--gutter:#79747E;--ring:#6750A4;--fab:#6750A4;--fab-txt:#fff;--now:#B3261E}
+  .t-m3 .p-tabs span{color:var(--text2)}
+  .t-m3 .p-tabs .on{background:var(--tabbg);color:var(--tabtxt);font-weight:600}
+  .t-m3 .p-day.today{background:transparent}
+  .t-m3 .chip{background:#E8DEF8;color:#1D192B}
+  .t-m3 .ev{border-radius:14px}
+  .t-m3 .e-blue{background:#D8E2FF;color:#1A3653}.t-m3 .e-green{background:#D3F2DC;color:#14472B}
+  .t-m3 .e-purple{background:#E8DDFF;color:#3F2A66}.t-m3 .e-orange{background:#FFDECC;color:#5C2B00}
+  [data-mode="dark"] .t-m3{--bg:#1D1B20;--text:#E6E0E9;--text2:#CAC4D0;--tabbg:#4A4458;--tabtxt:#E8DDFF;--grid:#36343B;--gutter:#948F99;--ring:#CFBCFF;--fab:#CFBCFF;--fab-txt:#381E72;--now:#F2B8B5}
+  [data-mode="dark"] .t-m3 .chip{background:#4A4458;color:#E8DDFF}
+  [data-mode="dark"] .t-m3 .e-blue{background:#394A6D;color:#D8E2FF}[data-mode="dark"] .t-m3 .e-green{background:#2E5240;color:#C8ECD4}
+  [data-mode="dark"] .t-m3 .e-purple{background:#4B3A72;color:#E8DDFF}[data-mode="dark"] .t-m3 .e-orange{background:#6E4326;color:#FFDECC}
+
+  /* ───── 主题 2:极致留白 Notion ───── */
+  .t-no{background:var(--bg);color:var(--text);--fab-r:14px}
+  .t-no{--bg:#FFFFFF;--text:#37352F;--text2:#787774;--tabbg:transparent;--tabtxt:#37352F;--grid:#EDECE9;--gutter:#9B9A97;--ring:#2383E2;--fab:#2383E2;--fab-txt:#fff;--now:#E03E3E}
+  .t-no .p-tabs span{color:var(--text2);border-radius:6px}
+  .t-no .p-tabs .on{color:var(--text);font-weight:700;box-shadow:inset 0 -2px 0 var(--ring);border-radius:0}
+  .t-no .chip{background:#F1F1EF;color:#37352F}
+  .t-no .ev{border-radius:6px}
+  .t-no .e-blue{background:#E9F3FC;color:#14538F}.t-no .e-green{background:#EDF5EC;color:#3D7C43}
+  .t-no .e-purple{background:#F3EFFB;color:#6A4FB6}.t-no .e-orange{background:#FDF0E4;color:#B2601B}
+  [data-mode="dark"] .t-no{--bg:#191919;--text:#E1E1E1;--text2:#9B9B9B;--tabtxt:#E1E1E1;--grid:#2A2A2A;--gutter:#6F6F6F;--ring:#4D9CE4;--fab:#4D9CE4;--fab-txt:#fff;--now:#E03E3E}
+  [data-mode="dark"] .t-no .chip{background:#2A2A2A;color:#E1E1E1}
+  [data-mode="dark"] .t-no .e-blue{background:#1F3346;color:#7EB8E8}[data-mode="dark"] .t-no .e-green{background:#223A26;color:#86C79A}
+  [data-mode="dark"] .t-no .e-purple{background:#33294F;color:#B3A1EA}[data-mode="dark"] .t-no .e-orange{background:#46301A;color:#E2A35C}
+
+  /* ───── 主题 3:暖橙活力 ───── */
+  .t-tk{background:var(--bg);color:var(--text);--fab-r:999px}
+  .t-tk{--bg:#FFFAF5;--text:#2C2C2C;--text2:#8A8A8A;--tabbg:#F86B3D;--tabtxt:#fff;--grid:#F3E9E0;--gutter:#B9AFA6;--ring:#F86B3D;--fab:#F86B3D;--fab-txt:#fff;--now:#E44332}
+  .t-tk .p-tabs span{color:var(--text2)}
+  .t-tk .p-tabs .on{background:var(--tabbg);color:var(--tabtxt);font-weight:700}
+  .t-tk .chip{background:#FFE8DD;color:#A03A12;font-weight:600}
+  .t-tk .ev{border-radius:10px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .t-tk .ev b,.t-tk .ev i{color:#fff}
+  .t-tk .e-blue{background:#2196F3}.t-tk .e-green{background:#4CAF50}
+  .t-tk .e-purple{background:#9C6ADE}.t-tk .e-orange{background:#FF9800}
+  [data-mode="dark"] .t-tk{--bg:#1A1A1A;--text:#F2F2F2;--text2:#9C9C9C;--tabbg:#FF7A50;--tabtxt:#1A1A1A;--grid:#2C2C2C;--gutter:#6E6E6E;--ring:#FF7A50;--fab:#FF7A50;--fab-txt:#fff;--now:#FF5A47}
+  [data-mode="dark"] .t-tk .chip{background:#3A2A22;color:#FFB59A}
+  [data-mode="dark"] .t-tk .e-blue{background:#1976D2}[data-mode="dark"] .t-tk .e-green{background:#43A047}
+  [data-mode="dark"] .t-tk .e-purple{background:#8E5BD0}[data-mode="dark"] .t-tk .e-orange{background:#FB8C00}
+
+  /* ───── 主题 4:宁静冷色 ───── */
+  .t-tp{background:var(--bg);color:var(--text);--fab-r:18px}
+  .t-tp{--bg:#F8F6F0;--text:#2D3E50;--text2:#8B93A1;--grid:#E7E3D8;--gutter:#A6A096;--ring:#4A7DBF;--fab:#4A7DBF;--fab-txt:#fff;--now:#E05A4E}
+  .t-tp .p-top{background:linear-gradient(135deg,#74B9FF,#A29BFE);color:#fff;padding-bottom:10px}
+  .t-tp .p-topbar,.t-tp .p-tabs,.t-tp .p-week,.t-tp .p-allday{position:relative;z-index:1}
+  .t-tp .p-tabs span{color:rgba(255,255,255,.75)}
+  .t-tp .p-tabs .on{color:#fff;font-weight:700;box-shadow:inset 0 -2px 0 rgba(255,255,255,.9);border-radius:0}
+  .t-tp .p-day.today .dnum{background:rgba(255,255,255,.25)}
+  .t-tp .chip{background:rgba(255,255,255,.28);color:#fff}
+  .t-tp .ev{border-radius:14px;box-shadow:0 3px 8px rgba(45,62,80,.10)}
+  .t-tp .e-blue{background:#BBDFF7;color:#2C5B80}.t-tp .e-green{background:#CDE8CE;color:#2F6636}
+  .t-tp .e-purple{background:#D8CEFA;color:#4F3D8F}.t-tp .e-orange{background:#FAD6B8;color:#8A4E1B}
+  [data-mode="dark"] .t-tp{--bg:#1A2A3A;--text:#E8EEF5;--text2:#93A6B8;--grid:#2A3D50;--gutter:#6D8093;--ring:#8FB4DC;--fab:#8FB4DC;--fab-txt:#1A2A3A;--now:#E8837A}
+  [data-mode="dark"] .t-tp .p-top{background:linear-gradient(135deg,#2C4A6E,#413A75)}
+  [data-mode="dark"] .t-tp .chip{background:rgba(255,255,255,.14);color:#DCE8F5}
+  [data-mode="dark"] .t-tp .ev{box-shadow:none}
+  [data-mode="dark"] .t-tp .e-blue{background:#2E4A63;color:#9CC7E8}[data-mode="dark"] .t-tp .e-green{background:#2C4A33;color:#96C9A4}
+  [data-mode="dark"] .t-tp .e-purple{background:#3D3563;color:#B7A8EE}[data-mode="dark"] .t-tp .e-orange{background:#553B22;color:#E8B183}
+
+  .foot{max-width:1440px;margin:28px auto 0;font-size:12px;color:var(--head-sub);text-align:center}
+</style>
+</head>
+<body data-mode="light">
+
+<div class="head">
+  <div>
+    <h1><em>lnx</em> · 4 套主题预览</h1>
+    <div class="sub">同一周的日程,四种性格 —— 右上角可切换 浅色 / 深色 模式</div>
+  </div>
+  <div class="toggle">
+    <button id="btn-light" class="on" onclick="setMode('light')">☀ 浅色模式</button>
+    <button id="btn-dark" onclick="setMode('dark')">🌙 深色模式</button>
+  </div>
+</div>
+<div class="note">示例内容为周视图:顶部栏 + 日/周/月 Tab + 星期头 + 全天事件条 + 时间轴(含当前时刻红线)+ 右下角新建按钮。色值为示意,最终以 App 实际渲染为准。</div>
+
+<div class="grid">
+
+  <!-- 主题 1 -->
+  <div class="card">
+    <h3>主题 1 · Material You <span class="badge">默认主题</span></h3>
+    <div class="persona">主色随手机壁纸自动取色,和系统浑然一体</div>
+    <div class="phone t-m3">
+      <div class="p-topbar"><span>☰</span><span class="p-title">9月 · 30日 周三</span><span class="p-actions"><span>今天</span><span title="搜索"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></span></span></div>
+      <div class="p-tabs"><span>日</span><span class="on">周</span><span>月</span></div>
+      <div class="p-week">
+        <div class="p-day"><span class="dow">一</span><span class="dnum">28</span></div>
+        <div class="p-day"><span class="dow">二</span><span class="dnum">29</span></div>
+        <div class="p-day today"><span class="dow">三</span><span class="dnum">30</span></div>
+        <div class="p-day"><span class="dow">四</span><span class="dnum">1</span></div>
+        <div class="p-day"><span class="dow">五</span><span class="dnum">2</span></div>
+        <div class="p-day"><span class="dow">六</span><span class="dnum">3</span></div>
+        <div class="p-day"><span class="dow">日</span><span class="dnum">4</span></div>
+      </div>
+      <div class="p-allday"><span class="chip">团建日 · 全天(至10月1日)</span></div>
+      <div class="p-body">
+        <div class="p-gutter">
+          <span style="top:0">9:00</span><span style="top:52px">10:00</span><span style="top:104px">11:00</span>
+          <span style="top:156px">12:00</span><span style="top:208px">13:00</span><span style="top:260px">14:00</span>
+          <span style="top:312px">15:00</span><span style="top:364px">16:00</span><span style="top:416px">17:00</span><span style="top:468px">18:00</span>
+        </div>
+        <div class="p-grid">
+          <div class="hl" style="top:0"></div><div class="hl" style="top:52px"></div><div class="hl" style="top:104px"></div>
+          <div class="hl" style="top:156px"></div><div class="hl" style="top:208px"></div><div class="hl" style="top:260px"></div>
+          <div class="hl" style="top:312px"></div><div class="hl" style="top:364px"></div><div class="hl" style="top:416px"></div><div class="hl" style="top:468px"></div>
+          <div class="ev e-blue" style="top:1px;height:50px"><b>每日站会</b><i>9:00 – 10:00</i></div>
+          <div class="ev e-green" style="top:105px;height:76px"><b>产品评审</b><i>11:00 – 12:30</i></div>
+          <div class="ev e-purple" style="top:261px;height:50px"><b>团队周会</b><i>14:00 – 15:00</i></div>
+          <div class="ev e-orange" style="top:365px;height:76px"><b>健身 · 上肢</b><i>16:00 – 17:30</i></div>
+          <div class="now" style="top:240px"><em>13:37</em></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+    <div class="traits"><span>主色随壁纸</span><span>圆角 24dp</span><span>Material 动效</span><span>老机型回退蓝紫</span></div>
+    <div class="pal"><i style="background:#6750A4"></i><i style="background:#4E7BD0"></i><i style="background:#3E8E7E"></i><i style="background:#5B9E52"></i><i style="background:#C58F3A"></i><i style="background:#D06A5C"></i><i style="background:#B05CA8"></i><i style="background:#8B8B94"></i><small>事件色板(随壁纸微调)</small></div>
+  </div>
+
+  <!-- 主题 2 -->
+  <div class="card">
+    <h3>主题 2 · 极致留白</h3>
+    <div class="persona">Notion 派:安静、专业,给你思考的空间</div>
+    <div class="phone t-no">
+      <div class="p-topbar"><span>☰</span><span class="p-title">9月 · 30日 周三</span><span class="p-actions"><span>今天</span><span title="搜索"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></span></span></div>
+      <div class="p-tabs"><span>日</span><span class="on">周</span><span>月</span></div>
+      <div class="p-week">
+        <div class="p-day"><span class="dow">一</span><span class="dnum">28</span></div>
+        <div class="p-day"><span class="dow">二</span><span class="dnum">29</span></div>
+        <div class="p-day today"><span class="dow">三</span><span class="dnum">30</span></div>
+        <div class="p-day"><span class="dow">四</span><span class="dnum">1</span></div>
+        <div class="p-day"><span class="dow">五</span><span class="dnum">2</span></div>
+        <div class="p-day"><span class="dow">六</span><span class="dnum">3</span></div>
+        <div class="p-day"><span class="dow">日</span><span class="dnum">4</span></div>
+      </div>
+      <div class="p-allday"><span class="chip">团建日 · 全天(至10月1日)</span></div>
+      <div class="p-body">
+        <div class="p-gutter">
+          <span style="top:0">9:00</span><span style="top:52px">10:00</span><span style="top:104px">11:00</span>
+          <span style="top:156px">12:00</span><span style="top:208px">13:00</span><span style="top:260px">14:00</span>
+          <span style="top:312px">15:00</span><span style="top:364px">16:00</span><span style="top:416px">17:00</span><span style="top:468px">18:00</span>
+        </div>
+        <div class="p-grid">
+          <div class="hl" style="top:0"></div><div class="hl" style="top:52px"></div><div class="hl" style="top:104px"></div>
+          <div class="hl" style="top:156px"></div><div class="hl" style="top:208px"></div><div class="hl" style="top:260px"></div>
+          <div class="hl" style="top:312px"></div><div class="hl" style="top:364px"></div><div class="hl" style="top:416px"></div><div class="hl" style="top:468px"></div>
+          <div class="ev e-blue" style="top:1px;height:50px"><b>每日站会</b><i>9:00 – 10:00</i></div>
+          <div class="ev e-green" style="top:105px;height:76px"><b>产品评审</b><i>11:00 – 12:30</i></div>
+          <div class="ev e-purple" style="top:261px;height:50px"><b>团队周会</b><i>14:00 – 15:00</i></div>
+          <div class="ev e-orange" style="top:365px;height:76px"><b>健身 · 上肢</b><i>16:00 – 17:30</i></div>
+          <div class="now" style="top:240px"><em>13:37</em></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+    <div class="traits"><span>纸白 #FFF</span><span>唯一强调蓝</span><span>圆角 8–12</span><span>零阴影零边框</span><span>等宽数字</span></div>
+    <div class="pal"><i style="background:#2383E2"></i><i style="background:#3D7C43"></i><i style="background:#B2601B"></i><i style="background:#C4453C"></i><i style="background:#6A4FB6"></i><i style="background:#2E7D74"></i><i style="background:#8F6A3D"></i><i style="background:#787774"></i><small>事件色板</small></div>
+  </div>
+
+  <!-- 主题 3 -->
+  <div class="card">
+    <h3>主题 3 · 暖橙活力</h3>
+    <div class="persona">TickTick 派:年轻、有干劲,打开就想做事</div>
+    <div class="phone t-tk">
+      <div class="p-topbar"><span>☰</span><span class="p-title">9月 · 30日 周三</span><span class="p-actions"><span>今天</span><span title="搜索"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></span></span></div>
+      <div class="p-tabs"><span>日</span><span class="on">周</span><span>月</span></div>
+      <div class="p-week">
+        <div class="p-day"><span class="dow">一</span><span class="dnum">28</span></div>
+        <div class="p-day"><span class="dow">二</span><span class="dnum">29</span></div>
+        <div class="p-day today"><span class="dow">三</span><span class="dnum">30</span></div>
+        <div class="p-day"><span class="dow">四</span><span class="dnum">1</span></div>
+        <div class="p-day"><span class="dow">五</span><span class="dnum">2</span></div>
+        <div class="p-day"><span class="dow">六</span><span class="dnum">3</span></div>
+        <div class="p-day"><span class="dow">日</span><span class="dnum">4</span></div>
+      </div>
+      <div class="p-allday"><span class="chip">团建日 · 全天(至10月1日)</span></div>
+      <div class="p-body">
+        <div class="p-gutter">
+          <span style="top:0">9:00</span><span style="top:52px">10:00</span><span style="top:104px">11:00</span>
+          <span style="top:156px">12:00</span><span style="top:208px">13:00</span><span style="top:260px">14:00</span>
+          <span style="top:312px">15:00</span><span style="top:364px">16:00</span><span style="top:416px">17:00</span><span style="top:468px">18:00</span>
+        </div>
+        <div class="p-grid">
+          <div class="hl" style="top:0"></div><div class="hl" style="top:52px"></div><div class="hl" style="top:104px"></div>
+          <div class="hl" style="top:156px"></div><div class="hl" style="top:208px"></div><div class="hl" style="top:260px"></div>
+          <div class="hl" style="top:312px"></div><div class="hl" style="top:364px"></div><div class="hl" style="top:416px"></div><div class="hl" style="top:468px"></div>
+          <div class="ev e-blue" style="top:1px;height:50px"><b>每日站会</b><i>9:00 – 10:00</i></div>
+          <div class="ev e-green" style="top:105px;height:76px"><b>产品评审</b><i>11:00 – 12:30</i></div>
+          <div class="ev e-purple" style="top:261px;height:50px"><b>团队周会</b><i>14:00 – 15:00</i></div>
+          <div class="ev e-orange" style="top:365px;height:76px"><b>健身 · 上肢</b><i>16:00 – 17:30</i></div>
+          <div class="now" style="top:240px"><em>13:37</em></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+    <div class="traits"><span>橙红主色 #F86B3D</span><span>暖白背景</span><span>圆角 16</span><span>弹簧动效</span><span>高饱和事件块</span></div>
+    <div class="pal"><i style="background:#2196F3"></i><i style="background:#4CAF50"></i><i style="background:#FF9800"></i><i style="background:#F4511E"></i><i style="background:#9C27B0"></i><i style="background:#00BCD4"></i><i style="background:#C2185B"></i><i style="background:#607D8B"></i><small>事件色板</small></div>
+  </div>
+
+  <!-- 主题 4 -->
+  <div class="card">
+    <h3>主题 4 · 宁静冷色</h3>
+    <div class="persona">Timepage 派:温柔、有仪式感,日历也可以很美</div>
+    <div class="phone t-tp">
+      <div class="p-top">
+        <div class="p-topbar"><span>☰</span><span class="p-title">9月 · 30日 周三</span><span class="p-actions"><span>今天</span><span title="搜索"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></span></span></div>
+        <div class="p-tabs"><span>日</span><span class="on">周</span><span>月</span></div>
+        <div class="p-week">
+          <div class="p-day"><span class="dow">一</span><span class="dnum">28</span></div>
+          <div class="p-day"><span class="dow">二</span><span class="dnum">29</span></div>
+          <div class="p-day today"><span class="dow">三</span><span class="dnum">30</span></div>
+          <div class="p-day"><span class="dow">四</span><span class="dnum">1</span></div>
+          <div class="p-day"><span class="dow">五</span><span class="dnum">2</span></div>
+          <div class="p-day"><span class="dow">六</span><span class="dnum">3</span></div>
+          <div class="p-day"><span class="dow">日</span><span class="dnum">4</span></div>
+        </div>
+        <div class="p-allday"><span class="chip">团建日 · 全天(至10月1日)</span></div>
+      </div>
+      <div class="p-body">
+        <div class="p-gutter">
+          <span style="top:0">9:00</span><span style="top:52px">10:00</span><span style="top:104px">11:00</span>
+          <span style="top:156px">12:00</span><span style="top:208px">13:00</span><span style="top:260px">14:00</span>
+          <span style="top:312px">15:00</span><span style="top:364px">16:00</span><span style="top:416px">17:00</span><span style="top:468px">18:00</span>
+        </div>
+        <div class="p-grid">
+          <div class="hl" style="top:0"></div><div class="hl" style="top:52px"></div><div class="hl" style="top:104px"></div>
+          <div class="hl" style="top:156px"></div><div class="hl" style="top:208px"></div><div class="hl" style="top:260px"></div>
+          <div class="hl" style="top:312px"></div><div class="hl" style="top:364px"></div><div class="hl" style="top:416px"></div><div class="hl" style="top:468px"></div>
+          <div class="ev e-blue" style="top:1px;height:50px"><b>每日站会</b><i>9:00 – 10:00</i></div>
+          <div class="ev e-green" style="top:105px;height:76px"><b>产品评审</b><i>11:00 – 12:30</i></div>
+          <div class="ev e-purple" style="top:261px;height:50px"><b>团队周会</b><i>14:00 – 15:00</i></div>
+          <div class="ev e-orange" style="top:365px;height:76px"><b>健身 · 上肢</b><i>16:00 – 17:30</i></div>
+          <div class="now" style="top:240px"><em>13:37</em></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+    <div class="traits"><span>天空渐变头部</span><span>云白背景</span><span>圆角 20–24 + 柔投影</span><span>慢动效</span><span>空状态插画</span></div>
+    <div class="pal"><i style="background:#5FA8DC"></i><i style="background:#7FBF8E"></i><i style="background:#A78FE0"></i><i style="background:#E8A87C"></i><i style="background:#D97B8F"></i><i style="background:#6BC0C0"></i><i style="background:#C9A86A"></i><i style="background:#8B93A1"></i><small>事件色板</small></div>
+  </div>
+
+</div>
+
+<div class="foot">提示:主题 1 的配色实际由你的手机壁纸动态生成,图中为示例配色 · 切到深色模式可预览各自的夜间表现</div>
+
+<script>
+  function setMode(m){
+    document.body.dataset.mode = m;
+    document.getElementById('btn-light').classList.toggle('on', m==='light');
+    document.getElementById('btn-dark').classList.toggle('on', m==='dark');
+  }
+  if(new URLSearchParams(location.search).get('mode')==='dark'){ setMode('dark'); }
+</script>
+</body>
+</html>
