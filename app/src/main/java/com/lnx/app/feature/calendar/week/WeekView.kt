@@ -56,7 +56,8 @@ fun WeekView(
 ) {
     val pagerState = rememberPagerState(
         initialPage = dateToPage(state.selectedDate),
-        pageCount = { 40001 },
+        // 40001 页 ≈ 以 1970-01-05 为中心的前后各约 200 年,足够任何现实日期
+        pageCount = { PAGE_COUNT },
     )
     // 首次组合不算"用户翻页":跳过首次发射,避免把 spec §3.1 的"进入周视图显示当前日期"
     // 改写成本周周一(今天非周一时标题/高亮会被抹掉;WEEK 分支重挂载同样受益)
@@ -68,6 +69,9 @@ fun WeekView(
         if (pagerState.currentPage != target) pagerState.scrollToPage(target)
     }
     // 翻页 → 选中日锚点(仅用户驱动):当前周锚定"今天",其他周锚定"该周周一"
+    // 不变量:锚点永远落在 currentPage 所在的那一周内,因此 dateToPage(anchor) == currentPage,
+    // 上面的 selectedDate→翻页 effect 不会反向触发,两个 effect 不会互相打架。
+    // (M3 若加"点别周日期跳转",需重新审视这条不变量)
     LaunchedEffect(pagerState.currentPage) {
         if (userPaged.value) {
             val weekStart = pageToDate(pagerState.currentPage)
@@ -123,7 +127,6 @@ private fun WeekHeader(
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly,
             ) {
                 Text(
                     text = dayOfWeekCnShort(date.dayOfWeek),
@@ -178,6 +181,9 @@ private fun AllDayStrip(modifier: Modifier = Modifier) {
 private val HOUR_HEIGHT = 56.dp
 private val GUTTER_WIDTH = 44.dp
 
+/** 周分页总数:以 1970-01-05(第 0 页)为中心,前后各约 200 年 */
+private const val PAGE_COUNT = 40001
+
 @Composable
 private fun TimeGrid(
     selectedDate: LocalDate,
@@ -205,7 +211,11 @@ private fun TimeGrid(
         }
     }
 
-    Box(modifier = modifier) {
+    val now = nowState.value
+    // 注意乘法顺序:可用的是 Dp.times(Float),不是 Float.times(Dp)
+    val nowY = HOUR_HEIGHT * (now.hour + now.minute / 60f)
+
+    Box(modifier = modifier.testTag("time_grid")) {
         Row(
             modifier = Modifier
                 .fillMaxHeight()
@@ -225,6 +235,15 @@ private fun TimeGrid(
                             .offset(y = (hour * HOUR_HEIGHT.value - 6).dp),
                     )
                 }
+                // 当前时刻线的左端圆点(spec §3.2:细线 + 左端圆点),与红线同在滚动内容内故同步移动。
+                // x 定位到刻度列右缘(即红线起点)左侧 4dp,视觉上与红线连成一体。
+                Box(
+                    modifier = Modifier
+                        .offset(x = GUTTER_WIDTH - 12.dp, y = nowY - 4.dp)
+                        .size(8.dp)
+                        .background(MaterialTheme.colorScheme.error, CircleShape)
+                        .testTag("now_dot"),
+                )
             }
             // 7 天列 + 小时横线 + 当前线
             Box(
@@ -256,8 +275,6 @@ private fun TimeGrid(
                         )
                     }
                 }
-                val now = nowState.value
-                val nowY = HOUR_HEIGHT * (now.hour + now.minute / 60f)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

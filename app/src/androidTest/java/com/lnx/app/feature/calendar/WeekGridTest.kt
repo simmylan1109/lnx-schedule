@@ -2,6 +2,7 @@ package com.lnx.app.feature.calendar
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,16 +21,19 @@ class WeekGridTest {
 
     @Test
     fun `网格与刻度存在`() {
-        rule.onNodeWithTag("week_grid").assertExists()
+        // time_grid 挂在时间轴自身(week_grid 是含表头的 pager 容器,只能证明"周视图在")
+        rule.onNodeWithTag("time_grid").assertExists()
         // 注:必须 assertIsDisplayed —— assertExists 只证明节点在树里,performScrollTo 在
         // maxValue==0 时会空转通过;只有"真的被滚进可视区"才证明滚动容器可用。
-        // 用 onAllNodes + onFirst:pager 会组合相邻页,刻度文案可能有 2 份(见下方用例注释)
+        // 用 onAllNodes + onFirst:pager 滑动中会组合相邻页,刻度文案可能出现 2 份
         rule.onAllNodesWithText("9:00").onFirst().performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun `当前时刻线存在`() {
-        rule.onNodeWithTag("now_line").assertExists()
+    fun `当前时刻线与左端圆点存在`() {
+        // 同样用 onAllNodes:滑动中相邻页各有一套红线
+        rule.onAllNodesWithTag("now_line").onFirst().assertExists()
+        rule.onAllNodesWithTag("now_dot").onFirst().assertExists()
     }
 
     @Test
