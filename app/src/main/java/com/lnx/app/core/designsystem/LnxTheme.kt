@@ -6,7 +6,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+
+/** 当前主题环境(色位翻译、组件差异化样式都从这里取,别再读系统状态) */
+data class LnxThemeSpec(val slot: ThemeSlot, val dark: Boolean)
+
+val LocalLnxTheme = staticCompositionLocalOf { LnxThemeSpec(ThemeSlot.MATERIAL_YOU, dark = false) }
 
 @Composable
 fun LnxTheme(
@@ -31,5 +38,7 @@ fun LnxTheme(
         // PAPER / WARM / SERENE 在 M6 实现;先回退主题 1 静态方案
         else -> if (dark) materialYouDarkScheme() else materialYouLightScheme()
     }
-    MaterialTheme(colorScheme = scheme, typography = LnxTypography, content = content)
+    CompositionLocalProvider(LocalLnxTheme provides LnxThemeSpec(slot, dark)) {
+        MaterialTheme(colorScheme = scheme, typography = LnxTypography, content = content)
+    }
 }

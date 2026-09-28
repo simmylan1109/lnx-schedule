@@ -45,6 +45,7 @@ import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
+import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.feature.calendar.CalendarUiState
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
@@ -380,36 +381,55 @@ private fun TimeGrid(
                 blocks.forEach { day ->
                     day.forEach { b ->
                         val w = colWidth / b.lanes
-                        Column(
+                        Box(
                             modifier = Modifier
                                 .offset(x = w * b.lane, y = (b.topMinutes / 60f * HOUR_HEIGHT.value).dp)
                                 .width((w - 1.dp).coerceAtLeast(1.dp))
-                                .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(EventColors.of(b.occurrence.event.colorSlot))
-                                .clickable { onEventClick(b.occurrence) }
-                                .testTag("event_block_${b.occurrence.event.id}"),
-                            verticalArrangement = Arrangement.Center,
+                                .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp),
                         ) {
-                            Text(
-                                text = b.occurrence.event.title,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = EventColors.on(b.occurrence.event.colorSlot),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 3.dp),
-                            )
-                            if (b.heightMinutes >= 30f) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(EventColors.of(b.occurrence.event.colorSlot))
+                                    .clickable { onEventClick(b.occurrence) }
+                                    .testTag("event_block_${b.occurrence.event.id}"),
+                                verticalArrangement = Arrangement.Center,
+                            ) {
                                 Text(
-                                    text = "%02d:%02d".format(
-                                        b.occurrence.start.hour,
-                                        b.occurrence.start.minute,
-                                    ),
+                                    text = b.occurrence.event.title,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = EventColors.on(b.occurrence.event.colorSlot)
-                                        .copy(alpha = 0.75f),
+                                    color = EventColors.on(b.occurrence.event.colorSlot),
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(horizontal = 3.dp),
+                                )
+                                if (b.heightMinutes >= 30f) {
+                                    Text(
+                                        text = "%02d:%02d".format(
+                                            b.occurrence.start.hour,
+                                            b.occurrence.start.minute,
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = EventColors.on(b.occurrence.event.colorSlot)
+                                            .copy(alpha = 0.75f),
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(horizontal = 3.dp),
+                                    )
+                                }
+                            }
+                            // P0/P1 优先级色点:叠在块右上角,1dp 描边保证在任何色位上可见
+                            if (b.occurrence.event.priority == Priority.P0 ||
+                                b.occurrence.event.priority == Priority.P1
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(2.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(EventColors.priorityColor(b.occurrence.event.priority))
+                                        .border(1.dp, EventColors.on(b.occurrence.event.colorSlot), CircleShape),
                                 )
                             }
                         }
