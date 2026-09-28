@@ -154,7 +154,9 @@ class CalendarViewModelTest {
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
         val start = LocalDateTime.of(thisMonday, java.time.LocalTime.MIDNIGHT)
-        val range = repo.observedRanges.last()
+        // 日视图查询(±1 天窗口)也走同一仓库,断言周窗口时按"区间长 7 天"过滤
+        val range = repo.observedRanges
+            .last { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         assertEquals(start, range.first)
         assertEquals(start.plusWeeks(1), range.second)
     }
@@ -163,9 +165,12 @@ class CalendarViewModelTest {
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
         val vm = CalendarViewModel(repo, FakeTagRepository())
-        val before = repo.observedRanges.size
+        val before = repo.observedRanges
+            .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
         vm.selectDate(LocalDate.now().plusWeeks(3))
-        assertEquals(before + 1, repo.observedRanges.size)
+        val after = repo.observedRanges
+            .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
+        assertEquals(before + 1, after)
     }
 }

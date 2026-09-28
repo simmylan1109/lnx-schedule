@@ -44,11 +44,15 @@ class CalendarScreenTest {
         rule.onNodeWithText("月视图将在后续里程碑提供").assertDoesNotExist()
     }
 
+    // M3 起日 Tab 由 DayView 承接(日期条 + 单列时间轴),占位文案移除
     @Test
-    fun `点击日Tab显示日占位再点周Tab回到周视图`() {
+    fun `点击日Tab显示日视图再点周Tab回到周视图`() {
         rule.onNodeWithTag("tab_DAY").performClick()
-        rule.onNodeWithText("日视图将在后续里程碑提供").assertExists()
+        rule.waitForIdle()
+        rule.onNodeWithTag("day_pager").assertExists()
+        rule.onNodeWithTag("day_strip").assertExists()
         rule.onNodeWithTag("tab_WEEK").performClick()
+        rule.waitForIdle()
         rule.onNodeWithTag("week_pager").assertExists()
         rule.onNodeWithText("日视图将在后续里程碑提供").assertDoesNotExist()
     }

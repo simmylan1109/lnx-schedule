@@ -27,6 +27,7 @@ import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
+import com.lnx.app.feature.calendar.day.DayView
 import com.lnx.app.feature.calendar.week.WeekView
 import com.lnx.app.feature.event.EventDefaults
 import com.lnx.app.feature.event.EventDetailContent
@@ -77,7 +78,16 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 onSelect = viewModel::selectViewMode,
             )
             when (state.viewMode) {
-                ViewMode.DAY -> PlaceholderScreen("日视图将在后续里程碑提供")
+                // M3:日视图(日期条 + 单列时间轴)
+                ViewMode.DAY -> DayView(
+                    state = state,
+                    today = remember { LocalDate.now() },
+                    onSelectDate = viewModel::selectDate,
+                    occurrences = state.dayOccurrences,
+                    onEventClick = onEventClick,
+                    onEmptySlotClick = onEmptySlotClick,
+                    modifier = Modifier.weight(1f),
+                )
                 // M1: 进程内固定 today,跨零点需刷新(已记录为 minor)
                 ViewMode.WEEK -> WeekView(
                     state = state,

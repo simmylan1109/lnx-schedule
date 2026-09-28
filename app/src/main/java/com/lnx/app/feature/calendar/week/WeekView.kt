@@ -290,7 +290,8 @@ private fun minutesFromMidnight(time: LocalDateTime): Float =
 private fun buildDayBlocks(
     occurrences: List<Occurrence>,
     weekStart: LocalDate,
-): List<List<DayBlock>> = (0..6).map { dayIndex ->
+    dayCount: Int = 7,
+): List<List<DayBlock>> = (0 until dayCount).map { dayIndex ->
     val date = weekStart.plusDays(dayIndex.toLong())
     val dayStart = date.atStartOfDay()
     val dayEnd = dayStart.plusDays(1)
@@ -325,7 +326,7 @@ private fun buildDayBlocks(
 }
 
 @Composable
-private fun TimeGrid(
+internal fun TimeGrid(
     selectedDate: LocalDate,
     today: LocalDate,
     weekStart: LocalDate,
@@ -333,6 +334,8 @@ private fun TimeGrid(
     onEventClick: (Occurrence) -> Unit,
     onEmptySlotClick: (LocalDateTime) -> Unit,
     modifier: Modifier = Modifier,
+    /** M3 日视图复用同一条时间轴:7 = 周,1 = 日(列宽/吸附/网格线全部按此参数推) */
+    dayCount: Int = 7,
 ) {
     val scrollState = rememberScrollState()
     val nowState = remember { mutableStateOf(LocalTime.now()) }
@@ -358,6 +361,9 @@ private fun TimeGrid(
     val now = nowState.value
     // 注意乘法顺序:可用的是 Dp.times(Float),不是 Float.times(Dp)
     val nowY = HOUR_HEIGHT * (now.hour + now.minute / 60f)
+    // 当前时刻线只画在包含"今天"的页面(周=当前周,日=今天);翻到别周/别日不画
+    val showNowLine = !today.isBefore(weekStart) &&
+        !today.isAfter(weekStart.plusDays((dayCount - 1).toLong()))
 
     Box(modifier = modifier.testTag("time_grid")) {
         Row(
@@ -381,13 +387,15 @@ private fun TimeGrid(
                 }
                 // 当前时刻线的左端圆点(spec §3.2:细线 + 左端圆点),与红线同在滚动内容内故同步移动。
                 // x 定位到刻度列右缘(即红线起点)左侧 4dp,视觉上与红线连成一体。
-                Box(
-                    modifier = Modifier
-                        .offset(x = GUTTER_WIDTH - 12.dp, y = nowY - 4.dp)
-                        .size(8.dp)
-                        .background(MaterialTheme.colorScheme.error, CircleShape)
-                        .testTag("now_dot"),
-                )
+                if (showNowLine) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = GUTTER_WIDTH - 12.dp, y = nowY - 4.dp)
+                            .size(8.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
+                            .testTag("now_dot"),
+                    )
+                }
             }
             // 7 天列 + 小时横线 + 事件块 + 当前线
             BoxWithConstraints(
@@ -399,7 +407,9 @@ private fun TimeGrid(
                         // 事件块是子节点且自带 clickable,会先消费点击,不会误触发这里。
                         val hourPx = HOUR_HEIGHT.toPx()
                         detectTapGestures { offset ->
-                            val col = (offset.x / (size.width / 7f)).toInt().coerceIn(0, 6)
+                            val col = (offset.x / (size.width / dayCount.toFloat()))
+                                .toInt()
+                                .coerceIn(0, dayCount - 1)
                             val rawMinute = offset.y / hourPx * 60f
                             // spec §3.2:吸附到"所在 30 分钟格的开头"= 向下取整,
                             // 不能四舍五入(那会把每格的上半段推到下一格,一半点击报错时间)
@@ -413,9 +423,9 @@ private fun TimeGrid(
                         }
                     },
             ) {
-                val colWidth = maxWidth / 7
-                val blocks = remember(occurrences, weekStart) {
-                    buildDayBlocks(occurrences, weekStart)
+                val colWidth = maxWidth / dayCount
+                val blocks = remember(occurrences, weekStart, dayCount) {
+                    buildDayBlocks(occurrences, weekStart, dayCount)
                 }
                 // 注:Canvas 的 onDraw 是 DrawScope(非 @Composable),颜色须在组合期取出;
                 // 且必须 fillMaxSize —— Spacer 默认宽度包裹为 0,fillMaxHeight 会让 size.width=0
@@ -431,8 +441,8 @@ private fun TimeGrid(
                             strokeWidth = 1f,
                         )
                     }
-                    val cw = size.width / 7f
-                    repeat(8) { i ->
+                    val cw = size.width / dayCount
+                    repeat(dayCount + 1) { i ->
                         drawLine(
                             color = gridLineColor,
                             start = androidx.compose.ui.geometry.Offset(i * cw, 0f),
@@ -498,14 +508,16 @@ private fun TimeGrid(
                         }
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = nowY)
-                        .height(2.dp)
-                        .background(MaterialTheme.colorScheme.error)
-                        .testTag("now_line"),
-                )
+                if (showNowLine) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = nowY)
+                            .height(2.dp)
+                            .background(MaterialTheme.colorScheme.error)
+                            .testTag("now_line"),
+                    )
+                }
             }
         }
         // 空状态(spec §3.14):仅当这一周确实没有事件时才显示,

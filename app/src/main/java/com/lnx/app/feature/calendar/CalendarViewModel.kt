@@ -32,6 +32,8 @@ data class CalendarUiState(
     val viewMode: ViewMode,
     /** 当前所选周区间内的事件(M2 只做周视图;日/月视图在 M3 消费同一份数据) */
     val occurrences: List<Occurrence> = emptyList(),
+    /** 所选日 ±1 天的事件(日视图翻页用:当前页 + 相邻页),M3 日视图消费 */
+    val dayOccurrences: List<Occurrence> = emptyList(),
 )
 
 @HiltViewModel
@@ -55,13 +57,27 @@ class CalendarViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** 日视图数据:所选日 ±1 天(当前页 + 相邻页可即时渲染),天变化才重查 */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val dayOccurrences: StateFlow<List<Occurrence>> = selection
+        .map { it.selectedDate }
+        .distinctUntilChanged()
+        .flatMapLatest { day ->
+            repository.observeOccurrences(
+                day.minusDays(1).atStartOfDay(),
+                day.plusDays(2).atStartOfDay(),
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     /**
      * 选择与数据分开再合并:切 Tab / 翻周必须**立刻**反映到界面,
      * 不能等数据库查询回来(否则点下去有可感知的延迟,自动化测试也会抢跑)。
      */
     val uiState: StateFlow<CalendarUiState> =
-        combine(selection, occurrences) { sel, occ -> sel.copy(occurrences = occ) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
+        combine(selection, occurrences, dayOccurrences) { sel, occ, dayOcc ->
+            sel.copy(occurrences = occ, dayOccurrences = dayOcc)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
 
     private fun weekStartOf(date: LocalDate): LocalDateTime =
         weekStartOfDate(date).atStartOfDay()
