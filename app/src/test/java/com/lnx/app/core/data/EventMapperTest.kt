@@ -119,6 +119,8 @@ class EventMapperTest {
     @Test
     fun `非重复事件的interval归一化不丢`() {
         val weird = event().copy(rule = EventRule(type = RuleType.NONE, interval = 5))
+        // 钉住写侧归一化:实体里必须落 1,否则这次改动回退测试也不会红
+        assertEquals(1, weird.toEntity().ruleInterval)
         assertEquals(EventRule(), weird.toEntity().toEvent().rule)
     }
 }

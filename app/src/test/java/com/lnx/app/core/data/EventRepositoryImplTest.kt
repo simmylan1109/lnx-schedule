@@ -94,7 +94,7 @@ class EventRepositoryImplTest {
     }
 
     @Test
-    fun `查询区间按半开语义传给DAO`() = runTest {
+    fun `查询区间换算成毫秒传给DAO`() = runTest {
         val start = LocalDateTime.parse("2026-09-28T00:00")
         val end = LocalDateTime.parse("2026-10-05T00:00")
         repo.observeEvents(start, end).first()

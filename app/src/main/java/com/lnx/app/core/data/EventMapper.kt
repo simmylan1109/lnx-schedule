@@ -8,12 +8,8 @@ import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.model.RuleEnd
 import com.lnx.app.core.domain.model.RuleType
 import java.time.DayOfWeek
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
-
-private val zone: ZoneId get() = ZoneId.systemDefault()
 
 fun Event.toEntity(): EventEntity = EventEntity(
     id = id,
