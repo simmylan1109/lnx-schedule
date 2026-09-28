@@ -2,16 +2,19 @@ package com.lnx.app.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lnx.app.core.common.weekStartOf
+import com.lnx.app.core.common.weekStartOf as weekStartOfDate
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Occurrence
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -38,19 +41,25 @@ class CalendarViewModel @Inject constructor(
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<CalendarUiState> = selection
-        .flatMapLatest { sel ->
-            val weekStart = weekStartOf(sel.selectedDate).atStartOfDay()
+    private val occurrences: StateFlow<List<Occurrence>> = selection
+        // 只在"周"变化时重查:切视图模式不该触发查询
+        .map { weekStartOf(it.selectedDate) }
+        .distinctUntilChanged()
+        .flatMapLatest { weekStart ->
             repository.observeOccurrences(weekStart, weekStart.plusWeeks(1))
-                .map { occurrences -> sel.copy(occurrences = occurrences) }
         }
-        .stateIn(
-            scope = viewModelScope,
-            // Eagerly:日历是单屏常驻,让状态始终是活的;若 M3 引入多页面/多订阅方,
-            // 再评估改回 WhileSubscribed(5_000) 之类的懒启动
-            started = SharingStarted.Eagerly,
-            initialValue = selection.value,
-        )
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * 选择与数据分开再合并:切 Tab / 翻周必须**立刻**反映到界面,
+     * 不能等数据库查询回来(否则点下去有可感知的延迟,自动化测试也会抢跑)。
+     */
+    val uiState: StateFlow<CalendarUiState> =
+        combine(selection, occurrences) { sel, occ -> sel.copy(occurrences = occ) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
+
+    private fun weekStartOf(date: LocalDate): LocalDateTime =
+        weekStartOfDate(date).atStartOfDay()
 
     fun selectDate(date: LocalDate) = selection.update { it.copy(selectedDate = date) }
 

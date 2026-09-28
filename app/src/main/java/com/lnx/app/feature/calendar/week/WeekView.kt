@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
+import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.CalendarUiState
 import kotlinx.coroutines.delay
@@ -384,7 +385,7 @@ private fun TimeGrid(
                                 .width((w - 1.dp).coerceAtLeast(1.dp))
                                 .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .background(EventColors.of(b.occurrence.event.colorSlot))
                                 .clickable { onEventClick(b.occurrence) }
                                 .testTag("event_block_${b.occurrence.event.id}"),
                             verticalArrangement = Arrangement.Center,
@@ -392,12 +393,11 @@ private fun TimeGrid(
                             Text(
                                 text = b.occurrence.event.title,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = EventColors.on(b.occurrence.event.colorSlot),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 3.dp),
                             )
-                            // 时间行只在块够高时显示(spec §3.5:标题 1 行 + 时间 1 行)
                             if (b.heightMinutes >= 30f) {
                                 Text(
                                     text = "%02d:%02d".format(
@@ -405,7 +405,7 @@ private fun TimeGrid(
                                         b.occurrence.start.minute,
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = EventColors.on(b.occurrence.event.colorSlot)
                                         .copy(alpha = 0.75f),
                                     maxLines = 1,
                                     modifier = Modifier.padding(horizontal = 3.dp),
