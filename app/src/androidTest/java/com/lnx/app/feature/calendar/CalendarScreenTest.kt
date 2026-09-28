@@ -44,6 +44,18 @@ class CalendarScreenTest {
         rule.onNodeWithTag("week_grid").assertExists()
     }
 
+    // WEEK 分支离开组合会销毁 pagerState,重挂载时不得把"今天"改写成本周周一
+    @Test
+    fun `点击今天后切日Tab再回周Tab标题仍是今天`() {
+        val todayTitle = formatTitle(LocalDate.now())
+        rule.onNodeWithTag("today_button").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(todayTitle).assertExists()
+        rule.onNodeWithTag("tab_DAY").performClick()
+        rule.onNodeWithTag("tab_WEEK").performClick()
+        rule.onNodeWithText(todayTitle).assertExists()
+    }
+
     // 注:测试方法名不得含空格(minSdk 26 → DEX 037,D8 拒绝 SimpleName 中的空格)
     @Test
     fun `标题跟随选中日期_点击今天按钮回到今天`() {

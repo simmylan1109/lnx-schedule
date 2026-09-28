@@ -16,6 +16,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,15 +44,19 @@ fun WeekView(
         initialPage = dateToPage(state.selectedDate),
         pageCount = { 40001 },
     )
+    // 首次组合不算"用户翻页":跳过首次发射,避免把 spec §3.1 的"进入周视图显示当前日期"
+    // 改写成本周周一(今天非周一时标题/高亮会被抹掉;WEEK 分支重挂载同样受益)
+    val userPaged = remember { mutableStateOf(false) }
     // 选中日期变化(如"今天"按钮)时同步翻页
     // 注:M1 接受"今天"按钮在本周时不发射(值相同)的合流限制,故当前周内不滚动
     LaunchedEffect(state.selectedDate) {
         val target = dateToPage(state.selectedDate)
         if (pagerState.currentPage != target) pagerState.scrollToPage(target)
     }
-    // 翻页 → 选中日 = 该周周一
+    // 翻页 → 选中日 = 该周周一(仅用户驱动)
     LaunchedEffect(pagerState.currentPage) {
-        onSelectDate(pageToDate(pagerState.currentPage))
+        if (userPaged.value) onSelectDate(pageToDate(pagerState.currentPage))
+        else userPaged.value = true
     }
 
     HorizontalPager(
