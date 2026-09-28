@@ -25,7 +25,7 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override fun observeEvents(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>> =
-        dao.observeBetween(start.toMillis(), end.toMillis()).map { list ->
+        dao.observeBetween(start.toEpochMillis(), end.toEpochMillis()).map { list ->
             list.map { it.toEvent() }
         }
 
@@ -44,7 +44,4 @@ class EventRepositoryImpl @Inject constructor(
     override suspend fun delete(id: String) {
         dao.softDelete(id, System.currentTimeMillis())
     }
-
-    private fun LocalDateTime.toMillis(): Long =
-        atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
 }

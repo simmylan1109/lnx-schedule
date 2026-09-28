@@ -83,4 +83,42 @@ class EventMapperTest {
         assertEquals(null, entity.ruleEndType)
         assertEquals(RuleEnd.Never, entity.toEvent().rule.end)
     }
+
+    @Test
+    fun `每月按第N天往返`() {
+        val rule = EventRule(
+            type = RuleType.MONTHLY,
+            monthlyMode = MonthlyMode.BY_MONTHDAY,
+            monthlyDay = 31,
+            end = RuleEnd.Never,
+        )
+        assertEquals(rule, event(rule = rule).toEntity().toEvent().rule)
+    }
+
+    @Test
+    fun `脏数据不炸且有兜底`() {
+        val dirty = event().toEntity().copy(
+            priority = "P9",
+            ruleInterval = 0,
+            ruleWeekdays = "1,9,5", // 9 非法
+            ruleType = RuleType.WEEKLY.name,
+        ).toEvent()
+        assertEquals(Priority.P2, dirty.priority) // spec §4.2 默认 P2
+        assertEquals(1, dirty.rule.interval) // 0 被抬到 1
+        assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), dirty.rule.weekdays) // 9 丢弃
+    }
+
+    @Test
+    fun `未知规则类型回落为不重复`() {
+        val dirty = event().toEntity().copy(ruleType = "HOURLY", ruleWeekdays = "1,5")
+            .toEvent()
+        assertEquals(RuleType.NONE, dirty.rule.type)
+        assertEquals(EventRule(), dirty.rule) // 整体回落,不残留半截规则
+    }
+
+    @Test
+    fun `非重复事件的interval归一化不丢`() {
+        val weird = event().copy(rule = EventRule(type = RuleType.NONE, interval = 5))
+        assertEquals(EventRule(), weird.toEntity().toEvent().rule)
+    }
 }

@@ -41,7 +41,7 @@ data class EventEntity(
     val ruleMonthlyDay: Int?,
     val ruleMonthlyNth: Int?,
     val ruleMonthlyWeekday: Int?,
-    /** NEVER / UNTIL / COUNT */
+    /** null = 永不结束(唯一表示,不写 "NEVER" 字面量);UNTIL / COUNT */
     val ruleEndType: String?,
     /** UNTIL 时为 epochDay */
     val ruleEndDate: Long?,

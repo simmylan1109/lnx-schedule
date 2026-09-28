@@ -15,25 +15,20 @@ import java.time.ZoneId
 
 private val zone: ZoneId get() = ZoneId.systemDefault()
 
-private fun LocalDateTime.toMillis(): Long =
-    atZone(zone).toInstant().toEpochMilli()
-
-private fun Long.toLocalDateTime(): LocalDateTime =
-    Instant.ofEpochMilli(this).atZone(zone).toLocalDateTime()
-
 fun Event.toEntity(): EventEntity = EventEntity(
     id = id,
     title = title,
     allDay = allDay,
-    startAt = start.toMillis(),
-    endAt = end.toMillis(),
+    startAt = start.toEpochMillis(),
+    endAt = end.toEpochMillis(),
     location = location,
     notes = notes,
     colorSlot = colorSlot,
     priority = priority.name,
     reminderLeadMinutes = reminderLeadMinutes,
     ruleType = rule.type.name,
-    ruleInterval = rule.interval,
+    // 归一化:非重复事件的 interval 无意义,统一写 1,避免"写 5 读回 1"的有损往返
+    ruleInterval = if (rule.type == RuleType.NONE) 1 else rule.interval.coerceAtLeast(1),
     ruleWeekdays = rule.weekdays.takeIf { it.isNotEmpty() }?.joinToString(",") { it.value.toString() },
     ruleMonthlyMode = rule.monthlyMode?.name,
     ruleMonthlyDay = rule.monthlyDay,
@@ -66,10 +61,12 @@ fun EventEntity.toEvent(): Event = Event(
 private fun EventEntity.toRule(): EventRule {
     val type = runCatching { RuleType.valueOf(ruleType) }.getOrDefault(RuleType.NONE)
     if (type == RuleType.NONE) return EventRule()
+    // 脏数据(导入/手改)不能让整个流崩掉:非法星期号丢弃而非抛异常,
+    // 与下面 monthlyWeekday 的处理保持一致
     val weekdays = ruleWeekdays
         ?.split(',')
         ?.mapNotNull { it.trim().toIntOrNull() }
-        ?.mapNotNull { DayOfWeek.of(it) }
+        ?.mapNotNull { runCatching { DayOfWeek.of(it) }.getOrNull() }
         ?.toSet()
         ?: emptySet()
     val end: RuleEnd = when (ruleEndType) {
@@ -89,7 +86,7 @@ private fun EventEntity.toRule(): EventRule {
     )
 }
 
-/** 非重复事件不写结束条件(null),避免"永不结束"出现两种表示(spec §3.7) */
+/** `RuleEnd.Never` 恒写 null("永不结束"只有一种表示),读回时 null 与未知值都落到 Never */
 private fun RuleEnd.typeName(): String? = when (this) {
     is RuleEnd.Never -> null
     is RuleEnd.Until -> "UNTIL"
