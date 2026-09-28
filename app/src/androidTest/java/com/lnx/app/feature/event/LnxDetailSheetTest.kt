@@ -28,4 +28,18 @@ class LnxDetailSheetTest {
         rule.onNodeWithText("测试详情").assertExists()
         rule.onNodeWithText("测试内容行").assertExists()
     }
+
+    /** 钉死"visible=false 时不渲染任何内容"这条冻结约束(早返回守卫最容易被后人挪动) */
+    @Test
+    fun `visible为false时不渲染任何内容`() {
+        rule.setContent {
+            LnxTheme(ThemeSlot.MATERIAL_YOU, DarkMode.LIGHT) {
+                LnxDetailSheet(visible = false, onDismiss = {}, title = "测试详情") {
+                    Text("测试内容行")
+                }
+            }
+        }
+        rule.onNodeWithText("测试详情").assertDoesNotExist()
+        rule.onNodeWithText("测试内容行").assertDoesNotExist()
+    }
 }
