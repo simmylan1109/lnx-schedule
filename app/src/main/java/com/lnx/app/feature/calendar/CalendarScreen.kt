@@ -28,6 +28,7 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
 import com.lnx.app.feature.calendar.day.DayView
+import com.lnx.app.feature.calendar.month.MonthView
 import com.lnx.app.feature.calendar.week.WeekView
 import com.lnx.app.feature.event.EventDefaults
 import com.lnx.app.feature.event.EventDetailContent
@@ -98,7 +99,17 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                     onEmptySlotClick = onEmptySlotClick,
                     modifier = Modifier.weight(1f),
                 )
-                ViewMode.MONTH -> PlaceholderScreen("月视图将在后续里程碑提供")
+                // M3:月视图(上 6×7 月历 + 下当日列表联动)
+                ViewMode.MONTH -> MonthView(
+                    state = state,
+                    today = remember { LocalDate.now() },
+                    onSelectDate = viewModel::selectDate,
+                    occurrences = state.monthOccurrences,
+                    onEventClick = onEventClick,
+                    // spec §3.5:月视图空态「＋ 新建日程」= 该日 09:00(不做下半点预填)
+                    onCreateAt = { date -> editorTarget = EditorTarget(start = date.atTime(9, 0)) },
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
         // 新建事件入口(spec §3.1:右下角 ＋)

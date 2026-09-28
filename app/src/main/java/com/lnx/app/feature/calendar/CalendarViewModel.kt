@@ -10,6 +10,7 @@ import com.lnx.app.core.domain.model.Tag
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,8 @@ data class CalendarUiState(
     val occurrences: List<Occurrence> = emptyList(),
     /** 所选日 ±1 天的事件(日视图翻页用:当前页 + 相邻页),M3 日视图消费 */
     val dayOccurrences: List<Occurrence> = emptyList(),
+    /** 所选月 ±1 月的事件(月视图翻页用),M3 月视图消费 */
+    val monthOccurrences: List<Occurrence> = emptyList(),
 )
 
 @HiltViewModel
@@ -70,13 +73,26 @@ class CalendarViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** 月视图数据:所选月 ±1 月(当前页 + 相邻页),月变化才重查 */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val monthOccurrences: StateFlow<List<Occurrence>> = selection
+        .map { YearMonth.from(it.selectedDate) }
+        .distinctUntilChanged()
+        .flatMapLatest { month ->
+            repository.observeOccurrences(
+                month.minusMonths(1).atDay(1).atStartOfDay(),
+                month.plusMonths(2).atDay(1).atStartOfDay(),
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     /**
      * 选择与数据分开再合并:切 Tab / 翻周必须**立刻**反映到界面,
      * 不能等数据库查询回来(否则点下去有可感知的延迟,自动化测试也会抢跑)。
      */
     val uiState: StateFlow<CalendarUiState> =
-        combine(selection, occurrences, dayOccurrences) { sel, occ, dayOcc ->
-            sel.copy(occurrences = occ, dayOccurrences = dayOcc)
+        combine(selection, occurrences, dayOccurrences, monthOccurrences) { sel, occ, dayOcc, monthOcc ->
+            sel.copy(occurrences = occ, dayOccurrences = dayOcc, monthOccurrences = monthOcc)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
 
     private fun weekStartOf(date: LocalDate): LocalDateTime =

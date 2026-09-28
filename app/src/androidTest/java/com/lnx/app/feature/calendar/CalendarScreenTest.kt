@@ -57,12 +57,17 @@ class CalendarScreenTest {
         rule.onNodeWithText("日视图将在后续里程碑提供").assertDoesNotExist()
     }
 
+    // M3 起月 Tab 由 MonthView 承接(月历 + 当日列表),占位文案移除
     @Test
-    fun `点击月Tab显示月占位再点周Tab回到周视图`() {
+    fun `点击月Tab显示月视图再点周Tab回到周视图`() {
         rule.onNodeWithTag("tab_MONTH").performClick()
-        rule.onNodeWithText("月视图将在后续里程碑提供").assertExists()
+        rule.waitForIdle()
+        rule.onNodeWithTag("month_pager").assertExists()
+        rule.onNodeWithTag("month_agenda").assertExists()
         rule.onNodeWithTag("tab_WEEK").performClick()
+        rule.waitForIdle()
         rule.onNodeWithTag("week_grid").assertExists()
+        rule.onNodeWithText("月视图将在后续里程碑提供").assertDoesNotExist()
     }
 
     // 翻到非当前周后点"今天":当前周锚点规则应让标题回到今天
