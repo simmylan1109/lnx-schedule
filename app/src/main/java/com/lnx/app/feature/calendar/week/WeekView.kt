@@ -192,12 +192,14 @@ private fun TimeGrid(
             nowState.value = LocalTime.now()
         }
     }
-    // 打开时滚到当前时刻位于上部约 1/3 处(spec §3.2)
+    // 打开时滚到当前时刻位于上部约 1/3 处(spec §3.2)。
+    // 注意分母必须是"视口高"而非 maxValue(内容高−视口高),否则红线会落到约 47% 处。
     val hourPx = with(LocalDensity.current) { HOUR_HEIGHT.toPx() }
     LaunchedEffect(scrollState.maxValue) {
         if (scrollState.maxValue > 0) {
             val nowFraction = (nowState.value.hour + nowState.value.minute / 60f) / 24f
-            val target = (nowFraction * 24 * hourPx - scrollState.maxValue / 3f)
+            val viewportPx = 24 * hourPx - scrollState.maxValue
+            val target = (nowFraction * 24 * hourPx - viewportPx / 3f)
                 .toInt().coerceIn(0, scrollState.maxValue)
             scrollState.scrollTo(target)
         }
