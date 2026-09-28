@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,15 +25,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
@@ -112,12 +113,18 @@ private fun WeekHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
+        // 前导占位 = TimeGrid 的刻度列宽(TimeGrid 把宽度扣掉 GUTTER_WIDTH 后再 7 等分),
+        // 不留这个占位,星期头会整体左移半个刻度列,首列漂移最大
+        Spacer(Modifier.width(GUTTER_WIDTH))
         (0..6).forEach { offset ->
             val date = weekStart.plusDays(offset.toLong())
             val isToday = date == today
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly,
+            ) {
                 Text(
                     text = dayOfWeekCnShort(date.dayOfWeek),
                     style = MaterialTheme.typography.labelSmall,
@@ -129,13 +136,22 @@ private fun WeekHeader(
                         .size(28.dp)
                         .clip(CircleShape)
                         .background(
+                            // 非选中日用透明:Material You 下 surface 与 background 有细微差异,
+                            // 填色会让 7 个非今天格都显出浅色圆圈
                             if (date == selectedDate) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surface
+                            else Color.Transparent
                         )
-                        .border(
-                            width = if (isToday) 2.dp else 0.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
+                        // 边框必须条件性挂载:border(0.dp) 在本 Compose 版本仍会画出 1px 发丝圆环
+                        .then(
+                            if (isToday) {
+                                Modifier.border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape,
+                                )
+                            } else {
+                                Modifier
+                            }
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -193,15 +209,17 @@ private fun TimeGrid(
                 .fillMaxHeight()
                 .verticalScroll(scrollState),
         ) {
-            // 左侧刻度列
+            // 左侧刻度列:标签右对齐并留 6dp 末距,贴着网格左缘(左对齐会让首位数字被屏幕边缘切掉)
             Box(modifier = Modifier.width(GUTTER_WIDTH)) {
                 repeat(24) { hour ->
                     Text(
                         text = "$hour:00",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
                         modifier = Modifier
                             .width(GUTTER_WIDTH)
+                            .padding(end = 6.dp)
                             .offset(y = (hour * HOUR_HEIGHT.value - 6).dp),
                     )
                 }
