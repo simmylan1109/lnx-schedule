@@ -53,10 +53,16 @@ fun WeekView(
         val target = dateToPage(state.selectedDate)
         if (pagerState.currentPage != target) pagerState.scrollToPage(target)
     }
-    // 翻页 → 选中日 = 该周周一(仅用户驱动)
+    // 翻页 → 选中日锚点(仅用户驱动):当前周锚定"今天",其他周锚定"该周周一"
     LaunchedEffect(pagerState.currentPage) {
-        if (userPaged.value) onSelectDate(pageToDate(pagerState.currentPage))
-        else userPaged.value = true
+        if (userPaged.value) {
+            val weekStart = pageToDate(pagerState.currentPage)
+            val weekEnd = weekStart.plusDays(6)
+            val anchor = if (!today.isBefore(weekStart) && !today.isAfter(weekEnd)) today else weekStart
+            onSelectDate(anchor)
+        } else {
+            userPaged.value = true
+        }
     }
 
     HorizontalPager(

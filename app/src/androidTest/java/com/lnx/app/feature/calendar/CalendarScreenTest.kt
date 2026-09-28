@@ -4,9 +4,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
 import com.lnx.app.core.common.formatTitle
+import java.time.DayOfWeek
 import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
@@ -42,6 +45,19 @@ class CalendarScreenTest {
         rule.onNodeWithText("月视图将在后续里程碑提供").assertExists()
         rule.onNodeWithTag("tab_WEEK").performClick()
         rule.onNodeWithTag("week_grid").assertExists()
+    }
+
+    // 翻到非当前周后点"今天":当前周锚点规则应让标题回到今天
+    @Test
+    fun `翻到下周后点今天回到今天`() {
+        val today = LocalDate.now()
+        val todayTitle = formatTitle(today)
+        val nextMonday = today.plusWeeks(1).with(DayOfWeek.MONDAY)
+        rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
+        rule.onNodeWithText(formatTitle(nextMonday)).assertExists()
+        rule.onNodeWithTag("today_button").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(todayTitle).assertExists()
     }
 
     // WEEK 分支离开组合会销毁 pagerState,重挂载时不得把"今天"改写成本周周一

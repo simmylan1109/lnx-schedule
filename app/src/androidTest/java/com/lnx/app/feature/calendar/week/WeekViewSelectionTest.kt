@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
@@ -53,6 +54,18 @@ class WeekViewSelectionTest {
         setWeekView { emitted = it }
         rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
         rule.waitForIdle()
-        assertEquals("左滑一整页后选中日应为下周周一", start.plusWeeks(1), emitted)
+        assertEquals("翻到非当前周:锚点为该周周一", start.plusWeeks(1), emitted)
+    }
+
+    // 锚点规则另一面:翻回当前周 ⇒ 锚点是"今天"而非该周周一(此处今天=周三 9-30)
+    @Test
+    fun `翻回当前周锚定今天`() {
+        var emitted: LocalDate? = null
+        setWeekView { emitted = it }
+        rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
+        rule.waitForIdle()
+        rule.onNodeWithTag("week_pager").performTouchInput { swipeRight() }
+        rule.waitForIdle()
+        assertEquals("翻回当前周:锚点为今天", wednesday, emitted)
     }
 }

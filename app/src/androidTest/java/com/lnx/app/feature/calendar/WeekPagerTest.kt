@@ -29,14 +29,14 @@ class WeekPagerTest {
         val today = LocalDate.now()
         val thisMonday = mondayOf(today)
         val nextMonday = mondayOf(today.plusWeeks(1))
-        // 左滑:头部与顶栏标题都应切到下周一(spec §3.2 翻页 → 选中日 = 该周周一)
+        // 左滑到非当前周:头部切到下周一,选中日锚定为该周周一
         rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
         rule.onNodeWithTag("week_header_$nextMonday").assertExists()
         rule.onNodeWithText(formatTitle(nextMonday)).assertExists()
-        // 右滑回到本周:选中日回到该周周一(今天恰为周一时等于 formatTitle(今天))
+        // 右滑回到当前周:锚点规则要求回到"今天",而不是该周周一
         rule.onNodeWithTag("week_pager").performTouchInput { swipeRight() }
         rule.onNodeWithTag("week_header_$thisMonday").assertExists()
-        rule.onNodeWithText(formatTitle(thisMonday)).assertExists()
+        rule.onNodeWithText(formatTitle(today)).assertExists()
     }
 
     // 冷启动(spec §3.1):无任何交互时标题必须是"今天",不能被改写成本周周一
