@@ -113,7 +113,11 @@ fun WeekView(
             val weekStart = pageToDate(page)
             Column(modifier = Modifier.testTag("week_header_${weekStart}")) {
                 WeekHeader(weekStart = weekStart, selectedDate = state.selectedDate, today = today)
-                AllDayStrip()
+                AllDayStrip(
+                    occurrences = occurrences,
+                    weekStart = weekStart,
+                    onEventClick = onEventClick,
+                )
                 TimeGrid(
                     selectedDate = state.selectedDate,
                     today = today,
@@ -191,16 +195,75 @@ private fun WeekHeader(
 }
 
 @Composable
-private fun AllDayStrip(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(24.dp),
-    ) // M3 渲染全天/跨天事件条(spec §8.1 M3 跨天多天显示;M2 只有定时段)
+private fun AllDayStrip(
+    occurrences: List<Occurrence>,
+    weekStart: LocalDate,
+    onEventClick: (Occurrence) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val bars = remember(occurrences, weekStart) { AllDaySpan.layout(occurrences, weekStart) }
+    // M3:全天/跨天条带(spec §3.3/§3.4)。无全天事件时不占高度。
+    if (bars.isEmpty()) return
+
+    // 超过 2 行折叠为 +N(条带不能无限吃掉时间轴的高度)
+    val visibleRows = bars.filter { it.row < MAX_ALL_DAY_ROWS }
+    val overflowCount = bars.size - visibleRows.size
+    val rowIndices = visibleRows.map { it.row }.distinct().sorted()
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().testTag("all_day_strip")) {
+        val colWidth = (maxWidth - GUTTER_WIDTH) / 7f
+        Column(modifier = Modifier.fillMaxWidth()) {
+            rowIndices.forEach { row ->
+                Row(modifier = Modifier.height(ALL_DAY_ROW_HEIGHT)) {
+                    Spacer(Modifier.width(GUTTER_WIDTH))
+                    BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                        visibleRows.filter { it.row == row }.forEach { bar ->
+                            val barWidth = colWidth * (bar.endColExclusive - bar.startCol)
+                            Box(
+                                modifier = Modifier
+                                    .offset(x = colWidth * bar.startCol + 1.dp)
+                                    .width(barWidth - 2.dp)
+                                    .height(ALL_DAY_ROW_HEIGHT - 4.dp)
+                                    .padding(top = 1.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(EventColors.of(bar.occurrence.event.colorSlot))
+                                    .clickable { onEventClick(bar.occurrence) }
+                                    .testTag("all_day_bar_${bar.occurrence.event.id}"),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                Text(
+                                    text = bar.occurrence.event.title,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = EventColors.on(bar.occurrence.event.colorSlot),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 3.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (overflowCount > 0) {
+                Text(
+                    text = "+$overflowCount",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .padding(start = GUTTER_WIDTH + 4.dp, bottom = 2.dp)
+                        .testTag("all_day_overflow"),
+                )
+            }
+        }
+    }
 }
 
 private val HOUR_HEIGHT = 56.dp
 private val GUTTER_WIDTH = 44.dp
+private val ALL_DAY_ROW_HEIGHT = 24.dp
+
+/** 全天条最多可见行数,更多的折叠成 +N(spec §3.4) */
+private const val MAX_ALL_DAY_ROWS = 2
 
 /** 周分页总数:以 1970-01-05(第 0 页)为中心,前后各约 200 年 */
 private const val PAGE_COUNT = 40001

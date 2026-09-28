@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lnx.app.core.common.weekStartOf as weekStartOfDate
 import com.lnx.app.core.domain.EventRepository
+import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Occurrence
+import com.lnx.app.core.domain.model.Tag
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +37,7 @@ data class CalendarUiState(
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val repository: EventRepository,
+    private val tagRepository: TagRepository,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
 
@@ -72,4 +76,7 @@ class CalendarViewModel @Inject constructor(
     fun deleteEvent(id: String) {
         viewModelScope.launch { repository.delete(id) }
     }
+
+    /** 详情卡的标签行(spec §3.6);M3 起事件可带标签 */
+    fun observeTagsOf(eventId: String): Flow<List<Tag>> = tagRepository.observeTagsOfEvent(eventId)
 }

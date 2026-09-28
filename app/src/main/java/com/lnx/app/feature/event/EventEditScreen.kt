@@ -186,7 +186,12 @@ fun EventEditScreen(
                 selected = draft.reminderLeadMinutes,
                 onSelect = viewModel::setReminderLead,
             )
-            ReadonlyRow("标签", "M3 起可添加")
+            TagPickerSection(
+                tags = state.tags,
+                selectedIds = state.selectedTagIds,
+                onToggle = viewModel::toggleTag,
+                onCreate = viewModel::createTag,
+            )
             ColorPicker(
                 selected = draft.colorSlot,
                 onSelect = viewModel::setColorSlot,

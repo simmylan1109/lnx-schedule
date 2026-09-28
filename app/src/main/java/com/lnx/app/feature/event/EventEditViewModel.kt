@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lnx.app.core.domain.EventRepository
+import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.model.RuleEnd
 import com.lnx.app.core.domain.model.RuleType
+import com.lnx.app.core.domain.model.Tag
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDateTime
 import java.util.UUID
@@ -16,6 +18,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -27,11 +30,16 @@ data class EventEditUiState(
     /** 时间重叠提示(spec §3.5:不阻止保存) */
     val overlapTitles: List<String> = emptyList(),
     val saved: Boolean = false,
+    /** 全部可选标签(M3 spec §3.10) */
+    val tags: List<Tag> = emptyList(),
+    /** 该事件已选中的标签 */
+    val selectedTagIds: Set<String> = emptySet(),
 )
 
 @HiltViewModel
 class EventEditViewModel @Inject constructor(
     private val repository: EventRepository,
+    private val tagRepository: TagRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val editingId: String? = savedStateHandle.get<String>(KEY_EVENT_ID)
@@ -40,6 +48,12 @@ class EventEditViewModel @Inject constructor(
     val uiState: StateFlow<EventEditUiState> = _uiState.asStateFlow()
 
     init {
+        // 标签清单常驻刷新(新建标签对话框、其他入口改名/删除都要跟)
+        viewModelScope.launch {
+            tagRepository.observeTags().collect { tags ->
+                _uiState.update { it.copy(tags = tags) }
+            }
+        }
         // 导航参数优先(M3 起用 NavHost 传参);没有参数时等调用方 initialize()
         val navStart = savedStateHandle.get<String>(KEY_START)?.let { LocalDateTime.parse(it) }
         if (editingId != null) {
@@ -72,14 +86,30 @@ class EventEditViewModel @Inject constructor(
         _uiState.value = blank
         viewModelScope.launch {
             val event = repository.getEvent(eventId)
+            val tagIds = tagRepository.observeTagsOfEvent(eventId).first().map { it.id }.toSet()
             // 载入是异步的:若期间调用方又 initialize(新建),丢弃这次过期结果
             _uiState.compareAndSet(
                 blank,
                 blank.copy(
                     draft = event?.toDraft() ?: EventDefaults.draft(LocalDateTime.now()),
                     isEditing = event != null,
+                    selectedTagIds = tagIds,
                 ),
             )
+        }
+    }
+
+    /** 多选标签:已选则取消,未选则加入(spec §3.10 多对多) */
+    fun toggleTag(id: String) = _uiState.update { s ->
+        val next = s.selectedTagIds.toMutableSet()
+        if (!next.add(id)) next.remove(id)
+        s.copy(selectedTagIds = next)
+    }
+
+    fun createTag(name: String, colorSlot: Int) {
+        viewModelScope.launch {
+            val tag = tagRepository.createTag(name, colorSlot)
+            _uiState.update { it.copy(selectedTagIds = it.selectedTagIds + tag.id) }
         }
     }
 
@@ -116,9 +146,11 @@ class EventEditViewModel @Inject constructor(
         viewModelScope.launch {
             val normalized = normalizeAllDay(draft)
             val overlaps = OverlapChecker.find(repository, normalized)
+            // 先定 id 再落库,标签关联才能指向同一条事件
+            val id = draft.id ?: UUID.randomUUID().toString()
             repository.save(
                 Event(
-                    id = draft.id ?: UUID.randomUUID().toString(),
+                    id = id,
                     title = normalized.title.trim(),
                     allDay = normalized.allDay,
                     start = normalized.start,
@@ -134,6 +166,7 @@ class EventEditViewModel @Inject constructor(
                     updatedAt = 0L,
                 ),
             )
+            tagRepository.setEventTags(id, _uiState.value.selectedTagIds.toList())
             _uiState.update { it.copy(saved = true, overlapTitles = overlaps) }
         }
     }

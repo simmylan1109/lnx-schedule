@@ -12,6 +12,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +122,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
 
         // 事件详情卡(spec §3.6):编辑转到编辑页,删除确认后删除(M2 只有普通事件)
         detailTarget?.let { occ ->
+            val tags by viewModel.observeTagsOf(occ.event.id).collectAsState(initial = emptyList())
             LnxDetailSheet(
                 visible = true,
                 onDismiss = { detailTarget = null },
@@ -128,6 +130,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
             ) {
                 EventDetailContent(
                     event = occ.event,
+                    tags = tags,
                     onEdit = {
                         detailTarget = null
                         editorTarget = EditorTarget(eventId = occ.event.id)

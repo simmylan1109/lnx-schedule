@@ -1,10 +1,12 @@
 package com.lnx.app.feature.calendar
 
 import com.lnx.app.core.domain.EventRepository
+import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
+import com.lnx.app.core.domain.model.Tag
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,23 @@ private class FakeEventRepository(
     override suspend fun delete(id: String) = Unit
 }
 
+/** 假标签仓库:VM 测试不关心标签,全部空实现 */
+private class FakeTagRepository : TagRepository {
+    override fun observeTags(): Flow<List<Tag>> = MutableStateFlow(emptyList())
+
+    override suspend fun createTag(name: String, colorSlot: Int): Tag = Tag("t-$name", name, colorSlot)
+
+    override suspend fun renameTag(id: String, name: String) = Unit
+
+    override suspend fun deleteTag(id: String) = Unit
+
+    override suspend fun setEventTags(eventId: String, tagIds: List<String>) = Unit
+
+    override fun observeTagsOfEvent(eventId: String): Flow<List<Tag>> = MutableStateFlow(emptyList())
+
+    override fun observeEventTagIds(): Flow<Map<String, List<String>>> = MutableStateFlow(emptyMap())
+}
+
 class CalendarViewModelTest {
     /** 构造一条落在指定周内的发生,供 ViewModel 测试预置 */
     private fun occurrence(id: String, start: String, end: String) = Occurrence(
@@ -83,7 +102,8 @@ class CalendarViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(repo: FakeEventRepository = FakeEventRepository()) = CalendarViewModel(repo)
+    private fun vm(repo: FakeEventRepository = FakeEventRepository()) =
+        CalendarViewModel(repo, FakeTagRepository())
 
     @Test
     fun `初始状态为今天与周视图`() {
@@ -129,7 +149,7 @@ class CalendarViewModelTest {
                 occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
             ),
         )
-        val vm = CalendarViewModel(repo)
+        val vm = CalendarViewModel(repo, FakeTagRepository())
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -142,7 +162,7 @@ class CalendarViewModelTest {
     @Test
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
-        val vm = CalendarViewModel(repo)
+        val vm = CalendarViewModel(repo, FakeTagRepository())
         val before = repo.observedRanges.size
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
         vm.selectDate(LocalDate.now().plusWeeks(3))
