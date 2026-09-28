@@ -22,7 +22,8 @@ class CalendarScreenTest {
         rule.onNodeWithTag("top_bar").assertExists()
         rule.onNodeWithTag("tab_WEEK").assertExists()
         // 不点击任何 tab,钉住初始 viewMode == WEEK
-        rule.onNodeWithText("周视图将在本里程碑内实现").assertExists()
+        // Task 5 起 WEEK 分支由 WeekView 承接(周占位文案已按计划移除)
+        rule.onNodeWithTag("week_pager").assertExists()
         rule.onNodeWithText("月视图将在后续里程碑提供").assertDoesNotExist()
     }
 
@@ -31,7 +32,8 @@ class CalendarScreenTest {
         rule.onNodeWithTag("tab_DAY").performClick()
         rule.onNodeWithText("日视图将在后续里程碑提供").assertExists()
         rule.onNodeWithTag("tab_WEEK").performClick()
-        rule.onNodeWithText("周视图将在本里程碑内实现").assertExists()
+        rule.onNodeWithTag("week_pager").assertExists()
+        rule.onNodeWithText("日视图将在后续里程碑提供").assertDoesNotExist()
     }
 
     @Test

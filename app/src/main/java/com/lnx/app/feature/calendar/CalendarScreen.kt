@@ -1,17 +1,18 @@
 package com.lnx.app.feature.calendar
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
+import com.lnx.app.feature.calendar.week.WeekView
+import java.time.LocalDate
 
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
@@ -30,9 +31,13 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
         )
         when (state.viewMode) {
             ViewMode.DAY -> PlaceholderScreen("日视图将在后续里程碑提供")
-            ViewMode.WEEK -> Box(modifier = Modifier.testTag("week_grid")) { // Task 5 起由 WeekView 承接此 tag
-                PlaceholderScreen("周视图将在本里程碑内实现")
-            }
+            // M1: 进程内固定 today,跨零点需刷新(已记录为 minor)
+            ViewMode.WEEK -> WeekView(
+                state = state,
+                today = remember { LocalDate.now() },
+                onSelectDate = viewModel::selectDate,
+                modifier = Modifier.weight(1f),
+            )
             ViewMode.MONTH -> PlaceholderScreen("月视图将在后续里程碑提供")
         }
     }
