@@ -30,6 +30,12 @@ android {
     buildFeatures { compose = true }
 }
 
+// Room schema 落盘位置:exportSchema = true 依赖它,否则 schema JSON 不会生成,
+// M3 起要写 Migration / MigrationTestHelper 时就没有基线可比对。
+// 注:只配主编译;kspAndroidTest 是依赖配置(给依赖用的),没有 arg 扩展,且
+// MigrationTestHelper 读的是主编译导出的 schema,不依赖 androidTest 侧再导一次。
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

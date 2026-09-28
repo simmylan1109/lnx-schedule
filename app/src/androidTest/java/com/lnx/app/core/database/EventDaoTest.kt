@@ -72,8 +72,35 @@ class EventDaoTest {
     @Test
     fun `贴边不算重叠`() = runBlocking {
         db.eventDao().upsert(entity("a", 100L, 200L))
+        // 末端贴查询起点:endAt > startMillis 这一侧
         val hit = db.eventDao().observeBetween(200L, 300L).first()
         assertTrue(hit.isEmpty())
+    }
+
+    @Test
+    fun `起点贴边不算重叠`() = runBlocking {
+        db.eventDao().upsert(entity("a", 100L, 200L))
+        // 末端贴查询终点:startAt < endMillis 这一侧(把 < 写成 <= 会命中并让本用例失败)
+        val hit = db.eventDao().observeBetween(0L, 100L).first()
+        assertTrue(hit.isEmpty())
+    }
+
+    @Test
+    fun `全天事件按次日零点排他`() = runBlocking {
+        // 全天 9-28 到 9-29(含):endAt = 9-30 00:00,故查询 9-29 当天应命中
+        val day = 86_400_000L
+        db.eventDao().upsert(entity("all", 100L * day, 102L * day, allDay = true))
+        assertEquals(1, db.eventDao().observeBetween(101L * day, 102L * day).first().size)
+        // 结束日次日不再命中
+        assertTrue(db.eventDao().observeBetween(102L * day, 103L * day).first().isEmpty())
+    }
+
+    @Test
+    fun `并列开始时间排序稳定`() = runBlocking {
+        db.eventDao().upsert(entity("b", 100L, 300L))
+        db.eventDao().upsert(entity("a", 100L, 200L))
+        val hit = db.eventDao().observeBetween(0L, 999L).first()
+        assertEquals(listOf("a", "b"), hit.map { it.id }) // 同起点按 endAt 再按 id 全序
     }
 
     @Test

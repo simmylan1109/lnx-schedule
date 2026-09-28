@@ -1,13 +1,18 @@
 package com.lnx.app.core.database.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * 事件表(spec §4.2)。
  * 重复规则字段在本里程碑就建好表(M4 启用),避免后续 migration。
  */
-@Entity(tableName = "events")
+@Entity(
+    tableName = "events",
+    // 区间查询与排序都按 startAt(spec §3.2);现在建索引可避免 M3/M7 再升版本号
+    indices = [Index(value = ["startAt"])],
+)
 data class EventEntity(
     @PrimaryKey val id: String,
     val title: String,
