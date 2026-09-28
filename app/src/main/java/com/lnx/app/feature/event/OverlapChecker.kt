@@ -13,9 +13,10 @@ object OverlapChecker {
         draft: EventDraft,
         excludeId: String? = draft.id,
     ): List<String> {
-        // 重叠必定发生在同一天,只查这一天
-        val dayStart = draft.start.toLocalDate().atStartOfDay()
-        val existing = repository.observeEvents(dayStart, dayStart.plusDays(1)).first()
+        // 窗口按草稿覆盖到的日子取(跨零点的草稿要能看到次日的重叠)
+        val windowStart = draft.start.toLocalDate().atStartOfDay()
+        val windowEnd = draft.end.toLocalDate().plusDays(1).atStartOfDay()
+        val existing = repository.observeEvents(windowStart, windowEnd).first()
         return existing
             .filter { it.id != excludeId }
             .filter { it.start < draft.end && it.end > draft.start }

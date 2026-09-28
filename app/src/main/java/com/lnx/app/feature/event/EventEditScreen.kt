@@ -260,7 +260,7 @@ private fun DateTimeField(
                     value.dayOfMonth,
                 ).show()
             }
-            .padding(vertical = 12.dp)
+            .padding(vertical = 14.dp)
             .testTag(tag),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -294,7 +294,7 @@ private fun DateField(
                     date.dayOfMonth,
                 ).show()
             }
-            .padding(vertical = 12.dp)
+            .padding(vertical = 14.dp)
             .testTag(tag),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

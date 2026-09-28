@@ -114,4 +114,14 @@ class OverlapCheckerTest {
         // 窗口必须是目标日的整天(半开)
         assertEquals(day.atStartOfDay() to day.plusDays(1).atStartOfDay(), repo.lastWindow)
     }
+
+    @Test
+    fun `跨零点的草稿也能发现次日事件的重叠`() = runTest {
+        val draft = EventDefaults.draft(at(23, 30))
+            .copy(title = "夜班", end = day.plusDays(1).atTime(0, 30))
+        val repo = FakeRepository(
+            listOf(event("next", day.plusDays(1).atTime(0, 0), day.plusDays(1).atTime(1, 0))),
+        )
+        assertEquals(listOf("事件next"), OverlapChecker.find(repo, draft))
+    }
 }
