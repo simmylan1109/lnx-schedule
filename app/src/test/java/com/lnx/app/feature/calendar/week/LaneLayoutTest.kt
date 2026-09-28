@@ -1,6 +1,7 @@
 package com.lnx.app.feature.calendar.week
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LaneLayoutTest {
@@ -50,11 +51,13 @@ class LaneLayoutTest {
     }
 
     @Test
-    fun `零长事件不崩`() {
+    fun `零长事件不崩且车道至少一条`() {
         val r = LaneLayout.assign(
             listOf(span("a", 600f, 600f), span("b", 500f, 550f)),
         )
         assertEquals(2, r.size)
+        // 钉住 lanes >= 1:调用方会拿 lanes 做除法,0 会算出 Infinity 宽度
+        assertTrue(r.all { it.lanes >= 1 })
     }
 
     @Test

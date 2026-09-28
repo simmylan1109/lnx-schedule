@@ -50,7 +50,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import kotlin.math.roundToInt
 
 private val DOW_HEADER = listOf("一", "二", "三", "四", "五", "六", "日")
 
