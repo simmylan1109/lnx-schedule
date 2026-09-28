@@ -129,7 +129,8 @@ class EventEditViewModel @Inject constructor(
                     priority = normalized.priority,
                     reminderLeadMinutes = normalized.reminderLeadMinutes,
                     rule = normalized.rule,
-                    createdAt = 0L, // 0 = 新建,仓库会补当前时间
+                    // 0 = 新建(仓库补当前时间);编辑时透传原值,不得重写创建时间
+                    createdAt = draft.createdAt,
                     updatedAt = 0L,
                 ),
             )
@@ -151,6 +152,7 @@ class EventEditViewModel @Inject constructor(
         priority = priority,
         reminderLeadMinutes = reminderLeadMinutes,
         rule = rule,
+        createdAt = createdAt,
     )
 
     companion object {

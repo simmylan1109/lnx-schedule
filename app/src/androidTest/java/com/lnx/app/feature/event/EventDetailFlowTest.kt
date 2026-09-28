@@ -26,6 +26,7 @@ import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -127,6 +128,7 @@ class EventDetailFlowTest {
             repository.save(event("e-edit", "编辑前标题", todayAt(now.hour), todayAt(now.hour).plusMinutes(60)))
         }
         rule.waitForIdle()
+        val createdBefore = runBlocking { dao.allOnce().first().createdAt }
 
         rule.onNodeWithTag("event_block_e-edit").performClick()
         rule.waitForIdle()
@@ -153,6 +155,9 @@ class EventDetailFlowTest {
         val rows = runBlocking { dao.allOnce() }
         assertEquals(1, rows.size)
         assertEquals("编辑后标题", rows.first().title)
+        // 编辑不得重写创建时间(仓库契约;终审发现草稿曾把 createdAt 丢成 0 导致每次编辑被当新建)
+        assertEquals(createdBefore, rows.first().createdAt)
+        assertTrue(rows.first().updatedAt >= createdBefore)
     }
 
     @Test

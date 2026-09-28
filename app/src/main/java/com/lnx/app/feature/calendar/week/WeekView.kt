@@ -195,7 +195,7 @@ private fun AllDayStrip(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(24.dp),
-    ) // M2 渲染全天/跨天事件块
+    ) // M3 渲染全天/跨天事件条(spec §8.1 M3 跨天多天显示;M2 只有定时段)
 }
 
 private val HOUR_HEIGHT = 56.dp
@@ -339,7 +339,8 @@ private fun TimeGrid(
                             val rawMinute = offset.y / hourPx * 60f
                             // spec §3.2:吸附到"所在 30 分钟格的开头"= 向下取整,
                             // 不能四舍五入(那会把每格的上半段推到下一格,一半点击报错时间)
-                            val minute = (rawMinute / SNAP_MINUTES).toInt() * SNAP_MINUTES
+                            // 注意括号:coerceIn 必须钳乘积,绑到常量上是 no-op
+                            val minute = ((rawMinute / SNAP_MINUTES).toInt() * SNAP_MINUTES)
                                 .coerceIn(0, 24 * 60 - SNAP_MINUTES)
                             onEmptySlotClick(
                                 weekStart.plusDays(col.toLong())

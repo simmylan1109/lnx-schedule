@@ -3,7 +3,7 @@
 - 日期：2026-09-28
 - 设备：emulator-5554（AVD test35，API 35，1080×2340，动画已关）
 - 构建：main @ statusBarsPadding 修复后的 debug APK
-- 自动化测试：`testDebugUnitTest` + `connectedDebugAndroidTest` 全绿（76 例，见 `.superpowers/sdd/2026-09-26-lnx-m2-events/t6-full1.log`）
+- 自动化测试：`testDebugUnitTest` + `connectedDebugAndroidTest` 全绿（62 单测 + 35 仪器 = 97 例，见 `.superpowers/sdd/2026-09-26-lnx-m2-events/t6-full1.log`）
 
 ## 逐条验收（全过）
 

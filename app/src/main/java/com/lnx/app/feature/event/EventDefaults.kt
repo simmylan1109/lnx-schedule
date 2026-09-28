@@ -8,7 +8,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-/** 编辑页里的可变草稿(尚未落库) */
+/** 编辑页里的可变草稿(尚未落库);createdAt = 0 表示新建,编辑时透传原值 */
 data class EventDraft(
     val id: String? = null,
     val title: String = "",
@@ -22,6 +22,7 @@ data class EventDraft(
     /** null = 不提醒 */
     val reminderLeadMinutes: Int? = 15,
     val rule: EventRule = EventRule(RuleType.NONE, end = RuleEnd.Never),
+    val createdAt: Long = 0L,
 )
 
 enum class ValidationError { TITLE_REQUIRED, END_NOT_AFTER_START }
