@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,12 +35,14 @@ fun CalendarTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Icon(
-            imageVector = Icons.Default.Menu,
-            contentDescription = "菜单",
-            modifier = Modifier.padding(8.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
+        IconButton(onClick = onMenuClick) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = "菜单",
+                modifier = Modifier.padding(8.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -49,12 +52,14 @@ fun CalendarTopBar(
             TextButton(onClick = onTodayClick, modifier = Modifier.testTag("today_button")) {
                 Text("今天")
             }
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "搜索",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
+            IconButton(onClick = onSearchClick) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "搜索",
+                    modifier = Modifier.padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }
