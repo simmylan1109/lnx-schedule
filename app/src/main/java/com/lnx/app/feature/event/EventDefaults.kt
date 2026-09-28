@@ -32,14 +32,17 @@ fun validate(draft: EventDraft): List<ValidationError> = buildList {
 }
 
 /**
- * 全天事件归一化(spec §4.2:全天 = 起始日 00:00 到结束日次日 00:00,排他)。
- * start 取开始日,end 取"用户选中的结束日次日零点";多日全天由 M3 的日期范围选择器提供。
+ * 全天事件的存储规范(spec §4.2):start = 起始日 00:00,end = 结束日**次日** 00:00(排他)。
+ * 草稿在切换全天开关时立即落成规范形(toAllDay),结束日期选择器的显示/写入都按排他语义;
+ * normalizeAllDay 只做兜底钳制,不再平移 +1(否则会对已排他的结束时间双重平移)。
  */
 fun normalizeAllDay(draft: EventDraft): EventDraft {
     if (!draft.allDay) return draft
+    val start = draft.start.toLocalDate().atStartOfDay()
+    val end = draft.end.toLocalDate().atStartOfDay()
     return draft.copy(
-        start = draft.start.toLocalDate().atStartOfDay(),
-        end = draft.end.toLocalDate().plusDays(1).atStartOfDay(),
+        start = start,
+        end = if (end.isAfter(start)) end else start.plusDays(1),
     )
 }
 
@@ -67,5 +70,23 @@ object EventDefaults {
         start = start,
         end = start.plusMinutes(DEFAULT_DURATION_MINUTES),
         reminderLeadMinutes = DEFAULT_REMINDER_MINUTES,
+    )
+
+    /** 定时 → 全天:单日按当天;跨零点的定时事件按起止两天转为全天 */
+    fun toAllDay(draft: EventDraft): EventDraft {
+        val firstDay = draft.start.toLocalDate()
+        val lastDay = maxOf(draft.end.toLocalDate(), firstDay)
+        return draft.copy(
+            allDay = true,
+            start = firstDay.atStartOfDay(),
+            end = lastDay.plusDays(1).atStartOfDay(),
+        )
+    }
+
+    /** 全天 → 定时:恢复 09:00–10:00,避免留下 00:00 的时间 */
+    fun fromAllDay(draft: EventDraft): EventDraft = draft.copy(
+        allDay = false,
+        start = draft.start.toLocalDate().atTime(9, 0),
+        end = draft.start.toLocalDate().atTime(10, 0),
     )
 }

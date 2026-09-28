@@ -62,4 +62,55 @@ class EventDefaultsTest {
         assertEquals(LocalDateTime.of(2026, 9, 30, 0, 0), normalized.start)
         assertEquals(LocalDateTime.of(2026, 10, 1, 0, 0), normalized.end) // 排他
     }
+
+    // 回归:结束日期选择器存的是排他的"次日零点",归一化不得再 +1(否则多出一整天)
+    @Test
+    fun `全天归一化不再平移已排他的结束时间`() {
+        val draft = EventDefaults.draft(LocalDateTime.of(2026, 9, 26, 0, 0))
+            .copy(title = "两日行程", allDay = true, end = LocalDateTime.of(2026, 9, 28, 0, 0))
+        val normalized = normalizeAllDay(draft)
+        assertEquals(LocalDateTime.of(2026, 9, 26, 0, 0), normalized.start)
+        assertEquals(LocalDateTime.of(2026, 9, 28, 0, 0), normalized.end) // 覆盖 26、27 两天
+    }
+
+    @Test
+    fun `全天归一化兜底结束不晚于开始时保一天`() {
+        val draft = EventDefaults.draft(LocalDateTime.of(2026, 9, 27, 8, 0))
+            .copy(title = "异常草稿", allDay = true, end = LocalDateTime.of(2026, 9, 27, 0, 0))
+        val normalized = normalizeAllDay(draft)
+        assertEquals(LocalDateTime.of(2026, 9, 28, 0, 0), normalized.end)
+    }
+
+    @Test
+    fun `开启全天_当日定时事件转为单日全天`() {
+        val draft = EventDefaults.draft(LocalDateTime.of(2026, 9, 30, 14, 30))
+            .copy(title = "团建") // 14:30–15:30
+        val allDay = EventDefaults.toAllDay(draft)
+        assertTrue(allDay.allDay)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 0, 0), allDay.start)
+        assertEquals(LocalDateTime.of(2026, 10, 1, 0, 0), allDay.end)
+    }
+
+    @Test
+    fun `开启全天_跨零点的定时事件转为两日全天`() {
+        val draft = EventDefaults.draft(LocalDateTime.of(2026, 9, 30, 23, 0))
+            .copy(title = "通宵", end = LocalDateTime.of(2026, 10, 1, 1, 0))
+        val allDay = EventDefaults.toAllDay(draft)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 0, 0), allDay.start)
+        assertEquals(LocalDateTime.of(2026, 10, 2, 0, 0), allDay.end)
+    }
+
+    @Test
+    fun `关闭全天恢复九点到十点`() {
+        val allDay = EventDefaults.draft(LocalDateTime.of(2026, 9, 30, 0, 0))
+            .copy(
+                title = "度假",
+                allDay = true,
+                end = LocalDateTime.of(2026, 10, 3, 0, 0),
+            )
+        val timed = EventDefaults.fromAllDay(allDay)
+        assertFalse(timed.allDay)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 9, 0), timed.start)
+        assertEquals(LocalDateTime.of(2026, 9, 30, 10, 0), timed.end)
+    }
 }

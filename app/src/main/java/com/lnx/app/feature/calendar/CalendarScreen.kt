@@ -28,10 +28,15 @@ import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
 import com.lnx.app.feature.calendar.week.WeekView
 import com.lnx.app.feature.event.EventDefaults
+import com.lnx.app.feature.event.EventDetailContent
 import com.lnx.app.feature.event.EventEditScreen
+import com.lnx.app.feature.event.LnxDetailSheet
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+
+/** 编辑页入口:M2 无导航图的临时路由,eventId(编辑)与 start(新建)恰好给一个 */
+private data class EditorTarget(val eventId: String? = null, val start: LocalDateTime? = null)
 
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
@@ -39,13 +44,13 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
 
     // M2: 编辑页/详情卡的临时态;M3 引入导航图后改为 NavHost 路由
     var detailTarget by remember { mutableStateOf<Occurrence?>(null) }
-    var editorRequest by remember { mutableStateOf<LocalDateTime?>(null) }
+    var editorTarget by remember { mutableStateOf<EditorTarget?>(null) }
     val onEventClick: (Occurrence) -> Unit = remember { { detailTarget = it } }
-    val onEmptySlotClick: (LocalDateTime) -> Unit = remember { { editorRequest = it } }
+    val onEmptySlotClick: (LocalDateTime) -> Unit = remember { { editorTarget = EditorTarget(start = it) } }
     val onFabClick: () -> Unit = remember {
         {
             val selected = state.selectedDate
-            editorRequest = EventDefaults.startFor(selected, LocalTime.now())
+            editorTarget = EditorTarget(start = EventDefaults.startFor(selected, LocalTime.now()))
         }
     }
     // 重叠提示落在日历页:编辑页保存后即关闭,提示得由这里弹(spec §3.5:不阻止保存)
@@ -105,14 +110,34 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
         )
 
         // 全屏编辑页覆盖在日历之上(M2 还没有导航图,M3 换 NavHost)
-        editorRequest?.let { start ->
+        editorTarget?.let { target ->
             EventEditScreen(
-                start = start,
-                onClose = { editorRequest = null },
+                start = target.start,
+                eventId = target.eventId,
+                onClose = { editorTarget = null },
                 onSaved = { overlaps -> overlapNotice = overlaps.firstOrNull() },
             )
         }
-    }
 
-    detailTarget?.let { /* 详情弹卡在 Task 5 接入 */ }
+        // 事件详情卡(spec §3.6):编辑转到编辑页,删除确认后删除(M2 只有普通事件)
+        detailTarget?.let { occ ->
+            LnxDetailSheet(
+                visible = true,
+                onDismiss = { detailTarget = null },
+                title = occ.event.title,
+            ) {
+                EventDetailContent(
+                    event = occ.event,
+                    onEdit = {
+                        detailTarget = null
+                        editorTarget = EditorTarget(eventId = occ.event.id)
+                    },
+                    onDelete = {
+                        detailTarget = null
+                        viewModel.deleteEvent(occ.event.id)
+                    },
+                )
+            }
+        }
+    }
 }

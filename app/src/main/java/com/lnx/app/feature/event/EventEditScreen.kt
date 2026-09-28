@@ -5,6 +5,8 @@ import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +30,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +48,7 @@ import com.lnx.app.core.domain.model.Priority
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 新建 / 编辑事件(spec §3.5 字段顺序:标题 → 全天 → 起止 → 地点 → 重复 → 提醒 → 标签 → 颜色 → 优先级 → 备注)。
@@ -54,6 +58,8 @@ import java.time.format.DateTimeFormatter
 fun EventEditScreen(
     /** 预填的开始时间(spec §3.5 三入口规则);编辑既有事件时传 null */
     start: LocalDateTime? = null,
+    /** 编辑既有事件的 id;新建时传 null。start / eventId 必须恰好给一个 */
+    eventId: String? = null,
     onClose: () -> Unit,
     onSaved: (overlapTitles: List<String>) -> Unit = {},
     viewModel: EventEditViewModel = hiltViewModel(),
@@ -61,9 +67,12 @@ fun EventEditScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val draft = state.draft
 
-    // 没有导航图时由调用方给定预填时间
-    LaunchedEffect(start) {
-        start?.let(viewModel::initialize)
+    // 没有导航图时由调用方显式给定入口;ViewModel 跨多次打开存活,每次进入组合必须重置
+    LaunchedEffect(start, eventId) {
+        when {
+            eventId != null -> viewModel.initializeEvent(eventId)
+            start != null -> viewModel.initialize(start)
+        }
     }
 
     // 只有真的保存成功才关闭:校验不过时留在页面并显示错误(否则用户会丢失输入)
@@ -170,11 +179,11 @@ fun EventEditScreen(
             )
 
             ReadonlyRow("重复", "不重复(M4 起可设置)")
-            ReadonlyRow("标签", "M3 起可添加")
             ReminderPicker(
                 selected = draft.reminderLeadMinutes,
                 onSelect = viewModel::setReminderLead,
             )
+            ReadonlyRow("标签", "M3 起可添加")
             ColorPicker(
                 selected = draft.colorSlot,
                 onSelect = viewModel::setColorSlot,
@@ -205,9 +214,11 @@ fun EventEditScreen(
     }
 }
 
-private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val DATETIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日 E HH:mm")
-private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日 E")
+// 应用界面文案是中文(v0.1 不做 i18n):钉住 locale,否则 "E" 会随设备语言变成 Mon/周日 混排
+private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
+private val DATETIME_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("M月d日 E HH:mm", Locale.CHINA)
+private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日 E", Locale.CHINA)
 
 @Composable
 private fun ReadonlyRow(label: String, value: String) {
@@ -293,88 +304,102 @@ private fun DateField(
     }
 }
 
+/** 三个选择器共用的"标签行 + 选项行"结构;选项一律包在 48dp 触达目标里 */
 @Composable
 private fun ReminderPicker(selected: Int?, onSelect: (Int?) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("提醒", style = MaterialTheme.typography.bodyMedium)
-        listOf(null, 5, 15, 30, 60).forEach { minutes ->
-            val label = minutes?.let { "$it 分" } ?: "不提醒"
-            val isSelected = minutes == selected
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surface,
-                    )
-                    .clickable { onSelect(minutes) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                    .testTag("reminder_${minutes ?: "none"}"),
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(null, 5, 15, 30, 60).forEach { minutes ->
+                ChipOption(
+                    text = minutes?.let { "$it 分" } ?: "不提醒",
+                    selected = minutes == selected,
+                    onClick = { onSelect(minutes) },
+                    tag = "reminder_${minutes ?: "none"}",
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
-    val slots = EventColors.list() // 8 个色位(spec §5.4)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("颜色", style = MaterialTheme.typography.bodyMedium)
-        slots.forEachIndexed { index, color ->
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(color)
-                    .border(
-                        width = if (index == selected) 3.dp else 0.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape,
+        // 8 个 48dp 触达点一行放不下:允许横向滑动(固定 8 项,滑动成本很低)
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EventColors.list().forEachIndexed { index, color ->
+                Box(
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null, // 触达区大,涟漪会糊;视觉反馈用选中描边
+                        ) { onSelect(index) }
+                        .testTag("color_$index"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // 视觉仍是 28dp 圆点;选中描边条件挂载(border 0dp 会画 1px 发丝线)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .then(
+                                if (index == selected) {
+                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     )
-                    .clickable { onSelect(index) }
-                    .testTag("color_$index"),
-            )
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun PriorityPicker(selected: Priority, onSelect: (Priority) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("优先级", style = MaterialTheme.typography.bodyMedium)
-        Priority.entries.forEach { p ->
-            val isSelected = p == selected
-            Text(
-                text = p.label,
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surface,
-                    )
-                    .clickable { onSelect(p) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .testTag("priority_${p.name}"),
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Priority.entries.forEach { p ->
+                ChipOption(
+                    text = p.label,
+                    selected = p == selected,
+                    onClick = { onSelect(p) },
+                    tag = "priority_${p.name}",
+                )
+            }
         }
+    }
+}
+
+/** 胶囊选项:视觉小巧,触达目标不小于 48dp(Material 无障碍底线) */
+@Composable
+private fun ChipOption(text: String, selected: Boolean, onClick: () -> Unit, tag: String) {
+    Box(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .clip(RoundedCornerShape(999.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surface,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp)
+            .testTag(tag),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

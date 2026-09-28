@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class ViewMode(val label: String) { DAY("日"), WEEK("周"), MONTH("月") }
@@ -66,4 +67,9 @@ class CalendarViewModel @Inject constructor(
     fun selectViewMode(mode: ViewMode) = selection.update { it.copy(viewMode = mode) }
 
     fun backToToday() = selection.update { it.copy(selectedDate = today) }
+
+    /** 删除事件(spec §3.6);软删除,Room 失效通知会让周视图即时消失 */
+    fun deleteEvent(id: String) {
+        viewModelScope.launch { repository.delete(id) }
+    }
 }

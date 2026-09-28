@@ -58,12 +58,28 @@ class EventEditViewModel @Inject constructor(
     }
 
     /**
-     * 无导航图时由调用方显式给定预填时间(spec §3.5 的三入口规则)。
-     * 只在草稿尚未初始化时生效,避免覆盖用户已输入的内容。
+     * 新建入口:由调用方给定预填时间(spec §3.5 的三入口规则)。
+     * 无导航图时 ViewModel 挂在 Activity 上、跨多次打开存活,
+     * 所以这里必须**无条件**重置整个状态——否则第二次打开会残留上一次的草稿。
      */
     fun initialize(start: LocalDateTime) {
-        if (_uiState.value.draft == null) {
-            _uiState.update { it.copy(draft = EventDefaults.draft(start)) }
+        _uiState.value = EventEditUiState(draft = EventDefaults.draft(start))
+    }
+
+    /** 编辑入口:按 id 载入既有事件;事件已被删除时退化为新建 */
+    fun initializeEvent(eventId: String) {
+        val blank = EventEditUiState()
+        _uiState.value = blank
+        viewModelScope.launch {
+            val event = repository.getEvent(eventId)
+            // 载入是异步的:若期间调用方又 initialize(新建),丢弃这次过期结果
+            _uiState.compareAndSet(
+                blank,
+                blank.copy(
+                    draft = event?.toDraft() ?: EventDefaults.draft(LocalDateTime.now()),
+                    isEditing = event != null,
+                ),
+            )
         }
     }
 
@@ -81,16 +97,12 @@ class EventEditViewModel @Inject constructor(
     fun setPriority(priority: Priority) = update { it.copy(priority = priority) }
     fun setReminderLead(minutes: Int?) = update { it.copy(reminderLeadMinutes = minutes) }
 
-    /** 全天开关:关回定时时把时间恢复成 09:00–10:00,避免留下 00:00 的时间 */
+    /** 全天开关:开 = 规范形(起始日 00:00 → 结束日次日 00:00);关 = 恢复 09:00–10:00 */
     fun toggleAllDay(enabled: Boolean) = update { draft ->
-        if (!enabled && draft.allDay) {
-            draft.copy(
-                allDay = false,
-                start = draft.start.toLocalDate().atTime(9, 0),
-                end = draft.start.toLocalDate().atTime(10, 0),
-            )
-        } else {
-            draft.copy(allDay = enabled)
+        when {
+            enabled && !draft.allDay -> EventDefaults.toAllDay(draft)
+            !enabled && draft.allDay -> EventDefaults.fromAllDay(draft)
+            else -> draft.copy(allDay = enabled)
         }
     }
 
