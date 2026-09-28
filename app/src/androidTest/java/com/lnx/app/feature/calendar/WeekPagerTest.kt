@@ -9,16 +9,29 @@ import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
 import com.lnx.app.core.common.formatTitle
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.DayOfWeek
 import java.time.LocalDate
 
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class WeekPagerTest {
-    @get:Rule
+    // 见 CalendarScreenTest:Hilt 规则必须先于 Compose 规则
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
     val rule = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun inject() {
+        hiltRule.inject()
+    }
 
     // 注:testTag 为 week_header_{ISO 周一日期},故用 with(MONDAY) 而非 formatTitle
     private fun mondayOf(date: LocalDate) = date.with(DayOfWeek.MONDAY)

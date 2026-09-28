@@ -9,16 +9,30 @@ import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
 import com.lnx.app.core.common.formatTitle
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.DayOfWeek
 import java.time.LocalDate
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class CalendarScreenTest {
-    @get:Rule
+    // M2 起测试基座换成 HiltTestApplication(为新数据链路准备测试替身),
+    // 启动 Activity 的用例必须带 Hilt 规则,且它必须排在 Compose 规则之前
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
     val rule = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun inject() {
+        hiltRule.inject()
+    }
 
     @Test
     fun `默认周视图且标题存在`() {

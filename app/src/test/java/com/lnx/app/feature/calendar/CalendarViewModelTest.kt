@@ -25,26 +25,6 @@ private class FakeEventRepository(
 ) : EventRepository {
     val observedRanges = mutableListOf<Pair<LocalDateTime, LocalDateTime>>()
 
-    private fun occurrence(id: String, start: String, end: String) = Occurrence(
-        event = Event(
-            id = id,
-            title = id,
-            allDay = false,
-            start = LocalDateTime.parse(start),
-            end = LocalDateTime.parse(end),
-            location = null,
-            notes = null,
-            colorSlot = 0,
-            priority = Priority.P2,
-            reminderLeadMinutes = null,
-            rule = EventRule(),
-            createdAt = 0L,
-            updatedAt = 0L,
-        ),
-        start = LocalDateTime.parse(start),
-        end = LocalDateTime.parse(end),
-    )
-
     override fun observeOccurrences(
         start: LocalDateTime,
         end: LocalDateTime,
@@ -73,6 +53,27 @@ private class FakeEventRepository(
 }
 
 class CalendarViewModelTest {
+    /** 构造一条落在指定周内的发生,供 ViewModel 测试预置 */
+    private fun occurrence(id: String, start: String, end: String) = Occurrence(
+        event = Event(
+            id = id,
+            title = id,
+            allDay = false,
+            start = LocalDateTime.parse(start),
+            end = LocalDateTime.parse(end),
+            location = null,
+            notes = null,
+            colorSlot = 0,
+            priority = Priority.P2,
+            reminderLeadMinutes = null,
+            rule = EventRule(),
+            createdAt = 0L,
+            updatedAt = 0L,
+        ),
+        start = LocalDateTime.parse(start),
+        end = LocalDateTime.parse(end),
+    )
+
     // viewModelScope 依赖 Dispatchers.Main,JVM 单测没有主线程,必须替换
     private val dispatcher = UnconfinedTestDispatcher()
 
@@ -121,16 +122,30 @@ class CalendarViewModelTest {
 
     @Test
     fun `按选中周查询并把发生放进状态`() {
-        val today = LocalDate.now()
-        val repo = FakeEventRepository()
+        val thisMonday = LocalDate.now().minusDays((LocalDate.now().dayOfWeek.value - 1).toLong())
+        // 预置一条落在本周的事件,证明 occurrences 真的流进了状态
+        val repo = FakeEventRepository(
+            listOf(
+                occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
+            ),
+        )
         val vm = CalendarViewModel(repo)
-        // 选中日所在周的周一 00:00 到下周一 00:00
-        val monday = today.minusDays((today.dayOfWeek.value - 1).toLong())
-        val start = LocalDateTime.of(monday, java.time.LocalTime.MIDNIGHT)
-        vm.selectDate(monday)
+        vm.selectDate(thisMonday)
+        assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
+
+        val start = LocalDateTime.of(thisMonday, java.time.LocalTime.MIDNIGHT)
         val range = repo.observedRanges.last()
         assertEquals(start, range.first)
         assertEquals(start.plusWeeks(1), range.second)
-        assertEquals(emptyList<Occurrence>(), vm.uiState.value.occurrences)
+    }
+
+    @Test
+    fun `切换到另一周会重新查询`() {
+        val repo = FakeEventRepository()
+        val vm = CalendarViewModel(repo)
+        val before = repo.observedRanges.size
+        // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
+        vm.selectDate(LocalDate.now().plusWeeks(3))
+        assertEquals(before + 1, repo.observedRanges.size)
     }
 }

@@ -22,8 +22,12 @@ import java.time.LocalDateTime
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // M2: 详情/编辑的临时态;Task 4/5 接入真实编辑页与弹卡
+    // M2: 详情/编辑的临时态;Task 4/5 接入真实编辑页与弹卡。
+    // 用 remember 固定 lambda:否则每次重组都会生成新实例,让网格的 pointerInput
+    // 以它为 key 而重启手势监听。
     var detailTarget by remember { mutableStateOf<Occurrence?>(null) }
+    val onEventClick: (Occurrence) -> Unit = remember { { detailTarget = it } }
+    val onEmptySlotClick: (LocalDateTime) -> Unit = remember { { /* 新建页在 Task 4 接入 */ } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         CalendarTopBar(
@@ -44,8 +48,8 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 today = remember { LocalDate.now() },
                 onSelectDate = viewModel::selectDate,
                 occurrences = state.occurrences,
-                onEventClick = { detailTarget = it },
-                onEmptySlotClick = { _: LocalDateTime -> /* 新建页在 Task 4 接入 */ },
+                onEventClick = onEventClick,
+                onEmptySlotClick = onEmptySlotClick,
                 modifier = Modifier.weight(1f),
             )
             ViewMode.MONTH -> PlaceholderScreen("月视图将在后续里程碑提供")

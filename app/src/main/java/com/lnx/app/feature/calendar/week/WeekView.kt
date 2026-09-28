@@ -337,7 +337,9 @@ private fun TimeGrid(
                         detectTapGestures { offset ->
                             val col = (offset.x / (size.width / 7f)).toInt().coerceIn(0, 6)
                             val rawMinute = offset.y / hourPx * 60f
-                            val minute = (rawMinute / SNAP_MINUTES).roundToInt() * SNAP_MINUTES
+                            // spec §3.2:吸附到"所在 30 分钟格的开头"= 向下取整,
+                            // 不能四舍五入(那会把每格的上半段推到下一格,一半点击报错时间)
+                            val minute = (rawMinute / SNAP_MINUTES).toInt() * SNAP_MINUTES
                                 .coerceIn(0, 24 * 60 - SNAP_MINUTES)
                             onEmptySlotClick(
                                 weekStart.plusDays(col.toLong())
@@ -377,25 +379,39 @@ private fun TimeGrid(
                 blocks.forEach { day ->
                     day.forEach { b ->
                         val w = colWidth / b.lanes
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .offset(x = w * b.lane, y = (b.topMinutes / 60f * HOUR_HEIGHT.value).dp)
                                 .width((w - 1.dp).coerceAtLeast(1.dp))
-                                .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp.coerceAtLeast(8.dp))
+                                .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp)
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .clickable { onEventClick(b.occurrence) }
-                                .testTag("event_${b.occurrence.event.id}"),
-                            contentAlignment = Alignment.CenterStart,
+                                .testTag("event_block_${b.occurrence.event.id}"),
+                            verticalArrangement = Arrangement.Center,
                         ) {
                             Text(
                                 text = b.occurrence.event.title,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 3.dp),
                             )
+                            // 时间行只在块够高时显示(spec §3.5:标题 1 行 + 时间 1 行)
+                            if (b.heightMinutes >= 30f) {
+                                Text(
+                                    text = "%02d:%02d".format(
+                                        b.occurrence.start.hour,
+                                        b.occurrence.start.minute,
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        .copy(alpha = 0.75f),
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 3.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -409,13 +425,16 @@ private fun TimeGrid(
                 )
             }
         }
-        // 空状态(spec §3.14;M1 恒为空)
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = if (selectedDate == today) "今天没有日程,享受自由时光 🌤"
-                else "这天没有日程,享受自由时光 🌤",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // 空状态(spec §3.14):仅当这一周确实没有事件时才显示,
+        // 否则会盖在事件块上面(M1 时网格恒空,这个遮罩是无害的)
+        if (occurrences.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (selectedDate == today) "今天没有日程,享受自由时光 🌤"
+                           else "这天没有日程,享受自由时光 🌤",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

@@ -61,7 +61,8 @@ object LaneLayout {
             LaneSlot(
                 id = span.id,
                 lane = laneOf.getValue(span.id),
-                lanes = clusterPeak[cluster],
+                // 至少 1 道:零长事件的并发计数为 0,会让调用方算出 Infinity 宽度
+                lanes = maxOf(1, clusterPeak[cluster]),
             )
         }
     }
