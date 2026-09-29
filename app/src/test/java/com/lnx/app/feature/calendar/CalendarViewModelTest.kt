@@ -9,7 +9,12 @@ import com.lnx.app.core.domain.model.EventException
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
+import com.lnx.app.core.domain.model.RuleEnd
+import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.recurrence.EditScope
+import com.lnx.app.core.domain.recurrence.RecurrenceEngine
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
@@ -28,8 +33,11 @@ import org.junit.Test
 /** 假仓库:区间查询直接回放预置的发生 */
 private class FakeEventRepository(
     private val occurrences: List<Occurrence> = emptyList(),
+    /** 真母事件(重复系列的原始行);getEvent 优先取它——重复发生上带的 start 是那一次,不是系列起点 */
+    private val masters: Map<String, Event> = emptyMap(),
 ) : EventRepository {
     val observedRanges = mutableListOf<Pair<LocalDateTime, LocalDateTime>>()
+    val saved = mutableListOf<Event>()
 
     override fun observeOccurrences(
         start: LocalDateTime,
@@ -51,9 +59,11 @@ private class FakeEventRepository(
     }
 
     override suspend fun getEvent(id: String): Event? =
-        occurrences.firstOrNull { it.event.id == id }?.event
+        masters[id] ?: occurrences.firstOrNull { it.event.id == id }?.event
 
-    override suspend fun save(event: Event) = Unit
+    override suspend fun save(event: Event) {
+        saved += event
+    }
 
     override suspend fun delete(id: String) = Unit
 
@@ -208,5 +218,41 @@ class CalendarViewModelTest {
         assertTrue(vm.uiState.value.occurrences.isEmpty())
         assertTrue(vm.uiState.value.dayOccurrences.isEmpty())
         assertTrue(vm.uiState.value.monthOccurrences.isEmpty())
+    }
+
+    @Test
+    fun `删本次及以后_按真母事件剪断_系列起点和剪断日之前的发生都不丢`() {
+        // 回归:删除路径曾把"那一次的发生"当母事件落库,startAt 被改写成剪断日,
+        // 叠加 Until(前一天)后整条系列一条都不剩 —— 剪断日之前的历史全被抹掉。
+        val seriesStart = LocalDateTime.parse("2026-09-29T09:00")
+        val cutDate = LocalDate.parse("2026-12-01")
+        val rule = EventRule(type = RuleType.DAILY, interval = 1)
+        val master = Event(
+            id = "m1", title = "每日站会", allDay = false,
+            start = seriesStart, end = seriesStart.plusHours(1),
+            location = null, notes = null, colorSlot = 0, priority = Priority.P2,
+            reminderLeadMinutes = null, rule = rule, createdAt = 0L, updatedAt = 0L,
+        )
+        // 详情页拿到的发生:event.start 是"这一次"的日期,不是系列起点
+        val occurrence = Occurrence(
+            event = master.copy(start = cutDate.atTime(9, 0), end = cutDate.atTime(10, 0)),
+            start = cutDate.atTime(9, 0),
+            end = cutDate.atTime(10, 0),
+            originalDate = cutDate,
+        )
+        val repo = FakeEventRepository(masters = mapOf("m1" to master))
+
+        vm(repo).deleteOccurrence(occurrence, EditScope.THIS_AND_FUTURE)
+
+        assertEquals(1, repo.saved.size)
+        val saved = repo.saved.single()
+        assertEquals(seriesStart, saved.start)
+        assertEquals(RuleEnd.Until(cutDate.minusDays(1)), saved.rule.end)
+        // 剪断日之前的历史发生必须还在(以引擎实际展开为准,不是只看规则字段)
+        val kept = RecurrenceEngine.expand(
+            saved.rule, saved.start, Duration.between(saved.start, saved.end),
+            seriesStart, cutDate.atStartOfDay(),
+        )
+        assertTrue("剪断日之前应仍有发生", kept.isNotEmpty())
     }
 }

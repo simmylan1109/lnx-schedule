@@ -21,6 +21,9 @@ enum class EditScope { THIS_ONLY, THIS_AND_FUTURE, ALL }
  *   Count 统计截止日前的发生次数),剪断日起的例外清掉,改的时候再建一条新母事件。
  *
  * `edited = null` 表示删除。纯落库逻辑,不动 UI;数据库写入全部走 [EventRepository]。
+ *
+ * **调用方必须传母事件行本身**(按 id 从库里回读),不能传 `Occurrence.event`:
+ * 后者的 start/end 是"那一次"的发生时间,落库会把系列起点改写成它。
  */
 @Singleton
 class RecurrenceEditHandler @Inject constructor(

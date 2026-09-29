@@ -161,9 +161,12 @@ class CalendarViewModel @Inject constructor(
     /** 详情卡删除:按作用范围落库(单次事件也是 ALL,走同一入口) */
     fun deleteOccurrence(occ: Occurrence, scope: EditScope) {
         viewModelScope.launch {
+            // 必须按 id 回读真母事件:occ.event 带的 start 是"那一次"的日期,
+            // 直接落库会把系列起点改写成被删那次,剪断日之前的历史会整条消失。
+            val master = repository.getEvent(occ.event.id) ?: occ.event
             recurrenceHandler.apply(
-                master = occ.event,
-                originalDate = occ.originalDate ?: occ.event.start.toLocalDate(),
+                master = master,
+                originalDate = occ.originalDate ?: master.start.toLocalDate(),
                 edited = null,
                 scope = scope,
             )

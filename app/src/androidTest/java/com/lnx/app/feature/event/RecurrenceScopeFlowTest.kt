@@ -50,17 +50,18 @@ class RecurrenceScopeFlowTest {
 
     private val title = "范围测试"
 
-    /** 预置"每周今天 10:00-10:30、永不结束"的母事件 */
-    private fun seed() {
+    /** 预置"每周今天 10:00-10:30、永不结束"的母事件;[startedWeeksAgo] 让系列起点早于本周几周 */
+    private fun seed(startedWeeksAgo: Long = 0) {
         val today = LocalDate.now()
+        val seriesStart = today.minusWeeks(startedWeeksAgo)
         runBlocking {
             repository.save(
                 Event(
                     id = "scope-master",
                     title = title,
                     allDay = false,
-                    start = today.atTime(10, 0),
-                    end = today.atTime(10, 30),
+                    start = seriesStart.atTime(10, 0),
+                    end = seriesStart.atTime(10, 30),
                     location = null,
                     notes = null,
                     colorSlot = 3,
@@ -153,6 +154,24 @@ class RecurrenceScopeFlowTest {
         assertEquals(0, countIn(1, title))
         // 新系列往后再走 4 周都还在(母事件没断)
         assertEquals(1, countIn(4, "新系列"))
+    }
+
+    @Test
+    fun `本次及以后删除_从这次起清空_更早的历史发生都还在`() {
+        // 回归:删除路径曾把"那一次的发生"当母事件落库,系列起点被改写成今天,
+        // 叠加 Until(昨天)后整条系列清零 —— 三周前就存在的历史发生也跟着消失。
+        seed(startedWeeksAgo = 3)
+        openDetail()
+        rule.onNodeWithTag("detail_delete").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("scope_THIS_AND_FUTURE").performClick()
+
+        rule.waitUntil(timeoutMillis = 5_000) { countIn(0, title) == 0 }
+        assertEquals(0, countIn(0, title)) // 这次起不再有
+        assertEquals(0, countIn(1, title)) // 往后也没有
+        assertEquals(1, countIn(-1, title)) // 更早的三周一次都没丢
+        assertEquals(1, countIn(-2, title))
+        assertEquals(1, countIn(-3, title))
     }
 
     @Test
