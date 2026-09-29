@@ -2,6 +2,7 @@ package com.lnx.app.feature.event
 
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Event
+import com.lnx.app.core.domain.model.EventException
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
@@ -40,6 +41,15 @@ class OverlapCheckerTest {
         override suspend fun save(event: Event) = Unit
 
         override suspend fun delete(id: String) = Unit
+
+        // M4 起的例外操作与本测试无关,占位实现
+        override suspend fun upsertException(exception: EventException) = Unit
+
+        override suspend fun cancelOccurrence(masterId: String, originalDate: LocalDate) = Unit
+
+        override suspend fun deleteExceptionsFor(masterId: String) = Unit
+
+        override suspend fun deleteExceptionsFrom(masterId: String, from: LocalDate) = Unit
     }
 
     private fun event(id: String, start: LocalDateTime, end: LocalDateTime) = Event(

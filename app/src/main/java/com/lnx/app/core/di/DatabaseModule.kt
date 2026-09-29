@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.lnx.app.core.database.LnxDatabase
 import com.lnx.app.core.database.dao.EventDao
+import com.lnx.app.core.database.dao.EventExceptionDao
 import com.lnx.app.core.database.dao.TagDao
 import dagger.Module
 import dagger.Provides
@@ -25,6 +26,9 @@ object DatabaseModule {
 
     @Provides
     fun provideEventDao(db: LnxDatabase): EventDao = db.eventDao()
+
+    @Provides
+    fun provideEventExceptionDao(db: LnxDatabase): EventExceptionDao = db.eventExceptionDao()
 
     @Provides
     fun provideTagDao(db: LnxDatabase): TagDao = db.tagDao()

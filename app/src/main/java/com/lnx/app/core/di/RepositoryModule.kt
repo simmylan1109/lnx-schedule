@@ -2,7 +2,7 @@ package com.lnx.app.core.di
 
 import com.lnx.app.core.data.EventRepositoryImpl
 import com.lnx.app.core.data.TagRepositoryImpl
-import com.lnx.app.core.domain.BasicOccurrenceExpander
+import com.lnx.app.core.domain.DefaultOccurrenceExpander
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.OccurrenceExpander
 import com.lnx.app.core.domain.TagRepository
@@ -25,5 +25,5 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindOccurrenceExpander(impl: BasicOccurrenceExpander): OccurrenceExpander
+    abstract fun bindOccurrenceExpander(impl: DefaultOccurrenceExpander): OccurrenceExpander
 }

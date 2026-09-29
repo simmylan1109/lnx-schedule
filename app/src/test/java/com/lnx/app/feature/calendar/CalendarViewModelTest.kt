@@ -4,6 +4,7 @@ import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.TagFilterState
 import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Event
+import com.lnx.app.core.domain.model.EventException
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
@@ -54,6 +55,14 @@ private class FakeEventRepository(
     override suspend fun save(event: Event) = Unit
 
     override suspend fun delete(id: String) = Unit
+
+    override suspend fun upsertException(exception: EventException) = Unit
+
+    override suspend fun cancelOccurrence(masterId: String, originalDate: LocalDate) = Unit
+
+    override suspend fun deleteExceptionsFor(masterId: String) = Unit
+
+    override suspend fun deleteExceptionsFrom(masterId: String, from: LocalDate) = Unit
 }
 
 /** 假标签仓库:默认空实现;[tagIdsByEvent] 非空时用来验证三个视图窗口都走了同一套筛选 */
