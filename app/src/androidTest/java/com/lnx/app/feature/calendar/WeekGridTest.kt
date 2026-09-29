@@ -51,7 +51,8 @@ class WeekGridTest {
 
     @Test
     fun `空状态文案显示`() {
-        rule.onNodeWithText("今天没有日程,享受自由时光 🌤", substring = true).assertExists()
+        // 末尾的装饰图标已从 emoji 换成 Canvas 画的小太阳(spec §5.3),文案本身不再带符号
+        rule.onNodeWithText("今天没有日程,享受自由时光", substring = true).assertExists()
     }
 
     // 滚动可滚性:把远离当前时刻的底部刻度(23:00)滚进可视区。

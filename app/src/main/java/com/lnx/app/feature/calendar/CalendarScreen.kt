@@ -99,10 +99,12 @@ fun CalendarScreen(
             overlapNotice = null
         }
     }
-    // 点提醒通知进来(spec §3.8):ViewModel 已定位到那次发生,这里开详情卡并立刻消费掉,
-    // 免得旋转屏幕又弹一次
+    // 点提醒通知进来(spec §3.8)。两个 effect 必须分开:openEvent 是异步查库,
+    // openTarget 要等它出结果才变;合成一个的话第二次读到的还是初始 null,详情卡永远不弹。
     LaunchedEffect(openRequest) {
         openRequest?.let { viewModel.openEvent(it.eventId, it.occurrenceStart) }
+    }
+    LaunchedEffect(openTarget) {
         openTarget?.let {
             detailTarget = it
             viewModel.consumeOpenTarget()

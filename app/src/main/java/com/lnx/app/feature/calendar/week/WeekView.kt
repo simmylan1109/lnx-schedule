@@ -34,7 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -535,12 +537,43 @@ internal fun TimeGrid(
         // 否则会盖在事件块上面(M1 时网格恒空,这个遮罩是无害的)
         if (emptyCheck.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = if (selectedDate == today) "今天没有日程,享受自由时光 🌤"
-                           else "这天没有日程,享受自由时光 🌤",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // 装饰用矢量图标(spec §5.3:不拿 emoji 当图标)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SunGlyph(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (selectedDate == today) "今天没有日程,享受自由时光"
+                               else "这天没有日程,享受自由时光",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
+        }
+    }
+}
+
+/**
+ * 空状态那枚小太阳(spec §5.3:不拿 emoji 当图标)。
+ * 用 Canvas 画而不是 `Icons.Outlined.WbSunny`:后者在 material-icons-extended 里,
+ * 为了一个装饰图案把整个图标包拖进 APK 不划算。
+ */
+@Composable
+private fun SunGlyph(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.26f
+        val stroke = 1.6.dp.toPx()
+        drawCircle(color = color, radius = radius, center = center, style = Stroke(width = stroke))
+        for (i in 0 until 8) {
+            val angle = Math.toRadians(i * 45.0)
+            val dx = kotlin.math.cos(angle).toFloat()
+            val dy = kotlin.math.sin(angle).toFloat()
+            drawLine(
+                color = color,
+                start = Offset(center.x + dx * radius * 1.7f, center.y + dy * radius * 1.7f),
+                end = Offset(center.x + dx * radius * 2.6f, center.y + dy * radius * 2.6f),
+                strokeWidth = stroke,
+            )
         }
     }
 }
