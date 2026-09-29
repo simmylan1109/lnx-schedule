@@ -14,10 +14,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/** 设置仓库(spec §3.11):DataStore + 绑接口,测试侧可整块替换 */
+/**
+ * DataStore 单独一个模块:仪器测试只需要把"存哪儿"换掉(每个用例一个独立文件,
+ * 否则同一进程里多个 DataStore 抢同一个文件会抛 "multiple DataStores active"),
+ * 设置读写逻辑本身照旧走被测实现。
+ */
 @Module
 @InstallIn(SingletonComponent::class)
-object SettingsModule {
+object SettingsDataStoreModule {
 
     @Provides
     @Singleton
@@ -26,9 +30,15 @@ object SettingsModule {
             context.preferencesDataStoreFile(SETTINGS_FILE)
         }
 
+    private const val SETTINGS_FILE = "lnx_settings"
+}
+
+/** 设置仓库绑定 */
+@Module
+@InstallIn(SingletonComponent::class)
+object SettingsModule {
+
     @Provides
     @Singleton
     fun provideSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository = impl
-
-    private const val SETTINGS_FILE = "lnx_settings"
 }

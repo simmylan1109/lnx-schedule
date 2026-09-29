@@ -29,4 +29,17 @@ object SettingsDefaults {
 
     /** 提醒可选项(spec §3.11):不提醒 / 5 / 15 / 30 / 60 */
     val REMINDER_CHOICES: List<Int?> = listOf(null, 5, 15, 30, 60)
+
+    /** 全部出厂值组成的一份快照:DataStore 首帧还没吐出来时先用它渲染,避免主题闪一下 */
+    fun snapshot(): LnxSettings = LnxSettings(
+        themeSlot = THEME_SLOT,
+        darkMode = DARK_MODE,
+        reminderLeadMinutes = REMINDER_LEAD_MINUTES,
+        dndEnabled = DND_ENABLED,
+        dndStartMinute = DND_START_MINUTE,
+        dndEndMinute = DND_END_MINUTE,
+        weekStartMonday = WEEK_START_MONDAY,
+        language = LANGUAGE,
+        onboardingDone = ONBOARDING_DONE,
+    )
 }

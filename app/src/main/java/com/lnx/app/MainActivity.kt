@@ -5,23 +5,32 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.lnx.app.core.designsystem.DarkMode
+import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lnx.app.core.designsystem.LnxMotion
 import com.lnx.app.core.designsystem.LnxTheme
-import com.lnx.app.core.designsystem.ThemeSlot
-import com.lnx.app.core.notification.fromEpochMillis
 import com.lnx.app.core.notification.ReminderNotifier
+import com.lnx.app.core.notification.fromEpochMillis
+import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.SettingsRepository
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
 
     /** 点提醒通知带过来的打开请求(spec §3.8);Activity 是 singleTask,已在前台时走 onNewIntent */
     private var openRequest by mutableStateOf<OpenEventRequest?>(null)
@@ -33,9 +42,18 @@ class MainActivity : ComponentActivity() {
         // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页在 M7 接入。
         handleOpenRequest(intent)
         setContent {
-            LnxTheme(slot = ThemeSlot.MATERIAL_YOU, darkMode = DarkMode.FOLLOW_SYSTEM) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    CalendarScreen(openRequest = openRequest)
+            // 首帧先用出厂值渲染,DataStore 吐真值后再 Crossfade,避免开机白闪一下
+            val settings by settingsRepository.settings
+                .collectAsStateWithLifecycle(initialValue = SettingsDefaults.snapshot())
+            Crossfade(
+                targetState = settings.themeSlot,
+                animationSpec = tween(LnxMotion.THEME_CROSSFADE_MILLIS),
+                label = "theme-slot",
+            ) { slot ->
+                LnxTheme(slot = slot, darkMode = settings.darkMode) {
+                    Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
+                        CalendarScreen(openRequest = openRequest)
+                    }
                 }
             }
         }
