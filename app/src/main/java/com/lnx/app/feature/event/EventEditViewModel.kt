@@ -34,6 +34,8 @@ data class EventEditUiState(
     val tags: List<Tag> = emptyList(),
     /** 该事件已选中的标签 */
     val selectedTagIds: Set<String> = emptySet(),
+    /** 新建标签失败的原因(重名等),给对话框内联显示 */
+    val tagCreateError: String? = null,
 )
 
 @HiltViewModel
@@ -106,12 +108,25 @@ class EventEditViewModel @Inject constructor(
         s.copy(selectedTagIds = next)
     }
 
-    fun createTag(name: String, colorSlot: Int) {
-        viewModelScope.launch {
-            val tag = tagRepository.createTag(name, colorSlot)
-            _uiState.update { it.copy(selectedTagIds = it.selectedTagIds + tag.id) }
-        }
-    }
+    /**
+     * 新建标签并自动选中。返回是否成功:重名等失败要把原因留在对话框里让用户改,
+     * 不能弹一下就没了(静默失败过一次,结果是事件挂上不存在的标签 id,界面里再也藏不掉它)。
+     */
+    suspend fun createTag(name: String, colorSlot: Int): Boolean =
+        tagRepository.createTag(name, colorSlot).fold(
+            onSuccess = { tag ->
+                _uiState.update {
+                    it.copy(selectedTagIds = it.selectedTagIds + tag.id, tagCreateError = null)
+                }
+                true
+            },
+            onFailure = { e ->
+                _uiState.update { it.copy(tagCreateError = e.message ?: "创建标签失败") }
+                false
+            },
+        )
+
+    fun clearTagCreateError() = _uiState.update { it.copy(tagCreateError = null) }
 
     fun update(transform: (EventDraft) -> EventDraft) {
         _uiState.update { it.copy(draft = it.draft?.let(transform), errors = emptyList()) }

@@ -16,17 +16,29 @@ class TagRepositoryImpl @Inject constructor(
     override fun observeTags(): Flow<List<Tag>> =
         dao.observeAll().map { list -> list.map(TagEntity::toTag) }
 
-    override suspend fun createTag(name: String, colorSlot: Int): Tag {
+    override suspend fun createTag(name: String, colorSlot: Int): Result<Tag> {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return Result.failure(IllegalArgumentException("标签名不能为空"))
         val now = System.currentTimeMillis()
-        val entity = TagEntity(
+        // 必须先按名字查:name 上有唯一索引,重名时 @Upsert 会吞掉约束异常再按 id 更新(0 行),
+        // 表面上"成功"返回一个不存在的 id,后面事件就会挂上永远看不见也删不掉的幽灵关联。
+        val existing = dao.findByName(trimmed)
+        if (existing != null && !existing.isDeleted) {
+            return Result.failure(IllegalArgumentException("已有同名标签「$trimmed」,换个名字吧"))
+        }
+        val entity = (existing ?: TagEntity(
             id = UUID.randomUUID().toString(),
-            name = name.trim(),
+            name = trimmed,
             colorSlot = colorSlot,
             createdAt = now,
             updatedAt = now,
-        )
+            isDeleted = false,
+        )).let { base ->
+            // 复活软删行:沿用 id 与创建时间,只改颜色和删除标记
+            base.copy(colorSlot = colorSlot, updatedAt = now, isDeleted = false)
+        }
         dao.upsert(entity)
-        return entity.toTag()
+        return Result.success(entity.toTag())
     }
 
     override suspend fun renameTag(id: String, name: String) {

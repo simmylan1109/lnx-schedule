@@ -31,9 +31,21 @@ import androidx.compose.ui.unit.dp
 import com.lnx.app.core.common.dayOfWeekCn
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.CalendarUiState
+import com.lnx.app.feature.calendar.week.AllDayStrip
 import com.lnx.app.feature.calendar.week.TimeGrid
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+
+/**
+ * 这条发生是否落在指定日期上(含跨天)。
+ * 结束为零点是排他存储,不占当天(与 AllDaySpan 同一约定)。
+ */
+internal fun Occurrence.touchesDay(date: LocalDate): Boolean {
+    val lastCovered =
+        if (end.toLocalTime() == LocalTime.MIDNIGHT) end.toLocalDate().minusDays(1) else end.toLocalDate()
+    return !start.toLocalDate().isAfter(date) && !lastCovered.isBefore(date)
+}
 
 /** 日分页锚点:与周 pager 同锚(1970-01-05 周一),页 = 天 */
 private val DAY_PAGE_EPOCH = LocalDate.of(1970, 1, 5).toEpochDay()
@@ -85,11 +97,21 @@ fun DayView(
                 .testTag("day_pager"),
         ) { page ->
             val date = LocalDate.ofEpochDay(DAY_PAGE_EPOCH + page)
+            // 查询窗口是 ±1 天,判空和画条带都只看当天,否则"昨天有事件"会盖掉今天的空态
+            val dayOccurrences = occurrences.filter { it.touchesDay(date) }
             Column(modifier = Modifier.fillMaxSize()) {
                 DayStrip(
                     selectedDate = state.selectedDate,
                     today = today,
                     onSelectDate = onSelectDate,
+                )
+                // 全天/跨天事件(spec §3.3"其余交互与周视图一致"):日视图也得有,
+                // 否则全天事件所在那天整页空白,连空态都不出现
+                AllDayStrip(
+                    occurrences = dayOccurrences,
+                    weekStart = date,
+                    onEventClick = onEventClick,
+                    dayCount = 1,
                 )
                 TimeGrid(
                     selectedDate = state.selectedDate,
@@ -99,6 +121,7 @@ fun DayView(
                     onEventClick = onEventClick,
                     onEmptySlotClick = onEmptySlotClick,
                     dayCount = 1,
+                    emptyCheck = dayOccurrences,
                     modifier = Modifier.weight(1f),
                 )
             }

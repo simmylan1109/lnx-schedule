@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventRule
@@ -22,6 +23,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -43,6 +45,9 @@ class MonthViewTest {
 
     @Inject
     lateinit var repository: EventRepository
+
+    @Inject
+    lateinit var dao: EventDao
 
     @Before
     fun setUp() {
@@ -117,5 +122,24 @@ class MonthViewTest {
             rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText("新建事件").assertExists()
+        // 月历 pager 会把相邻页一起组合进来,同一个日期在多处出现,取第一份即可
+        rule.onAllNodesWithText("${emptyDay.monthValue}月${emptyDay.dayOfMonth}日", substring = true)
+            .onFirst().assertExists()
+        rule.onAllNodesWithText("09:00", substring = true).onFirst().assertExists()
+
+        // 预填真的落进了草稿:存下来查库,而不是只看界面上有这几个字
+        rule.onNodeWithTag("field_title").performTextInput("月视图预填")
+        rule.onNodeWithTag("save_button").performClick()
+        rule.waitUntil(timeoutMillis = 5_000) {
+            rule.onAllNodesWithTag("save_button").fetchSemanticsNodes().isEmpty()
+        }
+        val saved = runBlocking { dao.allOnce().first { it.title == "月视图预填" } }
+        assertEquals(
+            emptyDay.atTime(9, 0),
+            java.time.LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(saved.startAt),
+                java.time.ZoneId.systemDefault(),
+            ),
+        )
     }
 }

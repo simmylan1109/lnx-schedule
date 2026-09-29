@@ -104,6 +104,28 @@ class TagDaoTest {
     }
 
     @Test
+    fun `同名标签不产生第二行且新id查不到`() = runBlocking {
+        // 回归:name 上有唯一索引,而 @Upsert 撞索引时会吞掉约束异常再按 id 更新(0 行),
+        // 表面成功、实则根本没写进去。所以"同名的另一个 id"必须能被查出来才算真写进去。
+        val dao = db.tagDao()
+        dao.upsert(tag("a", "工作"))
+        dao.upsert(tag("b", "工作"))
+        assertEquals(1, dao.observeAll().first().size)
+        assertEquals(null, dao.getById("b"))
+    }
+
+    @Test
+    fun `按名字查能查到软删行`() = runBlocking {
+        // 仓库层靠它决定"重名失败"还是"复活软删行";查不到软删行的话,
+        // 删掉标签后就再也建不出同名标签(唯一索引仍然占着名字)。
+        val dao = db.tagDao()
+        dao.upsert(tag("a", "工作"))
+        dao.softDelete("a", updatedAtMillis = 1L)
+        assertEquals("a", dao.findByName("工作")?.id)
+        assertEquals(null, dao.findByName("不存在"))
+    }
+
+    @Test
     fun `事件与标签关联对可观察`() = runBlocking {
         db.eventDao().upsert(event("e1"))
         db.eventDao().upsert(event("e2"))

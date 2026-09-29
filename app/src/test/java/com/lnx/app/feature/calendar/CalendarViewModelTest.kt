@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -55,11 +56,14 @@ private class FakeEventRepository(
     override suspend fun delete(id: String) = Unit
 }
 
-/** 假标签仓库:VM 测试不关心标签,全部空实现 */
-private class FakeTagRepository : TagRepository {
+/** 假标签仓库:默认空实现;[tagIdsByEvent] 非空时用来验证三个视图窗口都走了同一套筛选 */
+private class FakeTagRepository(
+    private val tagIdsByEvent: Map<String, List<String>> = emptyMap(),
+) : TagRepository {
     override fun observeTags(): Flow<List<Tag>> = MutableStateFlow(emptyList())
 
-    override suspend fun createTag(name: String, colorSlot: Int): Tag = Tag("t-$name", name, colorSlot)
+    override suspend fun createTag(name: String, colorSlot: Int): Result<Tag> =
+        Result.success(Tag("t-$name", name, colorSlot))
 
     override suspend fun renameTag(id: String, name: String) = Unit
 
@@ -69,7 +73,8 @@ private class FakeTagRepository : TagRepository {
 
     override fun observeTagsOfEvent(eventId: String): Flow<List<Tag>> = MutableStateFlow(emptyList())
 
-    override fun observeEventTagIds(): Flow<Map<String, List<String>>> = MutableStateFlow(emptyMap())
+    override fun observeEventTagIds(): Flow<Map<String, List<String>>> =
+        MutableStateFlow(tagIdsByEvent)
 }
 
 class CalendarViewModelTest {
@@ -173,5 +178,25 @@ class CalendarViewModelTest {
         val after = repo.observedRanges
             .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         assertEquals(before + 1, after)
+    }
+
+    @Test
+    fun `勾掉标签后周日月三个窗口都过滤掉该事件`() {
+        // 三个视图各查各的窗口(周 / ±1 天 / ±1 月),最容易出的错就是只过滤了其中一路。
+        // 三路都断言,漏哪一路都会红。
+        val thisMonday = LocalDate.now().with(java.time.DayOfWeek.MONDAY)
+        val repo = FakeEventRepository(
+            listOf(occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00")),
+        )
+        val filterState = TagFilterState()
+        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState)
+        vm.selectDate(thisMonday)
+        assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
+
+        filterState.toggle("t1")
+
+        assertTrue(vm.uiState.value.occurrences.isEmpty())
+        assertTrue(vm.uiState.value.dayOccurrences.isEmpty())
+        assertTrue(vm.uiState.value.monthOccurrences.isEmpty())
     }
 }

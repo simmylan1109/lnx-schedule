@@ -79,16 +79,14 @@ fun MonthView(
         pageCount = { MONTH_PAGE_COUNT },
     )
     // 与周/日视图相同的锚点协议:程序化选择 → 翻页;用户滑月 → 选中当月 1 日(标题/列表随之联动)。
-    // programmatic 标志区分两种 currentPage 变化:否则"点相邻月补位格 → 程序化翻页"会被
-    // 误判成用户滑月,把所选日期覆盖成当月 1 号(跨月点格丢选择,真 bug)。
+    // 真正兜住"跨月补位格丢选择"的是下面那条同月判断,不是任何标志位:
+    // 点相邻月补位格会先写 selectedDate、再由上面翻页,此时所选日期已经落在新月份里,
+    // 所以 currentPage 回写必须识别出"这个月正是所选月"并跳过,否则会把用户选的 11 月 5 号改成 11 月 1 号。
     val userPaged = remember { mutableStateOf(false) }
-    val programmatic = remember { mutableStateOf(false) }
     LaunchedEffect(YearMonth.from(state.selectedDate)) {
         val target = pageOf(YearMonth.from(state.selectedDate))
         if (pagerState.currentPage != target) {
-            programmatic.value = true
             pagerState.scrollToPage(target)
-            programmatic.value = false
         }
     }
     LaunchedEffect(pagerState.currentPage) {
@@ -96,7 +94,6 @@ fun MonthView(
             userPaged.value = true // 首次组合不算用户翻页
             return@LaunchedEffect
         }
-        if (programmatic.value) return@LaunchedEffect
         val month = MONTH_PAGE_EPOCH.plusMonths(pagerState.currentPage.toLong())
         if (YearMonth.from(state.selectedDate) != month) {
             onSelectDate(month.atDay(1))

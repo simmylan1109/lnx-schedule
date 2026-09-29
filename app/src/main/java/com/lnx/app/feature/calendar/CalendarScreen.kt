@@ -170,7 +170,10 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
 
         // 事件详情卡(spec §3.6):编辑转到编辑页,删除确认后删除(M2 只有普通事件)
         detailTarget?.let { occ ->
-            val tags by viewModel.observeTagsOf(occ.event.id).collectAsState(initial = emptyList())
+            // 必须 remember:observeTagsOf 每次调用都返回新 Flow 实例,
+            // 直接 collectAsState 会让外层状态每变一次就取消并重启一次 Room 订阅
+            val tagsFlow = remember(occ.event.id) { viewModel.observeTagsOf(occ.event.id) }
+            val tags by tagsFlow.collectAsState(initial = emptyList())
             LnxDetailSheet(
                 visible = true,
                 onDismiss = { detailTarget = null },

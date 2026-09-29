@@ -64,14 +64,54 @@ object EventColors {
     @ReadOnlyComposable
     fun of(slot: Int): Color = list()[safeIndex(slot, list().size)]
 
-    /** 色位上的文字色:浅色位用深字、深色位用浅字,保证可读 */
+    /** 色位上的文字色:在深字与浅字里挑对比度更高的那个(纯函数,可单测) */
     @Composable
     @ReadOnlyComposable
-    fun on(slot: Int): Color {
-        val background = of(slot)
-        val luminance = 0.2126f * background.red + 0.7152f * background.green + 0.0722f * background.blue
-        return if (luminance > 0.5f) Color(0xFF1B1B1B) else Color(0xFFF7F7F7)
+    fun on(slot: Int): Color = textOn(of(slot))
+
+    private val DARK_TEXT = Color(0xFF1B1B1B)
+    private val LIGHT_TEXT = Color(0xFFF7F7F7)
+
+    /**
+     * WCAG 2.x 相对亮度(先做 sRGB → 线性化,不能直接拿 RGB 加权,否则深色段全错)。
+     * 事件块上的标题/时间都要靠它保证可读,spec §5.3 要求对比度满足 AA。
+     */
+    fun relativeLuminance(color: Color): Double {
+        fun channel(c: Float): Double {
+            val v = c.toDouble()
+            return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(color.red) + 0.7152 * channel(color.green) + 0.0722 * channel(color.blue)
     }
+
+    /** WCAG 对比度,1..21 */
+    fun contrastRatio(a: Color, b: Color): Double {
+        val la = relativeLuminance(a)
+        val lb = relativeLuminance(b)
+        val hi = maxOf(la, lb)
+        val lo = minOf(la, lb)
+        return (hi + 0.05) / (lo + 0.05)
+    }
+
+    /**
+     * 在深字与浅字里挑对比度更高的一方(spec §5.3 要求事件块文字过 AA)。
+     *
+     * 常规用柔和的近黑/近白(spec §5.4 那些色块配它们观感最好);但有几个中蓝/中灰色位
+     * (如主题 1 色位 4 #4E7BD0)配近黑只有 4.16:1,达不到 AA,这时才退到纯黑/纯白
+     * —— 数学上任意底色总有一方 ≥ 4.58:1,所以这个兜底必然过线。
+     */
+    fun textOn(background: Color): Color {
+        val soft = listOf(DARK_TEXT, LIGHT_TEXT).maxBy { contrastRatio(background, it) }
+        if (contrastRatio(background, soft) >= AA_CONTRAST) return soft
+        return if (contrastRatio(background, Color.Black) >= contrastRatio(background, Color.White)) {
+            Color.Black
+        } else {
+            Color.White
+        }
+    }
+
+    /** WCAG AA 正文对比度门槛 */
+    const val AA_CONTRAST = 4.5
 
     @Composable
     @ReadOnlyComposable

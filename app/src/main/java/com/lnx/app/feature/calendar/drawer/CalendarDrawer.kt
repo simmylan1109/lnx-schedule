@@ -5,9 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -41,53 +39,57 @@ fun CalendarDrawer(
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // 顶部:lnx 标识(spec §3.10)
-            Text(
-                text = "lnx",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
-            )
-            HorizontalDivider()
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // 顶部:lnx 标识(spec §3.10)
+                Text(
+                    text = "lnx",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+                )
+                HorizontalDivider()
 
-            Text(
-                text = "筛选",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-            tags.forEach { tag ->
+                Text(
+                    text = "筛选",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                tags.forEach { tag ->
+                    FilterRow(
+                        label = tag.name,
+                        checked = tag.id !in hiddenTagIds,
+                        dotColor = EventColors.of(tag.colorSlot),
+                        onToggle = { onToggleTag(tag.id) },
+                        modifier = Modifier.testTag("drawer_tag_${tag.id}"),
+                    )
+                }
                 FilterRow(
-                    label = tag.name,
-                    checked = tag.id !in hiddenTagIds,
-                    dotColor = EventColors.of(tag.colorSlot),
-                    onToggle = { onToggleTag(tag.id) },
-                    modifier = Modifier.testTag("drawer_tag_${tag.id}"),
+                    label = "未分类",
+                    checked = !hideUntagged,
+                    dotColor = null,
+                    onToggle = onToggleUntagged,
+                    modifier = Modifier.testTag("drawer_untagged"),
                 )
             }
-            FilterRow(
-                label = "未分类",
-                checked = !hideUntagged,
-                dotColor = null,
-                onToggle = onToggleUntagged,
-                modifier = Modifier.testTag("drawer_untagged"),
-            )
 
-            Spacer(Modifier.height(16.dp))
+            // 底部:设置入口(M6 接线,先禁用态,spec §3.10)。
+            // 清单滚动、设置贴底:标签再多也把"设置"压在抽屉最下面。
             HorizontalDivider()
-            // 底部:设置入口(M6 接线,先禁用态,spec §3.10)
             Text(
                 text = "设置",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .testTag("drawer_settings"),
             )
         }
     }

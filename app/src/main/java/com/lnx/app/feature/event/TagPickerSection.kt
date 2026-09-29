@@ -26,8 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.rememberScrollState
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +48,9 @@ fun TagPickerSection(
     tags: List<Tag>,
     selectedIds: Set<String>,
     onToggle: (String) -> Unit,
-    onCreate: (name: String, colorSlot: Int) -> Unit,
+    onCreate: suspend (name: String, colorSlot: Int) -> Boolean,
+    createError: String? = null,
+    onClearError: () -> Unit = {},
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -69,7 +73,10 @@ fun TagPickerSection(
                     .minimumInteractiveComponentSize()
                     .clip(RoundedCornerShape(999.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { showCreateDialog = true }
+                    .clickable {
+                        onClearError()
+                        showCreateDialog = true
+                    }
                     .padding(horizontal = 12.dp)
                     .testTag("tag_create"),
                 contentAlignment = Alignment.Center,
@@ -85,11 +92,13 @@ fun TagPickerSection(
 
     if (showCreateDialog) {
         CreateTagDialog(
-            onConfirm = { name, colorSlot ->
+            createError = createError,
+            onConfirm = onCreate,
+            onDismiss = {
+                onClearError()
                 showCreateDialog = false
-                onCreate(name, colorSlot)
             },
-            onDismiss = { showCreateDialog = false },
+            onCreated = { showCreateDialog = false },
         )
     }
 }
@@ -128,9 +137,15 @@ private fun TagChip(tag: Tag, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CreateTagDialog(onConfirm: (String, Int) -> Unit, onDismiss: () -> Unit) {
+private fun CreateTagDialog(
+    createError: String?,
+    onConfirm: suspend (String, Int) -> Boolean,
+    onDismiss: () -> Unit,
+    onCreated: () -> Unit,
+) {
     var name by remember { mutableStateOf("") }
     var colorSlot by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -182,10 +197,23 @@ private fun CreateTagDialog(onConfirm: (String, Int) -> Unit, onDismiss: () -> U
                     }
                 }
             }
+            if (createError != null) {
+                Text(
+                    text = createError,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("tag_create_error"),
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (name.isNotBlank()) onConfirm(name, colorSlot) },
+                onClick = {
+                    // 只有真建成才关窗;重名等失败留在窗内让用户改名字
+                    if (name.isNotBlank()) scope.launch {
+                        if (onConfirm(name.trim(), colorSlot)) onCreated()
+                    }
+                },
                 modifier = Modifier.testTag("tag_create_confirm"),
             ) { Text("创建") }
         },

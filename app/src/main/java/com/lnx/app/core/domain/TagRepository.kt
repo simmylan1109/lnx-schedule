@@ -8,8 +8,13 @@ interface TagRepository {
     /** 未删除标签,按创建顺序 */
     fun observeTags(): Flow<List<Tag>>
 
-    /** 新建标签;同名唯一(重复名覆盖语义由调用方避免,唯一索引兜底) */
-    suspend fun createTag(name: String, colorSlot: Int): Tag
+    /**
+     * 新建标签:同名唯一。
+     * - 名字为空 → 失败
+     * - 已有同名**未删**标签 → 失败(调用方需提示用户改名,不能悄悄建出第二个同名标签)
+     * - 有同名**已软删**标签 → 复活那一行(沿用原 id 与创建时间),返回成功
+     */
+    suspend fun createTag(name: String, colorSlot: Int): Result<Tag>
 
     suspend fun renameTag(id: String, name: String)
 

@@ -191,6 +191,8 @@ fun EventEditScreen(
                 selectedIds = state.selectedTagIds,
                 onToggle = viewModel::toggleTag,
                 onCreate = viewModel::createTag,
+                createError = state.tagCreateError,
+                onClearError = viewModel::clearTagCreateError,
             )
             ColorPicker(
                 selected = draft.colorSlot,

@@ -61,11 +61,22 @@ class TagFlowTest {
         hiltRule.inject()
     }
 
+    /**
+     * 等首页真的画出 FAB 再点。整套仪器测试连跑 50+ 条时,模拟器软件渲染会被压得很慢,
+     * 直接 performClick 会偶发 "Failed to inject touch input"(节点还没布局完就注入触摸)。
+     */
+    private fun awaitHome() {
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("fab_create").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.waitForIdle()
+    }
+
     @Test
     fun `编辑器选两个标签保存后详情卡显示`() {
-        val work = runBlocking { tagRepository.createTag("工作", 4) }
-        val life = runBlocking { tagRepository.createTag("生活", 3) }
-        rule.waitForIdle()
+        val work = runBlocking { tagRepository.createTag("工作", 4).getOrThrow() }
+        val life = runBlocking { tagRepository.createTag("生活", 3).getOrThrow() }
+        awaitHome()
 
         rule.onNodeWithTag("fab_create").performClick()
         rule.waitForIdle()
@@ -91,7 +102,7 @@ class TagFlowTest {
 
     @Test
     fun `新建标签对话框第8个色点可滑动到并选中`() {
-        rule.waitForIdle()
+        awaitHome()
         rule.onNodeWithTag("fab_create").performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("tag_create").performClick()
@@ -110,6 +121,27 @@ class TagFlowTest {
             .first { it.name == "第八色" }
         assertEquals(7, created.colorSlot)
         rule.onNodeWithTag("tag_chip_${created.id}").assertIsDisplayed()
+    }
+
+    @Test
+    fun `重名标签当场报错且对话框不关`() = runBlocking {
+        // 回归:曾经重名会静默"成功"返回一个库里不存在的 id,事件就此挂上幽灵标签,
+        // 抽屉里没有对应项、连未分类也藏不住它 —— 用户再也看不到这个事件。
+        tagRepository.createTag("工作", 4).getOrThrow()
+        awaitHome()
+        rule.onNodeWithTag("fab_create").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("tag_create").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("tag_name_field").performTextInput("工作")
+        rule.onNodeWithTag("tag_create_confirm").performClick()
+
+        rule.waitUntil(timeoutMillis = 5_000) {
+            rule.onAllNodesWithTag("tag_create_error").fetchSemanticsNodes().isNotEmpty()
+        }
+        // 对话框还开着,用户能改名字;库里仍然只有一个标签
+        rule.onNodeWithTag("tag_name_field").assertExists()
+        assertEquals(1, tagRepository.observeTags().first().size)
     }
 
     @Test
@@ -134,8 +166,9 @@ class TagFlowTest {
                 ),
             )
         }
-        rule.waitForIdle()
-
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("all_day_bar_all-day-x").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onNodeWithTag("all_day_bar_all-day-x").assertIsDisplayed()
         // 点横条 → 详情卡(spec §3.3:交互与事件块一致)
         rule.onNodeWithTag("all_day_bar_all-day-x").performClick()

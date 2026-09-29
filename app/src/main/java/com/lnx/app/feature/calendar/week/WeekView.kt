@@ -195,13 +195,17 @@ private fun WeekHeader(
 }
 
 @Composable
-private fun AllDayStrip(
+internal fun AllDayStrip(
     occurrences: List<Occurrence>,
     weekStart: LocalDate,
     onEventClick: (Occurrence) -> Unit,
     modifier: Modifier = Modifier,
+    /** 7 = 周条带,1 = 日视图顶部那一行(同一套布局,按参数推列宽) */
+    dayCount: Int = 7,
 ) {
-    val bars = remember(occurrences, weekStart) { AllDaySpan.layout(occurrences, weekStart) }
+    val bars = remember(occurrences, weekStart, dayCount) {
+        AllDaySpan.layout(occurrences, weekStart, dayCount)
+    }
     // M3:全天/跨天条带(spec §3.3/§3.4)。无全天事件时不占高度。
     if (bars.isEmpty()) return
 
@@ -211,7 +215,7 @@ private fun AllDayStrip(
     val rowIndices = visibleRows.map { it.row }.distinct().sorted()
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth().testTag("all_day_strip")) {
-        val colWidth = (maxWidth - GUTTER_WIDTH) / 7f
+        val colWidth = (maxWidth - GUTTER_WIDTH) / dayCount.toFloat()
         Column(modifier = Modifier.fillMaxWidth()) {
             rowIndices.forEach { row ->
                 Row(modifier = Modifier.height(ALL_DAY_ROW_HEIGHT)) {
@@ -336,6 +340,11 @@ internal fun TimeGrid(
     modifier: Modifier = Modifier,
     /** M3 日视图复用同一条时间轴:7 = 周,1 = 日(列宽/吸附/网格线全部按此参数推) */
     dayCount: Int = 7,
+    /**
+     * 判空用的那一份发生。默认就是本页的 occurrences;日视图传的是"只算当天"的那份,
+     * 因为它的查询窗口是 ±1 天——直接用窗口判空会出现"昨天有事件、今天没有"却什么都不显示。
+     */
+    emptyCheck: List<Occurrence> = occurrences,
 ) {
     val scrollState = rememberScrollState()
     val nowState = remember { mutableStateOf(LocalTime.now()) }
@@ -372,7 +381,8 @@ internal fun TimeGrid(
                 .verticalScroll(scrollState),
         ) {
             // 左侧刻度列:标签右对齐并留 6dp 末距,贴着网格左缘(左对齐会让首位数字被屏幕边缘切掉)。
-            // 上移量对 0 点钳到 0:0 点那行线就在容器顶缘,再上移 6dp 会把数字上半截切在屏幕外。
+            // 0 点那行也一样上移半行:时间轴是竖向滚动的,滚到顶时 0 点被视口上缘切一半属于
+            // 正常滚动裁剪(所有整点都如此),不必为它破坏"标签中心对齐整点线"的一致性。
             Box(modifier = Modifier.width(GUTTER_WIDTH)) {
                 repeat(24) { hour ->
                     Text(
@@ -383,7 +393,7 @@ internal fun TimeGrid(
                         modifier = Modifier
                             .width(GUTTER_WIDTH)
                             .padding(end = 6.dp)
-                            .offset(y = (hour * HOUR_HEIGHT.value - 6).coerceAtLeast(0f).dp),
+                            .offset(y = (hour * HOUR_HEIGHT.value - 6).dp),
                     )
                 }
                 // 当前时刻线的左端圆点(spec §3.2:细线 + 左端圆点),与红线同在滚动内容内故同步移动。
@@ -523,7 +533,7 @@ internal fun TimeGrid(
         }
         // 空状态(spec §3.14):仅当这一周确实没有事件时才显示,
         // 否则会盖在事件块上面(M1 时网格恒空,这个遮罩是无害的)
-        if (occurrences.isEmpty()) {
+        if (emptyCheck.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = if (selectedDate == today) "今天没有日程,享受自由时光 🌤"

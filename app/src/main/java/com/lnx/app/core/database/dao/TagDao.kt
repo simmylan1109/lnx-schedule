@@ -21,6 +21,14 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE id = :id AND isDeleted = 0")
     suspend fun getById(id: String): TagEntity?
 
+    /**
+     * 按名字查(**含软删行**)。name 上有唯一索引且软删不删行,
+     * 所以建重名标签时唯一索引照样会撞——必须先查这一条,否则 @Upsert 会吞掉约束异常、
+     * 回退去按新 id 做 UPDATE(影响 0 行),返回一个库里根本不存在的"幽灵标签 id"。
+     */
+    @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
+    suspend fun findByName(name: String): TagEntity?
+
     @Query("UPDATE tags SET isDeleted = 1, updatedAt = :updatedAtMillis WHERE id = :id")
     suspend fun softDelete(id: String, updatedAtMillis: Long)
 

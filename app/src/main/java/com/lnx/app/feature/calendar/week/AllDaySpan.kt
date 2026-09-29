@@ -22,8 +22,13 @@ object AllDaySpan {
 
     private const val DAYS_PER_WEEK = 7
 
-    fun layout(occurrences: List<Occurrence>, weekStart: LocalDate): List<AllDayBar> {
-        val weekEndInclusive = weekStart.plusDays(DAYS_PER_WEEK - 1L)
+    /** days = 7 周条带,1 日视图顶部那一行(同套布局,按参数裁剪与分行) */
+    fun layout(
+        occurrences: List<Occurrence>,
+        weekStart: LocalDate,
+        days: Int = DAYS_PER_WEEK,
+    ): List<AllDayBar> {
+        val weekEndInclusive = weekStart.plusDays(days - 1L)
 
         val candidates = occurrences
             .asSequence()
@@ -42,7 +47,7 @@ object AllDaySpan {
                 val startCol = ChronoUnit.DAYS.between(weekStart, firstClamped).toInt()
                 val endColExclusive = (ChronoUnit.DAYS.between(weekStart, lastClamped) + 1)
                     .toInt()
-                    .coerceAtMost(DAYS_PER_WEEK)
+                    .coerceAtMost(days)
                 Triple(occ, startCol, endColExclusive)
             }
             .sortedWith(
@@ -55,7 +60,7 @@ object AllDaySpan {
         candidates.forEach { (occ, startCol, endColExclusive) ->
             var row = 0
             while (true) {
-                val cells = rows.getOrNull(row) ?: BooleanArray(DAYS_PER_WEEK).also { rows.add(it) }
+                val cells = rows.getOrNull(row) ?: BooleanArray(days).also { rows.add(it) }
                 val free = (startCol until endColExclusive).all { !cells[it] }
                 if (free) {
                     (startCol until endColExclusive).forEach { cells[it] = true }

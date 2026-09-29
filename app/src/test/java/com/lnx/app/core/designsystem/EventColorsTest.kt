@@ -40,7 +40,7 @@ class EventColorsTest {
     }
 
     @Test
-    fun `深色版提亮且同色相_非主题1按派生`() {
+    fun `深色版提亮_非主题1按派生`() {
         listOf(ThemeSlot.PAPER, ThemeSlot.WARM, ThemeSlot.SERENE).forEach { slot ->
             val light = EventColors.resolve(slot, dark = false)
             val dark = EventColors.resolve(slot, dark = true)
@@ -50,6 +50,32 @@ class EventColorsTest {
                 assertTrue("深色应更亮或等亮:$slot", d.luminance() + 1e-3f >= l.luminance())
             }
         }
+    }
+
+    @Test
+    fun `事件块上的文字色对四主题深浅八色位全部过AA`() {
+        // spec §5.3 要求对比度满足 AA(正文 4.5:1)。深色版是派生出来的,
+        // 过去没有任何断言兜着,坏色位会一路带到 M6 验收才暴露。
+        ThemeSlot.entries.forEach { slot ->
+            listOf(false, true).forEach { dark ->
+                EventColors.resolve(slot, dark).forEachIndexed { index, background ->
+                    val ratio = EventColors.contrastRatio(background, EventColors.textOn(background))
+                    assertTrue(
+                        "主题$slot 深色=$dark 色位$index 对比度只有 $ratio",
+                        ratio >= 4.5,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `对比度按WCAG相对亮度算而不是RGB加权`() {
+        // 中灰 #808080:直接 RGB 加权得 0.5,线性化后只有约 0.216。
+        // 两种算法差一倍以上,算错会让深色底的文字色判反。
+        assertEquals(0.216, EventColors.relativeLuminance(Color(0xFF808080)), 0.01)
+        assertEquals(1.0, EventColors.relativeLuminance(Color.White), 0.001)
+        assertEquals(21.0, EventColors.contrastRatio(Color.White, Color.Black), 0.1)
     }
 
     @Test
@@ -63,6 +89,5 @@ class EventColorsTest {
         assertEquals(0, EventColors.safeIndex(-1, size = 8))
         assertEquals(7, EventColors.safeIndex(9, size = 8))
         assertEquals(3, EventColors.safeIndex(3, size = 8))
-        assertNotEquals(-1, EventColors.safeIndex(-1, size = 8))
     }
 }

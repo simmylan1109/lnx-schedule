@@ -102,7 +102,7 @@ class DrawerFlowTest {
     @Test
     fun `勾掉工作标签后含该标签的事件隐藏`() {
         val workId = runBlocking {
-            val work = tagRepository.createTag("工作", 4)
+            val work = tagRepository.createTag("工作", 4).getOrThrow()
             repository.save(event("tagged-x", "有标签的", 10))
             repository.save(event("untagged-x", "没标签的", 12))
             tagRepository.setEventTags("tagged-x", listOf(work.id))
