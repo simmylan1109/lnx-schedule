@@ -14,6 +14,9 @@ import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEngine
+import com.lnx.app.core.notification.ReminderAlarmSink
+import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.notification.ScheduledReminder
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -97,6 +100,19 @@ private class FakeTagRepository(
         MutableStateFlow(tagIdsByEvent)
 }
 
+/** 假闹钟落点:记录重排次数与最后一份清单(纯 JVM 环境没有 AlarmManager) */
+class RecordingAlarmSink : ReminderAlarmSink {
+    var rescheduleCount = 0
+    var last: List<ScheduledReminder> = emptyList()
+
+    override fun schedule(reminders: List<ScheduledReminder>) {
+        rescheduleCount++
+        last = reminders
+    }
+
+    override fun cancelAll() = Unit
+}
+
 class CalendarViewModelTest {
     /** 构造一条落在指定周内的发生,供 ViewModel 测试预置 */
     private fun occurrence(id: String, start: String, end: String) = Occurrence(
@@ -129,7 +145,13 @@ class CalendarViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun vm(repo: FakeEventRepository = FakeEventRepository()) =
-        CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
+        CalendarViewModel(
+            repo,
+            FakeTagRepository(),
+            TagFilterState(),
+            RecurrenceEditHandler(repo),
+            ReminderPlanner(repo, RecordingAlarmSink()),
+        )
 
     @Test
     fun `初始状态为今天与周视图`() {
@@ -175,7 +197,7 @@ class CalendarViewModelTest {
                 occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
             ),
         )
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -190,7 +212,7 @@ class CalendarViewModelTest {
     @Test
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
         val before = repo.observedRanges
             .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
@@ -209,7 +231,7 @@ class CalendarViewModelTest {
             listOf(occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00")),
         )
         val filterState = TagFilterState()
-        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo))
+        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -254,5 +276,37 @@ class CalendarViewModelTest {
             seriesStart, cutDate.atStartOfDay(),
         )
         assertTrue("剪断日之前应仍有发生", kept.isNotEmpty())
+    }
+
+    @Test
+    fun `删除本次及以后_剪断真母事件并触发提醒重排`() {
+        // 删除会改变"还剩哪些发生带提醒",所以落库后必须重排;漏了这一步,
+        // 被删事件的闹钟还会照响(spec §3.8)
+        val seriesStart = LocalDateTime.parse("2026-09-08T10:00")
+        val cutDate = LocalDate.parse("2026-12-01")
+        val master = Event(
+            id = "m1", title = "周会", allDay = false,
+            start = seriesStart, end = seriesStart.plusHours(1),
+            location = null, notes = null, colorSlot = 0, priority = Priority.P2,
+            reminderLeadMinutes = 15, rule = EventRule(type = RuleType.DAILY), createdAt = 0L, updatedAt = 0L,
+        )
+        val sink = RecordingAlarmSink()
+        val repo = FakeEventRepository(masters = mapOf("m1" to master))
+        val vm = CalendarViewModel(
+            repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, sink),
+        )
+
+        vm.deleteOccurrence(
+            Occurrence(
+                master.copy(start = cutDate.atTime(10, 0), end = cutDate.atTime(11, 0)),
+                cutDate.atTime(10, 0),
+                cutDate.atTime(11, 0),
+                cutDate,
+            ),
+            EditScope.THIS_AND_FUTURE,
+        )
+
+        assertEquals(seriesStart, repo.saved.single().start)
+        assertEquals(1, sink.rescheduleCount)
     }
 }

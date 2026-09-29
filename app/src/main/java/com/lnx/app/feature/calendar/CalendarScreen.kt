@@ -54,12 +54,26 @@ private data class EditorTarget(
     val scope: EditScope? = null,
 )
 
+/**
+ * 点提醒通知带进来的"打开某次发生"请求(spec §3.8)。
+ * 刻意不写 data class:按引用比较,连点同一条通知也能再次打开详情卡
+ * (data class 的值相等会让 LaunchedEffect 以为没变化,第二次点击就失灵)。
+ */
+class OpenEventRequest(
+    val eventId: String,
+    val occurrenceStart: LocalDateTime,
+)
+
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
+fun CalendarScreen(
+    openRequest: OpenEventRequest? = null,
+    viewModel: CalendarViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val tags by viewModel.tags.collectAsStateWithLifecycle()
     val hiddenTagIds by viewModel.hiddenTagIds.collectAsStateWithLifecycle()
     val hideUntagged by viewModel.hideUntagged.collectAsStateWithLifecycle()
+    val openTarget by viewModel.openTarget.collectAsStateWithLifecycle()
 
     // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -83,6 +97,15 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
         overlapNotice?.let {
             snackbar.showSnackbar("与\"$it\"时间重叠")
             overlapNotice = null
+        }
+    }
+    // 点提醒通知进来(spec §3.8):ViewModel 已定位到那次发生,这里开详情卡并立刻消费掉,
+    // 免得旋转屏幕又弹一次
+    LaunchedEffect(openRequest) {
+        openRequest?.let { viewModel.openEvent(it.eventId, it.occurrenceStart) }
+        openTarget?.let {
+            detailTarget = it
+            viewModel.consumeOpenTarget()
         }
     }
 

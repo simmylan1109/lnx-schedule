@@ -11,6 +11,7 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
+import com.lnx.app.core.notification.ReminderPlanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -49,6 +51,7 @@ class CalendarViewModel @Inject constructor(
     private val tagRepository: TagRepository,
     private val tagFilterState: TagFilterState,
     private val recurrenceHandler: RecurrenceEditHandler,
+    private val reminderPlanner: ReminderPlanner,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
 
@@ -144,6 +147,30 @@ class CalendarViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
 
+    /**
+     * 点提醒通知进来的那次发生(spec §3.8:点击通知 → 打开该事件详情卡片)。
+     * 独立于 uiState:它是一次性请求,不是"当前选中什么"的状态,混进 combine
+     * 会让打开详情卡顺带触发三视图重查。找不到对应发生(事件已被删)时留 null,什么都不弹。
+     */
+    private val _openTarget = MutableStateFlow<Occurrence?>(null)
+    val openTarget: StateFlow<Occurrence?> = _openTarget.asStateFlow()
+
+    fun openEvent(eventId: String, occurrenceStart: LocalDateTime) {
+        viewModelScope.launch {
+            selectDate(occurrenceStart.toLocalDate())
+            val day = occurrenceStart.toLocalDate()
+            val found = repository
+                .observeOccurrences(day.atStartOfDay(), day.plusDays(1).atStartOfDay())
+                .first()
+                .firstOrNull { it.event.id == eventId && it.start == occurrenceStart }
+            _openTarget.value = found
+        }
+    }
+
+    fun consumeOpenTarget() {
+        _openTarget.value = null
+    }
+
     private fun weekStartOf(date: LocalDate): LocalDateTime =
         weekStartOfDate(date).atStartOfDay()
 
@@ -155,7 +182,10 @@ class CalendarViewModel @Inject constructor(
 
     /** 删除事件(spec §3.6);软删除,Room 失效通知会让周视图即时消失 */
     fun deleteEvent(id: String) {
-        viewModelScope.launch { repository.delete(id) }
+        viewModelScope.launch {
+            repository.delete(id)
+            reminderPlanner.reschedule()
+        }
     }
 
     /** 详情卡删除:按作用范围落库(单次事件也是 ALL,走同一入口) */
@@ -170,6 +200,7 @@ class CalendarViewModel @Inject constructor(
                 edited = null,
                 scope = scope,
             )
+            reminderPlanner.reschedule()
         }
     }
 

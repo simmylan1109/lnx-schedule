@@ -15,6 +15,7 @@ import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
+import com.lnx.app.core.notification.ReminderPlanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -60,6 +61,7 @@ class EventEditViewModel @Inject constructor(
     private val repository: EventRepository,
     private val tagRepository: TagRepository,
     private val recurrenceHandler: RecurrenceEditHandler,
+    private val reminderPlanner: ReminderPlanner,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val editingId: String? = savedStateHandle.get<String>(KEY_EVENT_ID)
@@ -262,6 +264,9 @@ class EventEditViewModel @Inject constructor(
                     tagRepository.setEventTags(newMaster.id, selected)
                 }
             }
+            // 提醒重排(spec §3.8):新建/改期/改规则/剪断都会改变"哪些发生还带着提醒",
+            // 所以放在所有分支之后统一做一次,而不是每个分支各写一遍
+            reminderPlanner.reschedule()
             _uiState.update { it.copy(saved = true, overlapTitles = overlaps) }
         }
     }

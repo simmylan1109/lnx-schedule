@@ -1,29 +1,65 @@
 package com.lnx.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.designsystem.ThemeSlot
+import com.lnx.app.core.notification.NotificationPermission
+import com.lnx.app.core.notification.fromEpochMillis
 import com.lnx.app.feature.calendar.CalendarScreen
+import com.lnx.app.feature.calendar.OpenEventRequest
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    /** 点提醒通知带过来的打开请求(spec §3.8);Activity 是 singleTask,已在前台时走 onNewIntent */
+    private var openRequest by mutableStateOf<OpenEventRequest?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Android 13+ 首次进入申请通知权限(spec §3.8:引导页第 3 页在 M7,先在这里要一次;
+        // 被拒不崩,提醒静默失效,设置页给"去开启"入口)
+        NotificationPermission.request(this)
+        handleIntent(intent)
         setContent {
             LnxTheme(slot = ThemeSlot.MATERIAL_YOU, darkMode = DarkMode.FOLLOW_SYSTEM) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    CalendarScreen()
+                    CalendarScreen(openRequest = openRequest)
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val eventId = intent?.getStringExtra(EXTRA_EVENT_ID) ?: return
+        val start = intent.getLongExtra(EXTRA_OCCURRENCE_START, 0L)
+        if (start == 0L) return
+        openRequest = OpenEventRequest(eventId, fromEpochMillis(start))
+        // 清掉 extra:配置变更导致 Activity 重建时 onCreate 再读一次会把详情卡重复弹出来
+        intent.removeExtra(EXTRA_EVENT_ID)
+        intent.removeExtra(EXTRA_OCCURRENCE_START)
+    }
+
+    private companion object {
+        const val EXTRA_EVENT_ID = "event_id"
+        const val EXTRA_OCCURRENCE_START = "occurrence_start"
     }
 }
