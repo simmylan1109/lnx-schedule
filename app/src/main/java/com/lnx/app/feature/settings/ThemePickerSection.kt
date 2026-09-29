@@ -41,8 +41,19 @@ internal fun ThemePickerSection(
     modifier: Modifier = Modifier,
 ) {
     SectionTitle(stringResource(R.string.settings_section_appearance), "settings_section_appearance", modifier)
+    ThemeCardRow(current = current, darkMode = darkMode, onPick = onPick)
+}
+
+/** 横向一排 4 张主题卡;设置页和首启引导第 2 页(spec §3.12 ②)共用 */
+@Composable
+internal fun ThemeCardRow(
+    current: ThemeSlot,
+    darkMode: DarkMode,
+    onPick: (ThemeSlot) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

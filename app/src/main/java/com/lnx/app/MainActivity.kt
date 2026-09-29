@@ -19,12 +19,15 @@ import com.lnx.app.core.designsystem.LnxMotion
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.notification.ReminderNotifier
 import com.lnx.app.core.notification.fromEpochMillis
+import com.lnx.app.core.settings.LnxSettings
 import com.lnx.app.core.settings.SettingsDefaults
 import com.lnx.app.core.settings.SettingsRepository
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
+import com.lnx.app.feature.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -42,9 +45,13 @@ class MainActivity : ComponentActivity() {
         // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页在 M7 接入。
         handleOpenRequest(intent)
         setContent {
-            // 首帧先用出厂值渲染,DataStore 吐真值后再 Crossfade,避免开机白闪一下
-            val settings by settingsRepository.settings
-                .collectAsStateWithLifecycle(initialValue = SettingsDefaults.snapshot())
+            // null = 设置还没吐出真值(首帧那一刻)。
+            // 这一帧**不能**判引导:出厂值 onboardingDone=false,直接判会让每次冷启动
+            // 都先闪一下引导页。设置到了再决定进日历还是进引导。
+            val loaded by settingsRepository.settings
+                .map { it: LnxSettings? -> it }
+                .collectAsStateWithLifecycle(initialValue = null)
+            val settings = loaded ?: SettingsDefaults.snapshot()
             Crossfade(
                 targetState = settings.themeSlot,
                 animationSpec = tween(LnxMotion.THEME_CROSSFADE_MILLIS),
@@ -52,10 +59,14 @@ class MainActivity : ComponentActivity() {
             ) { slot ->
                 LnxTheme(slot = slot, darkMode = settings.darkMode) {
                     Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
-                        CalendarScreen(
-                            openRequest = openRequest,
-                            onOpenRequestConsumed = { openRequest = null },
-                        )
+                        if (loaded != null && !settings.onboardingDone) {
+                            OnboardingScreen()
+                        } else {
+                            CalendarScreen(
+                                openRequest = openRequest,
+                                onOpenRequestConsumed = { openRequest = null },
+                            )
+                        }
                     }
                 }
             }

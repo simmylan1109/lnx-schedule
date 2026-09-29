@@ -44,6 +44,17 @@
     <string name="settings_coming_soon">M7 开放</string>
     <string name="settings_version">版本 %1$s</string>
 
+    <!-- 首启引导(spec §3.12) -->
+    <string name="onboarding_tagline">轻快、好看的日程管理</string>
+    <string name="onboarding_start">开始</string>
+    <string name="onboarding_pick_theme">挑一个你喜欢的主题</string>
+    <string name="onboarding_pick_theme_hint">随时能在设置里改</string>
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_notification_title">别错过重要日程</string>
+    <string name="onboarding_notification_body">开启通知权限,日程到点会提醒你。稍后在设置里也能开启。</string>
+    <string name="onboarding_allow">开启提醒</string>
+    <string name="onboarding_later">以后再说</string>
+
     <!-- 主题名(spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">极致留白</string>
