@@ -3,9 +3,13 @@
     <!-- 提醒通知(M5,spec §3.8) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- 精确闹钟:lnx 是日历应用,按 Google 分类用 USE_EXACT_ALARM(安装即授予,无需用户手动开);
-         拿不到时 ReminderScheduler 降级为窗口闹钟(spec §3.8:受系统限制时尽力而为) -->
+    <!-- 精确闹钟:USE_EXACT_ALARM 是 API 33 才有的权限,Android 12(31/32)上声明了也无效,
+         那一段必须用 SCHEDULE_EXACT_ALARM(用户可在系统"闹钟和提醒"里开启)。
+         两者都拿不到时 ReminderScheduler 降级为窗口闹钟(spec §3.8:受系统限制时尽力而为) -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
 
     <application
         android:name=".LnxApplication"
@@ -32,12 +36,15 @@
             </intent-filter>
         </receiver>
 
-        <!-- 开机重排(重启会清空所有闹钟) -->
+        <!-- 开机 / 升级 / 改时区后重排:这三种情况都会让已排的闹钟失效
+             (重启清空、升级被系统清空、时区变了绝对时刻不再对) -->
         <receiver
             android:name=".core.notification.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>

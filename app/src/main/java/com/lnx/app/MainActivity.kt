@@ -15,6 +15,7 @@ import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.designsystem.ThemeSlot
 import com.lnx.app.core.notification.fromEpochMillis
+import com.lnx.app.core.notification.ReminderNotifier
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // 通知权限不在这里要:用户点开 App 的那一刻还不知道提醒是干什么的。
         // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页在 M7 接入。
-        handleIntent(intent)
+        handleOpenRequest(intent)
         setContent {
             LnxTheme(slot = ThemeSlot.MATERIAL_YOU, darkMode = DarkMode.FOLLOW_SYSTEM) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -43,21 +44,21 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
+        handleOpenRequest(intent)
     }
 
-    private fun handleIntent(intent: Intent?) {
-        val eventId = intent?.getStringExtra(EXTRA_EVENT_ID) ?: return
-        val start = intent.getLongExtra(EXTRA_OCCURRENCE_START, 0L)
+    /**
+     * 从 Intent 里取出通知带的打开请求。
+     * 由 onCreate 与 onNewIntent 两处调用;**公开**是为了让仪器测试能走同一条真实路径
+     * (后台点通知走 onNewIntent,而它是 Activity 的受保护方法)。
+     */
+    fun handleOpenRequest(intent: Intent?) {
+        val eventId = intent?.getStringExtra(ReminderNotifier.EXTRA_EVENT_ID) ?: return
+        val start = intent.getLongExtra(ReminderNotifier.EXTRA_OCCURRENCE_START, 0L)
         if (start == 0L) return
         openRequest = OpenEventRequest(eventId, fromEpochMillis(start))
         // 清掉 extra:配置变更导致 Activity 重建时 onCreate 再读一次会把详情卡重复弹出来
-        intent.removeExtra(EXTRA_EVENT_ID)
-        intent.removeExtra(EXTRA_OCCURRENCE_START)
-    }
-
-    private companion object {
-        const val EXTRA_EVENT_ID = "event_id"
-        const val EXTRA_OCCURRENCE_START = "occurrence_start"
+        intent.removeExtra(ReminderNotifier.EXTRA_EVENT_ID)
+        intent.removeExtra(ReminderNotifier.EXTRA_OCCURRENCE_START)
     }
 }

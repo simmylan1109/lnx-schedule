@@ -14,9 +14,8 @@ import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEngine
-import com.lnx.app.core.notification.ReminderAlarmSink
+import com.lnx.app.core.notification.RecordingAlarmSink
 import com.lnx.app.core.notification.ReminderPlanner
-import com.lnx.app.core.notification.ScheduledReminder
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -98,19 +97,6 @@ private class FakeTagRepository(
 
     override fun observeEventTagIds(): Flow<Map<String, List<String>>> =
         MutableStateFlow(tagIdsByEvent)
-}
-
-/** 假闹钟落点:记录重排次数与最后一份清单(纯 JVM 环境没有 AlarmManager) */
-class RecordingAlarmSink : ReminderAlarmSink {
-    var rescheduleCount = 0
-    var last: List<ScheduledReminder> = emptyList()
-
-    override fun schedule(reminders: List<ScheduledReminder>) {
-        rescheduleCount++
-        last = reminders
-    }
-
-    override fun cancelAll() = Unit
 }
 
 class CalendarViewModelTest {

@@ -72,6 +72,11 @@ class ReminderNotifier @Inject constructor(
 
     companion object {
         const val CHANNEL_ID = "lnx_reminders"
+
+        /**
+         * 点通知跳详情用的 extra key。**只有这一处定义**
+         * —— 之前 ReminderNotifier 和 MainActivity 各写一份字面量,改一处忘另一处就是静默 bug。
+         */
         const val EXTRA_EVENT_ID = "event_id"
         const val EXTRA_OCCURRENCE_START = "occurrence_start"
 

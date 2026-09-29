@@ -24,7 +24,14 @@ object NotificationPermission {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
 
-    /** 已拒绝过就别再自动弹系统框(spec §3.8:不反复打扰),引导入口由设置页承担 */
+    /**
+     * 请求通知权限。已授予则直接返回。
+     *
+     * 注意:这里**没有**"已永久拒绝就不再问"的判断 —— Android 的系统行为是第二次起
+     * requestPermissions 会被静默拒绝(不再弹框),所以观感上不会反复打扰。
+     * 真正的"去开启"引导入口归设置页(M6 接线),届时用 shouldShowRequestPermissionRationale
+     * 判断用户是否拒绝过、给出跳系统设置的入口。
+     */
     fun request(activity: Activity) {
         if (!isRequired() || isGranted(activity)) return
         ActivityCompat.requestPermissions(

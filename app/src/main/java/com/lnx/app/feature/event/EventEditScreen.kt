@@ -87,21 +87,26 @@ fun EventEditScreen(
         }
     }
 
-    // 只有真的保存成功才关闭:校验不过时留在页面并显示错误(否则用户会丢失输入)
-    LaunchedEffect(state.saved) {
-        if (state.saved) {
-            onSaved(state.overlapTitles)
-            onClose()
-        }
-    }
-
-    // 通知权限在"用户真的设了提醒"这一刻才要(spec §3.8)。
-    // 冷启动就弹会挡住首屏(实测仪器测试直接卡在权限框上),也让用户在没搞懂 App 前就被要权限。
+    // 通知权限在"用户要提醒"这一刻才问(spec §3.8),触发点有两个:点了提醒档位、
+    // 或直接保存了带提醒的事件(草稿默认 15 分钟,不碰提醒行也会走到)。
+    // 冷启动就弹会挡住首屏(实测仪器测试全部找不到 Compose 树),也不该在用户
+    // 还没搞懂 App 前就要权限。
     LaunchedEffect(state.askNotificationPermission) {
         if (state.askNotificationPermission) {
             if (activity != null) NotificationPermission.request(activity)
             viewModel.consumeNotificationPermissionRequest()
         }
+    }
+
+    // 保存成功才关页;索权要排在关闭之前,否则弹窗跟着页面一起消失,用户根本没机会授权
+    LaunchedEffect(state.saved) {
+        if (!state.saved) return@LaunchedEffect
+        onSaved(state.overlapTitles)
+        if (state.askNotificationPermission && activity != null) {
+            NotificationPermission.request(activity)
+            viewModel.consumeNotificationPermissionRequest()
+        }
+        onClose()
     }
 
     Scaffold(

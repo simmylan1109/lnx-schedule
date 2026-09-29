@@ -68,6 +68,9 @@ class EventEditViewModel @Inject constructor(
 ) : ViewModel() {
     private val editingId: String? = savedStateHandle.get<String>(KEY_EVENT_ID)
 
+    /** 本次编辑会话内是否已弹过通知权限(避免保存时二次弹) */
+    private var permissionAskedInSession = false
+
     private val _uiState = MutableStateFlow(EventEditUiState())
     val uiState: StateFlow<EventEditUiState> = _uiState.asStateFlow()
 
@@ -196,8 +199,21 @@ class EventEditViewModel @Inject constructor(
 
     fun setReminderLead(minutes: Int?) {
         update { it.copy(reminderLeadMinutes = minutes) }
-        // 只在用户主动设提醒时索权;选"不提醒"不该弹权限框
-        _uiState.update { it.copy(askNotificationPermission = minutes != null) }
+        // 用户主动设提醒是最自然的索权时机;选"不提醒"不该弹权限框
+        if (minutes != null) askNotificationPermissionOnce()
+    }
+
+    /**
+     * 本次编辑会话内只问一次通知权限。
+     *
+     * spec §3.5 规定新建事件的草稿**默认就带 15 分钟提醒**,所以光靠"用户点了提醒档位"
+     * 索权会漏掉主路径:用户不碰提醒行直接保存,事件有提醒、闹钟也排了,却从没申请过
+     * `POST_NOTIFICATIONS`,通知永远不会出现。保存时也要兜一次底(见 [save])。
+     */
+    private fun askNotificationPermissionOnce() {
+        if (permissionAskedInSession) return
+        permissionAskedInSession = true
+        _uiState.update { it.copy(askNotificationPermission = true) }
     }
 
     fun consumeNotificationPermissionRequest() =
@@ -244,40 +260,47 @@ class EventEditViewModel @Inject constructor(
             )
             val context = _uiState.value.editContext
             val selected = _uiState.value.selectedTagIds.toList()
-            if (context == null) {
-                repository.save(event)
-                tagRepository.setEventTags(id, selected)
-            } else when (context.scope) {
-                EditScope.ALL -> {
-                    // "全部":改母事件本身(id/createdAt 保持)
-                    val master = event.copy(id = context.masterId, createdAt = draft.createdAt)
-                    repository.save(master)
-                    tagRepository.setEventTags(context.masterId, selected)
-                }
+            try {
+                if (context == null) {
+                    repository.save(event)
+                    tagRepository.setEventTags(id, selected)
+                } else when (context.scope) {
+                    EditScope.ALL -> {
+                        // "全部":改母事件本身(id/createdAt 保持)
+                        val master = event.copy(id = context.masterId, createdAt = draft.createdAt)
+                        repository.save(master)
+                        tagRepository.setEventTags(context.masterId, selected)
+                    }
 
-                EditScope.THIS_ONLY -> {
-                    // 仅本次:写例外(全字段覆盖,规则强制沿用母事件);标签挂母事件,不动
-                    val master = repository.getEvent(context.masterId)
-                    repository.upsertException(
-                        EventException(
-                            masterId = context.masterId,
-                            originalDate = context.originalDate,
-                            override = event.copy(id = context.masterId, rule = master?.rule ?: draft.rule),
-                        ),
-                    )
-                }
+                    EditScope.THIS_ONLY -> {
+                        // 仅本次:写例外(全字段覆盖,规则强制沿用母事件);标签挂母事件,不动
+                        val master = repository.getEvent(context.masterId)
+                        repository.upsertException(
+                            EventException(
+                                masterId = context.masterId,
+                                originalDate = context.originalDate,
+                                override = event.copy(id = context.masterId, rule = master?.rule ?: draft.rule),
+                            ),
+                        )
+                    }
 
-                EditScope.THIS_AND_FUTURE -> {
-                    // 本次及以后:新母事件自持一个 id,标签跟着挂过去
-                    val master = repository.getEvent(context.masterId) ?: return@launch
-                    val newMaster = event.copy(id = UUID.randomUUID().toString(), createdAt = 0L)
-                    recurrenceHandler.apply(master, context.originalDate, newMaster, EditScope.THIS_AND_FUTURE)
-                    tagRepository.setEventTags(newMaster.id, selected)
+                    EditScope.THIS_AND_FUTURE -> {
+                        // 本次及以后:新母事件自持一个 id,标签跟着挂过去
+                        val master = repository.getEvent(context.masterId) ?: return@launch
+                        val newMaster = event.copy(id = UUID.randomUUID().toString(), createdAt = 0L)
+                        recurrenceHandler.apply(master, context.originalDate, newMaster, EditScope.THIS_AND_FUTURE)
+                        tagRepository.setEventTags(newMaster.id, selected)
+                    }
                 }
+            } finally {
+                // 提醒重排(spec §3.8):新建/改期/改规则/剪断都会改变"哪些发生还带着提醒",
+                // 所以放 finally —— 上面 THIS_AND_FUTURE 遇到母事件已被删会提前 return,
+                // 放到分支之后就跟着跳过了
+                reminderPlanner.reschedule()
             }
-            // 提醒重排(spec §3.8):新建/改期/改规则/剪断都会改变"哪些发生还带着提醒",
-            // 所以放在所有分支之后统一做一次,而不是每个分支各写一遍
-            reminderPlanner.reschedule()
+            // 草稿默认就带 15 分钟提醒(spec §3.5),用户完全可能不碰提醒行直接保存;
+            // 这里兜底索权,否则事件有提醒、闹钟也排了,通知却永远发不出来
+            if (event.reminderLeadMinutes != null) askNotificationPermissionOnce()
             _uiState.update { it.copy(saved = true, overlapTitles = overlaps) }
         }
     }
