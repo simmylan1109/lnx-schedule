@@ -139,10 +139,15 @@ class RecurrenceEngineTest {
     }
 
     @Test
-    fun `每2月_间隔跳月`() {
-        // 1-31 起每 2 个月:3-31、5-31、7-31、9-31(不存在跳过)、… 区间内 10 月无、9 月无 → 空
-        val slots = series("2026-01-31T09:00", rule(RuleType.MONTHLY, 2, monthlyMode = MonthlyMode.BY_MONTHDAY, monthlyDay = 31))
-        assertEquals(emptyList<Int>(), slots.map { it.start.dayOfMonth })
+    fun `每2月_隔月发生且短月跳过`() {
+        // 1-31 起每 2 个月:1/3/5/7 月有 31 号;9 月无 31、11 月无 31 → 跳过
+        val slots = series(
+            "2026-01-31T09:00",
+            rule(RuleType.MONTHLY, 2, monthlyMode = MonthlyMode.BY_MONTHDAY, monthlyDay = 31),
+            rangeStart = LocalDateTime.parse("2026-01-01T00:00"),
+            rangeEnd = LocalDateTime.parse("2027-01-01T00:00"),
+        )
+        assertEquals(listOf(1, 3, 5, 7), slots.map { it.start.monthValue })
     }
 
     // —— 每年 ——
@@ -206,6 +211,13 @@ class RecurrenceEngineTest {
     // —— 区间与系列起点 ——
 
     @Test
+    fun `结束条件_COUNT_0次一条都不发生`() {
+        // 脏数据防线:Count(0) 老代码会当成"无限制"→ 永不结束(方向正好反)
+        val slots = series("2026-09-28T09:00", rule(RuleType.DAILY, end = RuleEnd.Count(0)))
+        assertEquals(0, slots.size)
+    }
+
+    @Test
     fun `系列起点晚于区间_仅未来次不回填`() {
         val slots = series("2026-10-20T09:00", rule(RuleType.DAILY))
         assertEquals(listOf(20, 21), slots.take(2).map { it.start.dayOfMonth })
@@ -221,7 +233,7 @@ class RecurrenceEngineTest {
     }
 
     @Test
-    fun `半开区间_结束贴起点不算重叠`() {
+    fun `半开区间_发生结束贴窗口起点不算重叠`() {
         // 发生 10-01 09:00-10:00,区间从 10-01 10:00 起:10-01 那次结束恰好贴区间起点 → 不算
         val slots = series("2026-09-28T09:00", rule(RuleType.DAILY), rangeStart = LocalDateTime.parse("2026-10-01T10:00"))
         assertEquals(2, slots.first().start.dayOfMonth)

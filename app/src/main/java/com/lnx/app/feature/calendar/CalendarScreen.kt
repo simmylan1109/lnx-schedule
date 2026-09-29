@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalNavigationDrawer
@@ -193,16 +192,19 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                     tags = tags,
                     onEdit = { scope ->
                         detailTarget = null
-                        // "全部"(含单次事件)= 直接改母事件;另两档走该次发生的编辑模式
-                        editorTarget = if (scope == EditScope.ALL) {
+                        // 例外只对重复发生存在:没有 originalDate 就退回"改母事件",
+                        // 否则会给单次事件开一条永远匹配不上的例外
+                        val effective = if (occ.originalDate == null) EditScope.ALL else scope
+                        editorTarget = if (effective == EditScope.ALL) {
                             EditorTarget(eventId = occ.event.id)
                         } else {
-                            EditorTarget(occurrence = occ, scope = scope)
+                            EditorTarget(occurrence = occ, scope = effective)
                         }
                     },
                     onDelete = { scope ->
                         detailTarget = null
-                        viewModel.deleteOccurrence(occ, scope)
+                        val effective = if (occ.originalDate == null) EditScope.ALL else scope
+                        viewModel.deleteOccurrence(occ, effective)
                     },
                 )
             }

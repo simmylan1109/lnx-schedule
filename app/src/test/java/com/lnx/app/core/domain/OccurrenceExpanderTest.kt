@@ -54,7 +54,7 @@ class OccurrenceExpanderTest {
     }
 
     @Test
-    fun `半开区间_结束贴起点不算`() {
+    fun `半开区间_发生结束贴窗口起点不算命中`() {
         val list = expander.expand(
             listOf(timed("a", "2026-09-30T09:00", "2026-10-01T00:00")),
             emptyList(),

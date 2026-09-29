@@ -266,8 +266,6 @@ class EventEditViewModel @Inject constructor(
         }
     }
 
-    fun dismissOverlapNotice() = _uiState.update { it.copy(overlapTitles = emptyList()) }
-
     private fun Event.toDraft() = EventDraft(
         id = id,
         title = title,

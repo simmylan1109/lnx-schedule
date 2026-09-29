@@ -19,9 +19,11 @@ interface EventDao {
     fun observeBetween(startMillis: Long, endMillis: Long): Flow<List<EventEntity>>
 
     /**
-     * 展开用查询:窗口重叠 **或** 任何重复母事件都要带上——
-     * 永不结束、起点在窗口前的重复事件,按 startAt/endAt 根本不会与窗口重叠,漏掉就整条消失。
-     * 重复母事件之外的多余行由展开器裁剪。
+     * 展开用查询(spec §4.4 现场展开):**窗口重叠 OR 规则组非 NONE**。
+     * 关键在括号:重复母事件哪怕起点在窗口前(永不结束的每日事件)也要带上,
+     * 否则翻到下个月整条系列就"消失";其余(非重复)事件严格按窗口,别把全表拉出来。
+     * 历史教训:旧写法把"非 NONE"排除在外,重复事件只在与窗口重叠时才返回 —— 见 M4 终审。
+     * 注意:本查询只提供候选,真正的窗口裁剪在展开器(occurrence 级)。
      */
     @Query(
         "SELECT * FROM events WHERE isDeleted = 0 AND " +

@@ -168,7 +168,7 @@ class RecurrenceEditHandlerTest {
     }
 
     @Test
-    fun `仅本次删不触碰母事件与既有例外清理`() = runTest {
+    fun `仅本次删只写取消例外_不删母事件不清例外`() = runTest {
         handler.apply(master, targetDate, null, EditScope.THIS_ONLY)
         assertTrue(repo.deleted.isEmpty())
         assertEquals(0, repo.clearedExceptionsFor.size)

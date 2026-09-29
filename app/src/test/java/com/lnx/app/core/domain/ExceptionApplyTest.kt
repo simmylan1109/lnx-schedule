@@ -110,7 +110,7 @@ class ExceptionApplyTest {
     }
 
     @Test
-    fun `取消的改期例外同样不出现`() {
+    fun `取消优先_取消的例外即使带override也不出现`() {
         // 先改期到 10-15,又取消:两次都不出现
         val list = expand(
             listOf(

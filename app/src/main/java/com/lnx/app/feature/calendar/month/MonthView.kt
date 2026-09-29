@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -113,26 +114,34 @@ fun MonthView(
                 )
             }
         }
+        // spec §3.4 上下两半(Google Calendar 经典布局):月历 1.5、列表 1,
+        // 固定比例而不靠内容撑高 —— 否则月历被挤到 48%、列表只剩两三行
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1.5f)
                 .testTag("month_pager"),
         ) { page ->
             val month = MONTH_PAGE_EPOCH.plusMonths(page.toLong())
             val cells = remember(month) { monthCells(month) }
-            Column(modifier = Modifier.fillMaxWidth().testTag("month_page_$month")) {
+            // 彩点按日索引一次算好(记得 occurrences),别在 42 个格子里各 filter 一遍
+            val dayIndex = remember(occurrences) { indexByDay(occurrences) }
+            Column(modifier = Modifier.fillMaxWidth().fillMaxHeight().testTag("month_page_$month")) {
                 cells.chunked(7).forEach { week ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         week.forEach { date ->
                             MonthCell(
                                 date = date,
                                 month = month,
                                 selectedDate = state.selectedDate,
                                 today = today,
-                                dots = eventsOn(date, occurrences).take(3),
+                                dots = dayIndex[date].orEmpty().take(3),
                                 onSelectDate = onSelectDate,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
                             )
                         }
                     }
@@ -147,6 +156,28 @@ fun MonthView(
             modifier = Modifier.weight(1f),
         )
     }
+}
+
+/**
+ * 按日索引(月视图 42 格的彩点/列表共用):每个事件挂到它覆盖的每一天上。
+ * 覆盖天数上限 366:脏数据(跨年的全天事件)不许把内存拖垮。
+ */
+internal fun indexByDay(occurrences: List<Occurrence>): Map<LocalDate, List<Occurrence>> {
+    val map = HashMap<LocalDate, MutableList<Occurrence>>()
+    for (occ in occurrences) {
+        val last = if (occ.end.toLocalTime() == java.time.LocalTime.MIDNIGHT) {
+            occ.end.toLocalDate().minusDays(1)
+        } else {
+            occ.end.toLocalDate()
+        }
+        var d = occ.start.toLocalDate()
+        var guard = 0
+        while (!d.isAfter(last) && guard++ < 366) {
+            map.getOrPut(d) { mutableListOf() }.add(occ)
+            d = d.plusDays(1)
+        }
+    }
+    return map
 }
 
 /** 当日有"份"的事件:与 [dayStart, day+1) 半开相交(全天排他存储自然正确) */
@@ -167,12 +198,15 @@ private fun MonthCell(
     modifier: Modifier = Modifier,
 ) {
     val inMonth = YearMonth.from(date) == month
+    // 高度由外层行(weight)分配,这里只管填满并把日期圆点垂直居中:
+    // 写死 44dp 既撑不满行,也顶不到 Material 的 48dp 触达底线
     Column(
         modifier = modifier
-            .height(44.dp)
+            .fillMaxHeight()
             .clickable { onSelectDate(date) }
             .testTag("month_cell_$date"),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
             modifier = Modifier

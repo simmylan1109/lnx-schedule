@@ -41,13 +41,16 @@ object RecurrenceEngine {
         rangeEnd: LocalDateTime,
     ): List<RecurrenceSlot> {
         if (rule.type == RuleType.NONE || rangeEnd <= rangeStart) return emptyList()
-
-        val slots = mutableListOf<RecurrenceSlot>()
-        var count = 0
-        val countLimit = (rule.end as? RuleEnd.Count)?.times?.takeIf { it > 0 }
+        // 脏数据防线:Count(0/负)按"已经数满"处理 → 一次都不该发生;
+        // 老代码 takeIf{>0} 会把它当"没有限制"变成永不结束,方向正好反了
+        val countLimit = (rule.end as? RuleEnd.Count)?.times
+        if (countLimit != null && countLimit <= 0) return emptyList()
         val untilDate = (rule.end as? RuleEnd.Until)?.date
         // Count 必须从系列第一次数起,不能快进
         val canFastForward = countLimit == null
+
+        val slots = mutableListOf<RecurrenceSlot>()
+        var count = 0
 
         // 候选日期只增不减:开始时间越过区间终点(或越过 UNTIL)即无后续重叠,停止枚举
         fun emit(date: LocalDate): Boolean {
