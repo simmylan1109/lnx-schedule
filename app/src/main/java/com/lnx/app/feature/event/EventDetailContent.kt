@@ -33,21 +33,25 @@ import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.recurrence.EditScope
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
  * 事件详情卡的只读内容(spec §3.6:时间/重复/地点/标签/优先级/备注 + 编辑/删除)。
- * 重复描述的全集在 M4 实现,这里只区分"不重复"。
+ * 重复事件的编辑/删除弹三选一(spec §3.6/§3.7/§4.4:仅本次 / 本次及以后 / 全部);
+ * 单次事件走普通确认弹窗。作用范围由调用方落库(见 RecurrenceEditHandler)。
  */
 @Composable
 fun EventDetailContent(
     event: Event,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    onEdit: (EditScope) -> Unit,
+    onDelete: (EditScope) -> Unit,
     tags: List<Tag> = emptyList(),
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    // 重复事件:按钮先选作用范围(编辑/删除共用一个弹窗,靠 pendingAction 区分)
+    var pendingAction by remember { mutableStateOf<DetailAction?>(null) }
 
     Column(
         modifier = Modifier
@@ -66,13 +70,17 @@ fun EventDetailContent(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
-                onClick = onEdit,
+                onClick = {
+                    if (event.isRecurring) pendingAction = DetailAction.EDIT else onEdit(EditScope.ALL)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("detail_edit"),
             ) { Text("编辑") }
             Button(
-                onClick = { confirmDelete = true },
+                onClick = {
+                    if (event.isRecurring) pendingAction = DetailAction.DELETE else confirmDelete = true
+                },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("detail_delete"),
@@ -80,7 +88,7 @@ fun EventDetailContent(
         }
     }
 
-    // M2 只有普通事件;重复事件的三选一弹窗(仅本次/本次及以后/全部)属 M4
+    // 非重复事件:普通删除确认(spec §3.6)
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -90,7 +98,7 @@ fun EventDetailContent(
                 TextButton(
                     onClick = {
                         confirmDelete = false
-                        onDelete()
+                        onDelete(EditScope.ALL)
                     },
                     modifier = Modifier.testTag("delete_confirm"),
                 ) { Text("删除") }
@@ -100,7 +108,51 @@ fun EventDetailContent(
             },
         )
     }
+
+    // 重复事件:三选一作用范围(spec §3.6/§4.4)
+    val action = pendingAction
+    if (action != null) {
+        AlertDialog(
+            onDismissRequest = { pendingAction = null },
+            title = { Text(if (action == DetailAction.EDIT) "修改范围" else "删除范围") },
+            text = { Text("这个日程重复发生,请选择作用范围:") },
+            confirmButton = {
+                // 三个作用范围并排;AlertDialog 只有两个按钮槽,三选一塞进 confirm 槽
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ScopeButton("仅本次", EditScope.THIS_ONLY) {
+                        pendingAction = null
+                        if (action == DetailAction.EDIT) onEdit(EditScope.THIS_ONLY) else onDelete(EditScope.THIS_ONLY)
+                    }
+                    ScopeButton("本次及以后", EditScope.THIS_AND_FUTURE) {
+                        pendingAction = null
+                        if (action == DetailAction.EDIT) {
+                            onEdit(EditScope.THIS_AND_FUTURE)
+                        } else {
+                            onDelete(EditScope.THIS_AND_FUTURE)
+                        }
+                    }
+                    ScopeButton("全部", EditScope.ALL) {
+                        pendingAction = null
+                        if (action == DetailAction.EDIT) onEdit(EditScope.ALL) else onDelete(EditScope.ALL)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAction = null }) { Text("取消") }
+            },
+        )
+    }
 }
+
+@Composable
+private fun ScopeButton(label: String, scope: EditScope, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.testTag("scope_${scope.name}")) { Text(label) }
+}
+
+private val Event.isRecurring: Boolean
+    get() = rule.type != com.lnx.app.core.domain.model.RuleType.NONE
+
+private enum class DetailAction { EDIT, DELETE }
 
 @Composable
 private fun DetailRow(label: String, value: String) {

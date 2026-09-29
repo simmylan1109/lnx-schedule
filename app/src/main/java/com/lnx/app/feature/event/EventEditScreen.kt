@@ -45,7 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lnx.app.core.designsystem.EventColors
+import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
+import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RuleDescription
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -54,7 +56,8 @@ import java.util.Locale
 
 /**
  * 新建 / 编辑事件(spec §3.5 字段顺序:标题 → 全天 → 起止 → 地点 → 重复 → 提醒 → 标签 → 颜色 → 优先级 → 备注)。
- * [ruleEditable] = false 时"重复"只读显示:单次例外(仅本次)改不了规则(spec §4.3 裁定)。
+ * 重复事件按作用范围进入:"全部" 走 [eventId];"仅本次"/"本次及以后" 走 [occurrence] + [scope]
+ * (此时"重复"区只读显示,单次例外改不了规则)。
  */
 @Composable
 fun EventEditScreen(
@@ -62,7 +65,9 @@ fun EventEditScreen(
     start: LocalDateTime? = null,
     /** 编辑既有事件的 id;新建时传 null。start / eventId 必须恰好给一个 */
     eventId: String? = null,
-    ruleEditable: Boolean = true,
+    /** 编辑重复事件的某一次("仅本次"/"本次及以后"):给 occurrence + scope,二选一配合 eventId */
+    occurrence: Occurrence? = null,
+    scope: EditScope? = null,
     onClose: () -> Unit,
     onSaved: (overlapTitles: List<String>) -> Unit = {},
     viewModel: EventEditViewModel = hiltViewModel(),
@@ -71,8 +76,9 @@ fun EventEditScreen(
     val draft = state.draft
 
     // 没有导航图时由调用方显式给定入口;ViewModel 跨多次打开存活,每次进入组合必须重置
-    LaunchedEffect(start, eventId) {
+    LaunchedEffect(start, eventId, occurrence, scope) {
         when {
+            occurrence != null && scope != null -> viewModel.initializeOccurrenceEdit(occurrence, scope)
             eventId != null -> viewModel.initializeEvent(eventId)
             start != null -> viewModel.initialize(start)
         }
@@ -183,7 +189,8 @@ fun EventEditScreen(
                     .testTag("field_location"),
             )
 
-            if (ruleEditable) {
+            // 单次例外不能改规则(spec §4.3 裁定;改规则请用"本次及以后"或"全部")
+            if (state.editContext?.scope != EditScope.THIS_ONLY) {
                 RuleEditorSection(
                     rule = draft.rule,
                     seriesStart = draft.start,

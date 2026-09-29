@@ -9,6 +9,8 @@ import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.applyTagFilter
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.recurrence.EditScope
+import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -46,6 +48,7 @@ class CalendarViewModel @Inject constructor(
     private val repository: EventRepository,
     private val tagRepository: TagRepository,
     private val tagFilterState: TagFilterState,
+    private val recurrenceHandler: RecurrenceEditHandler,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
 
@@ -153,6 +156,18 @@ class CalendarViewModel @Inject constructor(
     /** 删除事件(spec §3.6);软删除,Room 失效通知会让周视图即时消失 */
     fun deleteEvent(id: String) {
         viewModelScope.launch { repository.delete(id) }
+    }
+
+    /** 详情卡删除:按作用范围落库(单次事件也是 ALL,走同一入口) */
+    fun deleteOccurrence(occ: Occurrence, scope: EditScope) {
+        viewModelScope.launch {
+            recurrenceHandler.apply(
+                master = occ.event,
+                originalDate = occ.originalDate ?: occ.event.start.toLocalDate(),
+                edited = null,
+                scope = scope,
+            )
+        }
     }
 
     /** 详情卡的标签行(spec §3.6);M3 起事件可带标签 */

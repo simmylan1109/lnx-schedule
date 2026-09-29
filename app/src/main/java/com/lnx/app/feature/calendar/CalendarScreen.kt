@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.domain.model.Occurrence
+import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
 import com.lnx.app.feature.calendar.day.DayView
@@ -46,7 +47,13 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /** 编辑页入口:M2 无导航图的临时路由,eventId(编辑)与 start(新建)恰好给一个 */
-private data class EditorTarget(val eventId: String? = null, val start: LocalDateTime? = null)
+private data class EditorTarget(
+    val eventId: String? = null,
+    val start: LocalDateTime? = null,
+    /** 编辑重复事件的某一次时给:携带该次发生与作用范围(spec §4.4) */
+    val occurrence: Occurrence? = null,
+    val scope: EditScope? = null,
+)
 
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
@@ -163,12 +170,14 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
             EventEditScreen(
                 start = target.start,
                 eventId = target.eventId,
+                occurrence = target.occurrence,
+                scope = target.scope,
                 onClose = { editorTarget = null },
                 onSaved = { overlaps -> overlapNotice = overlaps.firstOrNull() },
             )
         }
 
-        // 事件详情卡(spec §3.6):编辑转到编辑页,删除确认后删除(M2 只有普通事件)
+        // 事件详情卡(spec §3.6):编辑/删除先选作用范围(重复事件三选一),再落库
         detailTarget?.let { occ ->
             // 必须 remember:observeTagsOf 每次调用都返回新 Flow 实例,
             // 直接 collectAsState 会让外层状态每变一次就取消并重启一次 Room 订阅
@@ -182,13 +191,18 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 EventDetailContent(
                     event = occ.event,
                     tags = tags,
-                    onEdit = {
+                    onEdit = { scope ->
                         detailTarget = null
-                        editorTarget = EditorTarget(eventId = occ.event.id)
+                        // "全部"(含单次事件)= 直接改母事件;另两档走该次发生的编辑模式
+                        editorTarget = if (scope == EditScope.ALL) {
+                            EditorTarget(eventId = occ.event.id)
+                        } else {
+                            EditorTarget(occurrence = occ, scope = scope)
+                        }
                     },
-                    onDelete = {
+                    onDelete = { scope ->
                         detailTarget = null
-                        viewModel.deleteEvent(occ.event.id)
+                        viewModel.deleteOccurrence(occ, scope)
                     },
                 )
             }

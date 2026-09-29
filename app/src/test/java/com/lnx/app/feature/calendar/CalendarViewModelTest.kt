@@ -2,6 +2,7 @@ package com.lnx.app.feature.calendar
 
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.TagFilterState
+import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventException
@@ -118,7 +119,7 @@ class CalendarViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun vm(repo: FakeEventRepository = FakeEventRepository()) =
-        CalendarViewModel(repo, FakeTagRepository(), TagFilterState())
+        CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
 
     @Test
     fun `初始状态为今天与周视图`() {
@@ -164,7 +165,7 @@ class CalendarViewModelTest {
                 occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
             ),
         )
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState())
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -179,7 +180,7 @@ class CalendarViewModelTest {
     @Test
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState())
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo))
         val before = repo.observedRanges
             .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
@@ -198,7 +199,7 @@ class CalendarViewModelTest {
             listOf(occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00")),
         )
         val filterState = TagFilterState()
-        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState)
+        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo))
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
