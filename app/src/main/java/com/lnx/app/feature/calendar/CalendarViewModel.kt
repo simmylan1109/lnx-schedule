@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lnx.app.core.common.weekStartOf as weekStartOfDate
 import com.lnx.app.core.domain.EventRepository
+import com.lnx.app.core.domain.TagFilterState
 import com.lnx.app.core.domain.TagRepository
+import com.lnx.app.core.domain.applyTagFilter
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Tag
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,12 +45,24 @@ data class CalendarUiState(
 class CalendarViewModel @Inject constructor(
     private val repository: EventRepository,
     private val tagRepository: TagRepository,
+    private val tagFilterState: TagFilterState,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
 
     private val selection = MutableStateFlow(
         CalendarUiState(selectedDate = today, viewMode = ViewMode.WEEK)
     )
+
+    /** 抽屉清单用的全部标签(spec §3.10) */
+    val tags: StateFlow<List<Tag>> = tagRepository.observeTags()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val hiddenTagIds: StateFlow<Set<String>> = tagFilterState.hiddenTagIds
+    val hideUntagged: StateFlow<Boolean> = tagFilterState.hideUntagged
+
+    fun toggleTag(tagId: String) = tagFilterState.toggle(tagId)
+
+    fun toggleUntagged() = tagFilterState.toggleUntagged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val occurrences: StateFlow<List<Occurrence>> = selection
@@ -86,13 +100,45 @@ class CalendarViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** 筛选输入(关联表 + 抽屉勾选状态)合流成单一快照,供下方 5 流 combine 使用 */
+    private data class FilterSpec(
+        val tags: Map<String, List<String>>,
+        val hidden: Set<String>,
+        val hideUntagged: Boolean,
+    )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val filterSpec: StateFlow<FilterSpec> =
+        combine(
+            tagRepository.observeEventTagIds(),
+            tagFilterState.hiddenTagIds,
+            tagFilterState.hideUntagged,
+        ) { tags, hidden, hideUntagged ->
+            FilterSpec(tags, hidden, hideUntagged)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            FilterSpec(emptyMap(), emptySet(), false),
+        )
+
     /**
      * 选择与数据分开再合并:切 Tab / 翻周必须**立刻**反映到界面,
      * 不能等数据库查询回来(否则点下去有可感知的延迟,自动化测试也会抢跑)。
+     * 三个视图的数据都过同一份标签筛选(spec §3.10:抽屉勾选全局生效)。
      */
     val uiState: StateFlow<CalendarUiState> =
-        combine(selection, occurrences, dayOccurrences, monthOccurrences) { sel, occ, dayOcc, monthOcc ->
-            sel.copy(occurrences = occ, dayOccurrences = dayOcc, monthOccurrences = monthOcc)
+        combine(selection, occurrences, dayOccurrences, monthOccurrences, filterSpec) {
+                sel,
+                occ,
+                dayOcc,
+                monthOcc,
+                filter,
+            ->
+            sel.copy(
+                occurrences = applyTagFilter(occ, filter.tags, filter.hidden, filter.hideUntagged),
+                dayOccurrences = applyTagFilter(dayOcc, filter.tags, filter.hidden, filter.hideUntagged),
+                monthOccurrences = applyTagFilter(monthOcc, filter.tags, filter.hidden, filter.hideUntagged),
+            )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, selection.value)
 
     private fun weekStartOf(date: LocalDate): LocalDateTime =

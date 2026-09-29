@@ -13,19 +13,21 @@ class EventDefaultsTest {
     @Test
     fun `FAB默认起点是所选日的下一个半点`() {
         // spec §3.5:所选日期 + 今天取下一个半点
+        // today 显式传入:默认 LocalDate.now() 会让测试在跨天后失效
+        val today = LocalDate.of(2026, 9, 28)
         assertEquals(
             LocalDateTime.of(LocalDate.of(2026, 9, 28), LocalTime.of(9, 30)),
-            EventDefaults.startFor(LocalDate.of(2026, 9, 28), now = LocalTime.of(9, 7)),
+            EventDefaults.startFor(LocalDate.of(2026, 9, 28), now = LocalTime.of(9, 7), today = today),
         )
         // 整点已过时,进位到下一个半点
         assertEquals(
             LocalDateTime.of(LocalDate.of(2026, 9, 28), LocalTime.of(10, 0)),
-            EventDefaults.startFor(LocalDate.of(2026, 9, 28), now = LocalTime.of(9, 30)),
+            EventDefaults.startFor(LocalDate.of(2026, 9, 28), now = LocalTime.of(9, 30), today = today),
         )
         // 非今天:该日 09:00
         assertEquals(
             LocalDateTime.of(LocalDate.of(2026, 10, 5), LocalTime.of(9, 0)),
-            EventDefaults.startFor(LocalDate.of(2026, 10, 5), now = LocalTime.of(9, 7)),
+            EventDefaults.startFor(LocalDate.of(2026, 10, 5), now = LocalTime.of(9, 7), today = today),
         )
     }
 

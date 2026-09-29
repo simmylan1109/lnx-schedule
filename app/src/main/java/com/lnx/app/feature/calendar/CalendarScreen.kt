@@ -6,16 +6,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,8 +33,10 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
 import com.lnx.app.feature.calendar.day.DayView
+import com.lnx.app.feature.calendar.drawer.CalendarDrawer
 import com.lnx.app.feature.calendar.month.MonthView
 import com.lnx.app.feature.calendar.week.WeekView
+import kotlinx.coroutines.launch
 import com.lnx.app.feature.event.EventDefaults
 import com.lnx.app.feature.event.EventDetailContent
 import com.lnx.app.feature.event.EventEditScreen
@@ -44,6 +51,13 @@ private data class EditorTarget(val eventId: String? = null, val start: LocalDat
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val tags by viewModel.tags.collectAsStateWithLifecycle()
+    val hiddenTagIds by viewModel.hiddenTagIds.collectAsStateWithLifecycle()
+    val hideUntagged by viewModel.hideUntagged.collectAsStateWithLifecycle()
+
+    // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     // M2: 编辑页/详情卡的临时态;M3 引入导航图后改为 NavHost 路由
     var detailTarget by remember { mutableStateOf<Occurrence?>(null) }
@@ -67,13 +81,25 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            CalendarTopBar(
-                title = formatTitle(state.selectedDate),
-                onMenuClick = { /* 抽屉在 M3 接入 */ },
-                onTodayClick = viewModel::backToToday,
-                onSearchClick = { /* 搜索在 M7 接入 */ },
-            )
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                CalendarDrawer(
+                    tags = tags,
+                    hiddenTagIds = hiddenTagIds,
+                    hideUntagged = hideUntagged,
+                    onToggleTag = viewModel::toggleTag,
+                    onToggleUntagged = viewModel::toggleUntagged,
+                )
+            },
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                CalendarTopBar(
+                    title = formatTitle(state.selectedDate),
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onTodayClick = viewModel::backToToday,
+                    onSearchClick = { /* 搜索在 M7 接入 */ },
+                )
             ViewModeTabs(
                 current = state.viewMode,
                 onSelect = viewModel::selectViewMode,
@@ -110,6 +136,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                     onCreateAt = { date -> editorTarget = EditorTarget(start = date.atTime(9, 0)) },
                     modifier = Modifier.weight(1f),
                 )
+            }
             }
         }
         // 新建事件入口(spec §3.1:右下角 ＋)

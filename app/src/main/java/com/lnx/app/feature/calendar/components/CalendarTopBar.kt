@@ -35,7 +35,7 @@ fun CalendarTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        IconButton(onClick = onMenuClick) {
+        IconButton(onClick = onMenuClick, modifier = Modifier.testTag("menu_button")) {
             Icon(
                 imageVector = Icons.Default.Menu,
                 contentDescription = "菜单",
