@@ -141,6 +141,7 @@ class EventEditViewModel @Inject constructor(
     fun setColorSlot(slot: Int) = update { it.copy(colorSlot = slot) }
     fun setPriority(priority: Priority) = update { it.copy(priority = priority) }
     fun setReminderLead(minutes: Int?) = update { it.copy(reminderLeadMinutes = minutes) }
+    fun setRule(rule: EventRule) = update { it.copy(rule = rule) }
 
     /** 全天开关:开 = 规范形(起始日 00:00 → 结束日次日 00:00);关 = 恢复 09:00–10:00 */
     fun toggleAllDay(enabled: Boolean) = update { draft ->

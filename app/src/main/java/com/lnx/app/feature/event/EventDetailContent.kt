@@ -178,6 +178,5 @@ fun detailTimeText(event: Event): String {
     }
 }
 
-/** 重复规则描述(spec §3.6);M2 数据只会是"不重复",全集描述随 M4 重复引擎提供 */
-fun detailRuleText(rule: EventRule): String =
-    if (rule.type == RuleType.NONE) "不重复" else "重复"
+/** 重复规则描述(spec §3.6):M4 起是完整中文描述,与编辑器折叠行同一份文案 */
+fun detailRuleText(rule: EventRule): String = com.lnx.app.core.domain.recurrence.RuleDescription.of(rule)

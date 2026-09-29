@@ -46,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Priority
+import com.lnx.app.core.domain.recurrence.RuleDescription
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -53,7 +54,7 @@ import java.util.Locale
 
 /**
  * 新建 / 编辑事件(spec §3.5 字段顺序:标题 → 全天 → 起止 → 地点 → 重复 → 提醒 → 标签 → 颜色 → 优先级 → 备注)。
- * 标签属 M3、重复规则属 M4,本里程碑对应位置显示只读占位。
+ * [ruleEditable] = false 时"重复"只读显示:单次例外(仅本次)改不了规则(spec §4.3 裁定)。
  */
 @Composable
 fun EventEditScreen(
@@ -61,6 +62,7 @@ fun EventEditScreen(
     start: LocalDateTime? = null,
     /** 编辑既有事件的 id;新建时传 null。start / eventId 必须恰好给一个 */
     eventId: String? = null,
+    ruleEditable: Boolean = true,
     onClose: () -> Unit,
     onSaved: (overlapTitles: List<String>) -> Unit = {},
     viewModel: EventEditViewModel = hiltViewModel(),
@@ -181,7 +183,15 @@ fun EventEditScreen(
                     .testTag("field_location"),
             )
 
-            ReadonlyRow("重复", "不重复(M4 起可设置)")
+            if (ruleEditable) {
+                RuleEditorSection(
+                    rule = draft.rule,
+                    seriesStart = draft.start,
+                    onChange = viewModel::setRule,
+                )
+            } else {
+                ReadonlyRow("重复", RuleDescription.of(draft.rule))
+            }
             ReminderPicker(
                 selected = draft.reminderLeadMinutes,
                 onSelect = viewModel::setReminderLead,
@@ -284,7 +294,7 @@ private fun DateTimeField(
 }
 
 @Composable
-private fun DateField(
+internal fun DateField(
     label: String,
     date: LocalDate,
     onPick: (LocalDate) -> Unit,
@@ -391,7 +401,7 @@ private fun PriorityPicker(selected: Priority, onSelect: (Priority) -> Unit) {
 
 /** 胶囊选项:视觉小巧,触达目标不小于 48dp(Material 无障碍底线) */
 @Composable
-private fun ChipOption(text: String, selected: Boolean, onClick: () -> Unit, tag: String) {
+internal fun ChipOption(text: String, selected: Boolean, onClick: () -> Unit, tag: String) {
     Box(
         modifier = Modifier
             .minimumInteractiveComponentSize()
