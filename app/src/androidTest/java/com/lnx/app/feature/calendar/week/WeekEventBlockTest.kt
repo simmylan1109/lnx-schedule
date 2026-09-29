@@ -18,6 +18,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -108,6 +109,17 @@ class WeekEventBlockTest {
         val lineTop = rule.onAllNodesWithTag("now_line").onFirst()
             .getUnclippedBoundsInRoot().top.value.toDouble()
         assertEquals(lineTop, blockTop, 2.0)
+    }
+
+    @Test
+    fun `零点刻度标签不被上缘切掉`() {
+        // 回归:0 点那行的网格线就在容器顶缘,刻度标签若照别的时间上移半行,
+        // 数字上半截会被切在屏幕外(看着像"U:00")。断言标签顶端在可视区内。
+        val top = rule.onAllNodesWithText("0:00").onFirst()
+            .getUnclippedBoundsInRoot().top.value.toDouble()
+        val gridTop = rule.onAllNodesWithTag("time_grid").onFirst()
+            .getUnclippedBoundsInRoot().top.value.toDouble()
+        assertTrue("0:00 顶端 $top 低于网格顶端 $gridTop", top >= gridTop)
     }
 
     @Test

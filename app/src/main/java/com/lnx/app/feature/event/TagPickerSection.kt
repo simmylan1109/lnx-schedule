@@ -3,6 +3,7 @@ package com.lnx.app.feature.event
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -144,7 +146,12 @@ private fun CreateTagDialog(onConfirm: (String, Int) -> Unit, onDismiss: () -> U
                         .fillMaxWidth()
                         .testTag("tag_name_field"),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // 同 ColorPicker:8 个 48dp 触达点超过对话框正文宽度,必须允许横向滑动,
+                // 否则第 8 个色点被挤到屏幕外点不到
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     EventColors.list().forEachIndexed { index, color ->
                         Box(
                             modifier = Modifier

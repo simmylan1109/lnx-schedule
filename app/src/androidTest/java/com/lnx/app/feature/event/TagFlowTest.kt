@@ -1,12 +1,16 @@
 package com.lnx.app.feature.event
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
@@ -23,7 +27,9 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -81,6 +87,29 @@ class TagFlowTest {
 
         rule.onAllNodesWithText("工作").onFirst().assertExists()
         rule.onAllNodesWithText("生活").onFirst().assertExists()
+    }
+
+    @Test
+    fun `新建标签对话框第8个色点可滑动到并选中`() {
+        rule.waitForIdle()
+        rule.onNodeWithTag("fab_create").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("tag_create").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag("tag_name_field").performTextInput("第八色")
+
+        // 回归:8 个 48dp 色点排不开,容器必须可横向滑动,否则第 8 个点用户永远点不到
+        rule.onNode(
+            hasScrollAction() and hasAnyDescendant(hasTestTag("tag_color_7")),
+        ).performScrollToNode(hasTestTag("tag_color_7"))
+        rule.onNodeWithTag("tag_color_7").performClick()
+        rule.onNodeWithTag("tag_create_confirm").performClick()
+        rule.waitForIdle()
+
+        val created = runBlocking { tagRepository.observeTags().first { it.isNotEmpty() } }
+            .first { it.name == "第八色" }
+        assertEquals(7, created.colorSlot)
+        rule.onNodeWithTag("tag_chip_${created.id}").assertIsDisplayed()
     }
 
     @Test

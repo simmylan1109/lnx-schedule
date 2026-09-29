@@ -371,7 +371,8 @@ internal fun TimeGrid(
                 .fillMaxHeight()
                 .verticalScroll(scrollState),
         ) {
-            // 左侧刻度列:标签右对齐并留 6dp 末距,贴着网格左缘(左对齐会让首位数字被屏幕边缘切掉)
+            // 左侧刻度列:标签右对齐并留 6dp 末距,贴着网格左缘(左对齐会让首位数字被屏幕边缘切掉)。
+            // 上移量对 0 点钳到 0:0 点那行线就在容器顶缘,再上移 6dp 会把数字上半截切在屏幕外。
             Box(modifier = Modifier.width(GUTTER_WIDTH)) {
                 repeat(24) { hour ->
                     Text(
@@ -382,7 +383,7 @@ internal fun TimeGrid(
                         modifier = Modifier
                             .width(GUTTER_WIDTH)
                             .padding(end = 6.dp)
-                            .offset(y = (hour * HOUR_HEIGHT.value - 6).dp),
+                            .offset(y = (hour * HOUR_HEIGHT.value - 6).coerceAtLeast(0f).dp),
                     )
                 }
                 // 当前时刻线的左端圆点(spec §3.2:细线 + 左端圆点),与红线同在滚动内容内故同步移动。
