@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.LocalDateTime
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -47,6 +48,15 @@ class AlarmReceiverTest {
     fun setUp() {
         hiltRule.inject()
         scheduler = ReminderScheduler(context)
+        scheduler.cancelAll()
+    }
+
+    /**
+     * 这个套件用的是**真的**系统闹钟,不清理就会把续排闹钟留在机器上,
+     * 并污染之后跑的 dumpsys 走查证据(第二轮复核对 ReminderSchedulerTest 也提过同款问题)。
+     */
+    @After
+    fun tearDown() {
         scheduler.cancelAll()
     }
 

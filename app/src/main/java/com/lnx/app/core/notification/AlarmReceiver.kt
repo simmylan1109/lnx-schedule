@@ -60,17 +60,19 @@ class AlarmReceiver : BroadcastReceiver() {
             title = intent.getStringExtra(ReminderScheduler.EXTRA_TITLE).orEmpty(),
             location = intent.getStringExtra(ReminderScheduler.EXTRA_LOCATION),
         )
-        deps.reminderNotifier().show(
-            reminder = reminder,
-            silent = DndPolicy.isSilent(
-                at = fromEpochMillis(System.currentTimeMillis()),
-                enabled = DndSettings.enabled(),
-                startMinute = DndSettings.startMinute(),
-                endMinute = DndSettings.endMinute(),
-            ),
-        )
-        // 这次已经响过,重排时它自然会被"提醒时刻 > now"过滤掉,链条自动往下走。
-        // 兜住异常:通知已经发出去了,补排失败不该把进程带崩
+        // 和下面的补排对称:这是裸 CoroutineScope,未捕获异常会直接杀进程
+        runCatching {
+            deps.reminderNotifier().show(
+                reminder = reminder,
+                silent = DndPolicy.isSilent(
+                    at = fromEpochMillis(System.currentTimeMillis()),
+                    enabled = DndSettings.enabled(),
+                    startMinute = DndSettings.startMinute(),
+                    endMinute = DndSettings.endMinute(),
+                ),
+            )
+        }.onFailure { Log.w(TAG, "notify for $eventId failed", it) }
+        // 这次已经响过,重排时它自然会被"提醒时刻 > now"过滤掉,链条自动往下走
         runCatching { deps.reminderPlanner().reschedule() }
             .onFailure { Log.w(TAG, "reschedule after fire failed", it) }
     }
