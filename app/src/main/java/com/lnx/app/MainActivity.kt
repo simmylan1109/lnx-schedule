@@ -52,7 +52,10 @@ class MainActivity : ComponentActivity() {
             ) { slot ->
                 LnxTheme(slot = slot, darkMode = settings.darkMode) {
                     Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
-                        CalendarScreen(openRequest = openRequest)
+                        CalendarScreen(
+                            openRequest = openRequest,
+                            onOpenRequestConsumed = { openRequest = null },
+                        )
                     }
                 }
             }

@@ -41,6 +41,7 @@ import com.lnx.app.feature.event.EventDefaults
 import com.lnx.app.feature.event.EventDetailContent
 import com.lnx.app.feature.event.EventEditScreen
 import com.lnx.app.feature.event.LnxDetailSheet
+import com.lnx.app.feature.settings.SettingsScreen
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -67,6 +68,7 @@ class OpenEventRequest(
 @Composable
 fun CalendarScreen(
     openRequest: OpenEventRequest? = null,
+    onOpenRequestConsumed: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -74,6 +76,7 @@ fun CalendarScreen(
     val hiddenTagIds by viewModel.hiddenTagIds.collectAsStateWithLifecycle()
     val hideUntagged by viewModel.hideUntagged.collectAsStateWithLifecycle()
     val openTarget by viewModel.openTarget.collectAsStateWithLifecycle()
+    val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
 
     // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -101,8 +104,13 @@ fun CalendarScreen(
     }
     // 点提醒通知进来(spec §3.8)。两个 effect 必须分开:openEvent 是异步查库,
     // openTarget 要等它出结果才变;合成一个的话第二次读到的还是初始 null,详情卡永远不弹。
+    // 消费后立刻回调清掉 Activity 侧的 openRequest:换主题会重建整棵子树、effect 重跑,
+    // 不清的话旧请求会再触发一次,详情卡在换完主题后自己弹出来。
     LaunchedEffect(openRequest) {
-        openRequest?.let { viewModel.openEvent(it.eventId, it.occurrenceStart) }
+        openRequest?.let {
+            viewModel.openEvent(it.eventId, it.occurrenceStart)
+            onOpenRequestConsumed()
+        }
     }
     LaunchedEffect(openTarget) {
         openTarget?.let {
@@ -121,6 +129,10 @@ fun CalendarScreen(
                     hideUntagged = hideUntagged,
                     onToggleTag = viewModel::toggleTag,
                     onToggleUntagged = viewModel::toggleUntagged,
+                    onOpenSettings = {
+                        viewModel.openSettings()
+                        scope.launch { drawerState.close() }
+                    },
                 )
             },
         ) {
@@ -199,6 +211,11 @@ fun CalendarScreen(
                 onClose = { editorTarget = null },
                 onSaved = { overlaps -> overlapNotice = overlaps.firstOrNull() },
             )
+        }
+
+        // 设置页(spec §3.11):盖在最上层,返回关掉回日历
+        if (showSettings) {
+            SettingsScreen(onClose = viewModel::closeSettings)
         }
 
         // 事件详情卡(spec §3.6):编辑/删除先选作用范围(重复事件三选一),再落库

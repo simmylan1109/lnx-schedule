@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,7 +81,9 @@ class RecurrenceScopeFlowTest {
 
     /** 开详情卡(点块) → 等详情按钮出现 */
     private fun openDetail() {
-        rule.onNodeWithTag("event_block_scope-master").performClick()
+        // 必须先滚进视口:周视图开屏自动滚到当前时刻(下午跑测试时 10:00 的块在视口上方),
+        // 块仍留在语义树里(能被查到)但坐标已出屏,直接 performClick 会点空、详情卡永不弹。
+        rule.onNodeWithTag("event_block_scope-master").performScrollTo().performClick()
         rule.waitForIdle()
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithTag("detail_edit").fetchSemanticsNodes().isNotEmpty()

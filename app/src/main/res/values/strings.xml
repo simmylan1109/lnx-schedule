@@ -1,3 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">lnx</string>
+
+    <!-- 设置页(spec §3.11) -->
+    <string name="settings_title">设置</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_reminder">提醒</string>
+    <string name="settings_section_general">通用</string>
+    <string name="settings_section_data">数据</string>
+
+    <string name="settings_appearance_mode">外观模式</string>
+    <string name="settings_mode_light">浅色</string>
+    <string name="settings_mode_dark">深色</string>
+    <string name="settings_mode_follow">跟随系统</string>
+
+    <string name="settings_default_lead">默认提前提醒</string>
+    <string name="settings_lead_none">不提醒</string>
+    <string name="settings_lead_5">5 分钟</string>
+    <string name="settings_lead_15">15 分钟</string>
+    <string name="settings_lead_30">30 分钟</string>
+    <string name="settings_lead_60">60 分钟</string>
+
+    <string name="settings_dnd">免打扰</string>
+    <string name="settings_dnd_window">免打扰时段</string>
+    <string name="settings_notification_permission">通知权限</string>
+    <string name="settings_permission_granted">已开启</string>
+    <string name="settings_permission_denied">未开启,提醒不会弹出</string>
+    <string name="settings_open_system_settings">去开启</string>
+
+    <string name="settings_week_start">周起始日</string>
+    <string name="settings_week_monday">周一</string>
+    <string name="settings_week_sunday">周日</string>
+
+    <string name="settings_language">语言</string>
+    <string name="settings_lang_zh">中文</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_lang_system">跟随系统</string>
+    <string name="settings_lang_restart_hint">切换语言后需重启 App 生效(系统版本低于 Android 13)</string>
+
+    <string name="settings_export">导出</string>
+    <string name="settings_import">导入</string>
+    <string name="settings_coming_soon">M7 开放</string>
+    <string name="settings_version">版本 %1$s</string>
+
+    <!-- 主题名(spec §5.1) -->
+    <string name="theme_material_you">Material You</string>
+    <string name="theme_paper">极致留白</string>
+    <string name="theme_warm">暖橙活力</string>
+    <string name="theme_serene">宁静冷色</string>
 </resources>

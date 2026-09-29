@@ -27,7 +27,7 @@ import com.lnx.app.core.domain.model.Tag
 
 /**
  * 抽屉(spec §3.10):顶部 lnx 标识;中部标签筛选清单(色点 + 名称 + 勾选,
- * 勾掉即隐藏该标签的事件)与「未分类」行;底部「设置」入口(M6 接线,先禁用态)。
+ * 勾掉即隐藏该标签的事件)与「未分类」行;底部「设置」入口(M6 起可点,进设置页)。
  */
 @Composable
 fun CalendarDrawer(
@@ -36,6 +36,7 @@ fun CalendarDrawer(
     hideUntagged: Boolean,
     onToggleTag: (String) -> Unit,
     onToggleUntagged: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier = modifier) {
@@ -79,15 +80,16 @@ fun CalendarDrawer(
                 )
             }
 
-            // 底部:设置入口(M6 接线,先禁用态,spec §3.10)。
+            // 底部:设置入口(spec §3.10)。
             // 清单滚动、设置贴底:标签再多也把"设置"压在抽屉最下面。
             HorizontalDivider()
             Text(
                 text = "设置",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable(onClick = onOpenSettings)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
                     .testTag("drawer_settings"),
             )

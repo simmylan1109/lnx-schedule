@@ -155,6 +155,24 @@ class CalendarViewModel @Inject constructor(
     private val _openTarget = MutableStateFlow<Occurrence?>(null)
     val openTarget: StateFlow<Occurrence?> = _openTarget.asStateFlow()
 
+    /**
+     * 设置页开合(spec §3.11)。
+     * **必须放在 ViewModel 而不是界面里的 remember**:MainActivity 用
+     * `Crossfade(settings.themeSlot)` 包住整棵日历子树,换主题瞬间子树重建,
+     * remember 状态全部归零 —— 放在界面里的话,点一下主题卡设置页就会自己关掉
+     * (实机踩过)。ViewModel 挂在 Activity 作用域,重建时同一实例,状态活下来。
+     */
+    private val _showSettings = MutableStateFlow(false)
+    val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
+
+    fun openSettings() {
+        _showSettings.value = true
+    }
+
+    fun closeSettings() {
+        _showSettings.value = false
+    }
+
     fun openEvent(eventId: String, occurrenceStart: LocalDateTime) {
         viewModelScope.launch {
             selectDate(occurrenceStart.toLocalDate())

@@ -27,7 +27,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        // 设置页底部版本号(BuildConfig.VERSION_NAME);AGP 8 起默认不生成
+        buildConfig = true
+    }
 }
 
 // Room schema 落盘位置:exportSchema = true 依赖它,否则 schema JSON 不会生成,
