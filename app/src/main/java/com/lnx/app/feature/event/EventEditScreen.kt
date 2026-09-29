@@ -49,6 +49,8 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RuleDescription
+import com.lnx.app.core.notification.NotificationPermission
+import com.lnx.app.core.notification.findActivity
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -74,6 +76,7 @@ fun EventEditScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val draft = state.draft
+    val activity = LocalContext.current.findActivity()
 
     // 没有导航图时由调用方显式给定入口;ViewModel 跨多次打开存活,每次进入组合必须重置
     LaunchedEffect(start, eventId, occurrence, scope) {
@@ -89,6 +92,15 @@ fun EventEditScreen(
         if (state.saved) {
             onSaved(state.overlapTitles)
             onClose()
+        }
+    }
+
+    // 通知权限在"用户真的设了提醒"这一刻才要(spec §3.8)。
+    // 冷启动就弹会挡住首屏(实测仪器测试直接卡在权限框上),也让用户在没搞懂 App 前就被要权限。
+    LaunchedEffect(state.askNotificationPermission) {
+        if (state.askNotificationPermission) {
+            if (activity != null) NotificationPermission.request(activity)
+            viewModel.consumeNotificationPermissionRequest()
         }
     }
 

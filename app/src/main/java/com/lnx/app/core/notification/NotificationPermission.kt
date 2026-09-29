@@ -3,6 +3,7 @@ package com.lnx.app.core.notification
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -32,4 +33,11 @@ object NotificationPermission {
             REQUEST_CODE,
         )
     }
+}
+
+/** Compose 里拿 Activity:LocalContext 通常就是 Activity,被包过一层也能剥出来 */
+tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

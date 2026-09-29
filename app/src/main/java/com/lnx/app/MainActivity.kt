@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.designsystem.ThemeSlot
-import com.lnx.app.core.notification.NotificationPermission
 import com.lnx.app.core.notification.fromEpochMillis
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
@@ -29,9 +28,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Android 13+ 首次进入申请通知权限(spec §3.8:引导页第 3 页在 M7,先在这里要一次;
-        // 被拒不崩,提醒静默失效,设置页给"去开启"入口)
-        NotificationPermission.request(this)
+        // 通知权限不在这里要:用户点开 App 的那一刻还不知道提醒是干什么的。
+        // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页在 M7 接入。
         handleIntent(intent)
         setContent {
             LnxTheme(slot = ThemeSlot.MATERIAL_YOU, darkMode = DarkMode.FOLLOW_SYSTEM) {

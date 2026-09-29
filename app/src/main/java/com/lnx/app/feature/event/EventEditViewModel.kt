@@ -42,6 +42,8 @@ data class EventEditUiState(
     val selectedTagIds: Set<String> = emptySet(),
     /** 新建标签失败的原因(重名等),给对话框内联显示 */
     val tagCreateError: String? = null,
+    /** 用户刚设了提醒 → 该问一次通知权限了(spec §3.8),编辑器消费后置回 false */
+    val askNotificationPermission: Boolean = false,
     /**
      * 非 null = 正在改重复事件的某一次(spec §4.4),保存时按作用范围落库:
      * THIS_ONLY 写例外、THIS_AND_FUTURE 剪断+新建;"全部"不带 context(直接改母事件)。
@@ -191,7 +193,16 @@ class EventEditViewModel @Inject constructor(
     fun setEnd(value: LocalDateTime) = update { it.copy(end = value) }
     fun setColorSlot(slot: Int) = update { it.copy(colorSlot = slot) }
     fun setPriority(priority: Priority) = update { it.copy(priority = priority) }
-    fun setReminderLead(minutes: Int?) = update { it.copy(reminderLeadMinutes = minutes) }
+
+    fun setReminderLead(minutes: Int?) {
+        update { it.copy(reminderLeadMinutes = minutes) }
+        // 只在用户主动设提醒时索权;选"不提醒"不该弹权限框
+        _uiState.update { it.copy(askNotificationPermission = minutes != null) }
+    }
+
+    fun consumeNotificationPermissionRequest() =
+        _uiState.update { it.copy(askNotificationPermission = false) }
+
     fun setRule(rule: EventRule) = update { it.copy(rule = rule) }
 
     /** 全天开关:开 = 规范形(起始日 00:00 → 结束日次日 00:00);关 = 恢复 09:00–10:00 */
