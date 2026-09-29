@@ -35,6 +35,7 @@ object DndPolicy {
  * 这里只固定"出厂值"与读取口,M6 换实现不改调用方。
  */
 object DndSettings {
+    /** 出厂值:免打扰默认关,窗口 22:00–08:00(可跨午夜);M6 接设置页换数据源 */
     const val DEFAULT_START_MINUTE = 22 * 60
     const val DEFAULT_END_MINUTE = 8 * 60
     const val DEFAULT_ENABLED = false

@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.LocalDateTime
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -38,6 +39,15 @@ class ReminderSchedulerTest {
     fun setUp() {
         scheduler = ReminderScheduler(context)
         scheduler.cancelAll() // 上一个测试的残留清掉
+    }
+
+    /**
+     * 跑完必须清干净:这个套件用的是**真的**系统闹钟,留在机器上的话会在 2026-12-01
+     * 真弹出"会议"通知,还会污染之后跑的 dumpsys 走查证据。
+     */
+    @After
+    fun tearDown() {
+        scheduler.cancelAll()
     }
 
     private fun reminder(id: String, at: LocalDateTime) = ScheduledReminder(

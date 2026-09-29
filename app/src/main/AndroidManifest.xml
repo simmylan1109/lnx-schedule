@@ -27,12 +27,13 @@
             </intent-filter>
         </activity>
 
-        <!-- 到点弹通知 + 立刻补排下一次 -->
+        <!-- 到点弹通知 + 立刻补排下一次;REMINDER_CONTINUE 是"续排"闹钟(只重排不弹) -->
         <receiver
             android:name=".core.notification.AlarmReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.lnx.app.action.REMINDER_FIRE" />
+                <action android:name="com.lnx.app.action.REMINDER_CONTINUE" />
             </intent-filter>
         </receiver>
 

@@ -104,11 +104,13 @@ class EventEditViewModel @Inject constructor(
      * 所以这里必须**无条件**重置整个状态——否则第二次打开会残留上一次的草稿。
      */
     fun initialize(start: LocalDateTime) {
+        permissionAskedInSession = false // 新的一次编辑 → 重新获得一次索权机会
         _uiState.value = EventEditUiState(draft = EventDefaults.draft(start))
     }
 
     /** 编辑入口:按 id 载入既有事件;事件已被删除时退化为新建 */
     fun initializeEvent(eventId: String) {
+        permissionAskedInSession = false
         val blank = EventEditUiState()
         _uiState.value = blank
         viewModelScope.launch {
@@ -132,6 +134,7 @@ class EventEditViewModel @Inject constructor(
      * 保存时按 [EditContext.scope] 走例外/剪断,不直接写母事件。
      */
     fun initializeOccurrenceEdit(occ: Occurrence, scope: EditScope) {
+        permissionAskedInSession = false
         val master = occ.event
         _uiState.value = EventEditUiState(
             draft = EventDraft(

@@ -20,9 +20,13 @@ interface ReminderEntryPoint {
 }
 
 /** 取依赖;组件不可用时返回 null,调用方直接放弃这一次广播 */
-internal fun reminderEntryPoint(context: android.content.Context): ReminderEntryPoint? = runCatching {
-    dagger.hilt.android.EntryPointAccessors.fromApplication(
-        context.applicationContext,
-        ReminderEntryPoint::class.java,
-    )
-}.getOrNull()
+internal fun reminderEntryPoint(context: android.content.Context): ReminderEntryPoint? =
+    runCatching {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            ReminderEntryPoint::class.java,
+        )
+    }.onFailure {
+        // 取不到依赖就丢广播,必须留下原因 —— 否则"通知没响"只能靠猜
+        android.util.Log.w("lnx-remind", "entry point unavailable", it)
+    }.getOrNull()
