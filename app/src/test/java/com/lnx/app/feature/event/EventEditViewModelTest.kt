@@ -13,6 +13,11 @@ import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import com.lnx.app.core.notification.RecordingAlarmSink
 import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.settings.LnxSettings
+import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.SettingsRepository
+import com.lnx.app.core.designsystem.DarkMode
+import com.lnx.app.core.designsystem.ThemeSlot
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -70,8 +76,10 @@ private class FakeEventRepository(
     override suspend fun deleteExceptionsFrom(masterId: String, from: LocalDate) = Unit
 }
 
-private class FakeTagRepository : TagRepository {
-    override fun observeTags(): Flow<List<Tag>> = MutableStateFlow(emptyList())
+private class FakeTagRepository(
+    private val tags: MutableStateFlow<List<Tag>> = MutableStateFlow(emptyList()),
+) : TagRepository {
+    override fun observeTags(): Flow<List<Tag>> = tags
     override suspend fun createTag(name: String, colorSlot: Int): Result<Tag> =
         Result.success(Tag("t-$name", name, colorSlot))
     override suspend fun renameTag(id: String, name: String) = Unit
@@ -81,28 +89,59 @@ private class FakeTagRepository : TagRepository {
     override fun observeEventTagIds(): Flow<Map<String, List<String>>> = MutableStateFlow(emptyMap())
 }
 
+/** 假设置仓库:M6 起新建草稿的默认提醒档位从设置读(全局约束"默认值不得双源") */
+private class FakeSettingsRepository(
+    initial: LnxSettings = SettingsDefaults.snapshot(),
+) : SettingsRepository {
+    private val state = MutableStateFlow(initial)
+
+    /** 打开这个让"读设置"抛异常,验证读失败时编辑器仍能开 */
+    var failOnRead = false
+
+    override val settings: Flow<LnxSettings> = state
+    override suspend fun current(): LnxSettings =
+        if (failOnRead) throw IllegalStateException("settings unreadable") else state.value
+
+    override suspend fun setThemeSlot(slot: ThemeSlot) = Unit
+    override suspend fun setDarkMode(mode: DarkMode) = Unit
+    override suspend fun setReminderLead(minutes: Int?) {
+        state.value = state.value.copy(reminderLeadMinutes = minutes)
+    }
+
+    override suspend fun setDnd(enabled: Boolean, startMinute: Int, endMinute: Int) = Unit
+    override suspend fun setWeekStartMonday(monday: Boolean) = Unit
+    override suspend fun setLanguage(language: String) = Unit
+    override suspend fun setOnboardingDone() = Unit
+}
+
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class EventEditViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var repo: FakeEventRepository
     private lateinit var sink: RecordingAlarmSink
+    private lateinit var settings: FakeSettingsRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repo = FakeEventRepository()
         sink = RecordingAlarmSink()
+        settings = FakeSettingsRepository()
     }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(editingId: String? = null) = EventEditViewModel(
+    private fun vm(
+        editingId: String? = null,
+        tags: List<Tag> = emptyList(),
+    ) = EventEditViewModel(
         repository = repo,
-        tagRepository = FakeTagRepository(),
+        tagRepository = FakeTagRepository(MutableStateFlow(tags)),
         recurrenceHandler = RecurrenceEditHandler(repo),
         reminderPlanner = ReminderPlanner(repo, sink),
+        settingsRepository = settings,
         savedStateHandle = SavedStateHandle(
             if (editingId == null) emptyMap() else mapOf(EventEditViewModel.KEY_EVENT_ID to editingId),
         ),
@@ -218,5 +257,53 @@ class EventEditViewModelTest {
 
         assertFalse(subject.uiState.value.saved)
         assertEquals(0, sink.rescheduleCount)
+    }
+
+    // —— 去双源(spec §3.5:提醒 = 设置中的默认值,出厂 15)——
+    // 之前 15 分钟是 EventDefaults 里的编译期常量,设置页改 30 新建事件也还是 15
+
+    @Test
+    fun `新建草稿的默认提醒读设置_改了设置就跟着变`() = runTest {
+        settings.setReminderLead(30)
+        val subject = vm()
+        subject.initialize(start)
+
+        assertEquals(30, subject.uiState.value.draft?.reminderLeadMinutes)
+    }
+
+    @Test
+    fun `新建草稿默认提醒跟设置为不提醒时就是不带提醒`() = runTest {
+        settings.setReminderLead(null)
+        val subject = vm()
+        subject.initialize(start)
+
+        assertEquals(null, subject.uiState.value.draft?.reminderLeadMinutes)
+    }
+
+    @Test
+    fun `读不到设置时新建草稿回落出厂15_编辑器照常打开`() = runTest {
+        settings.failOnRead = true
+        val subject = vm()
+        subject.initialize(start)
+
+        // 读设置失败不许把编辑器卡在空白(草稿 null = 渲染不出任何字段)
+        assertEquals(15, subject.uiState.value.draft?.reminderLeadMinutes)
+    }
+
+    /**
+     * 回归:草稿曾用 `compareAndSet(整份空状态, …)` 落库,而标签采集协程随时在改同一份 state。
+     * 标签先到(用户之前建过标签)、草稿后到时,整份 state 早已不等于"空状态",
+     * compareAndSet 永远失败 → 编辑器画不出任何字段(实测标题栏十分钟不出现)。
+     * 改用会话号判过期后,标签与草稿各写各的字段,互不打架。
+     */
+    @Test
+    fun `标签比草稿先到时草稿照样装得进去`() = runTest {
+        val subject = vm(tags = listOf(Tag("t1", "工作", 4)))
+        subject.initialize(start)
+        // 让草稿那条协程晚于标签 emission 落地
+        advanceUntilIdle()
+
+        assertEquals(15, subject.uiState.value.draft?.reminderLeadMinutes)
+        assertEquals(listOf("工作"), subject.uiState.value.tags.map { it.name })
     }
 }

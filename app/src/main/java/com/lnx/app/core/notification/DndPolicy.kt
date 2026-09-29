@@ -29,18 +29,3 @@ object DndPolicy {
         }
     }
 }
-
-/**
- * 免打扰设置。数据源在 M6 接入(目前无常量以外的存储),
- * 这里只固定"出厂值"与读取口,M6 换实现不改调用方。
- */
-object DndSettings {
-    /** 出厂值:免打扰默认关,窗口 22:00–08:00(可跨午夜);M6 接设置页换数据源 */
-    const val DEFAULT_START_MINUTE = 22 * 60
-    const val DEFAULT_END_MINUTE = 8 * 60
-    const val DEFAULT_ENABLED = false
-
-    fun enabled(): Boolean = DEFAULT_ENABLED
-    fun startMinute(): Int = DEFAULT_START_MINUTE
-    fun endMinute(): Int = DEFAULT_END_MINUTE
-}

@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -18,6 +19,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -126,5 +128,24 @@ class SettingsScreenTest {
             runBlocking { settings.current().reminderLeadMinutes } == 30
         }
         assertEquals(30, runBlocking { settings.current() }.reminderLeadMinutes)
+    }
+
+    /**
+     * 去双源的端到端一半(spec §3.5:新建事件的提醒 = 设置中的默认值,出厂 15):
+     * 设置里改成 30,新建日程的提醒行就该默认选中 30,而不是仍写死的 15。
+     * 单测(草稿层)和这条(真界面)各钉一半,谁漏了都跑不掉。
+     */
+    @Test
+    fun 改了默认提醒后新建日程的提醒行跟着变() {
+        runBlocking { settings.setReminderLead(30) }
+
+        rule.onNodeWithTag("fab_create").performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("reminder_30").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(
+            "新建日程应默认选中 30 分钟提醒档",
+            rule.onAllNodesWithTag("reminder_30").fetchSemanticsNodes().isNotEmpty(),
+        )
     }
 }

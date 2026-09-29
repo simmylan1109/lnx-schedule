@@ -16,6 +16,8 @@ import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -64,6 +66,7 @@ class EventEditViewModel @Inject constructor(
     private val tagRepository: TagRepository,
     private val recurrenceHandler: RecurrenceEditHandler,
     private val reminderPlanner: ReminderPlanner,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val editingId: String? = savedStateHandle.get<String>(KEY_EVENT_ID)
@@ -73,6 +76,30 @@ class EventEditViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(EventEditUiState())
     val uiState: StateFlow<EventEditUiState> = _uiState.asStateFlow()
+
+    /**
+     * 编辑会话号:每次进入编辑器 +1。异步载入完草稿后**只认当前会话**的结果,
+     * 上一轮晚到的结果直接丢弃。
+     *
+     * 这里必须用会话号,不能用 `compareAndSet(整份旧状态, 新状态)`:
+     * 标签采集协程随时在改同一份 state(它比初始化先拿到标签,或用户刚建过标签),
+     * 一旦它插在中间写一笔,整份 state 就不再等于当初的"空状态",
+     * compareAndSet 便永远失败 —— 实测表现是**编辑器永远画不出来**(标题栏不出现,超时 10s)。
+     */
+    private var session = 0
+
+    /**
+     * 新建草稿(spec §3.5:提醒 = 设置里的默认值,出厂 15)。
+     *
+     * 档位**运行时从设置读**,不再用编译期常量 —— 常量和设置页各写一份默认值就是"双源":
+     * 用户在设置里改成 30,新建事件却还是 15。读失败(文件损坏/IO 异常)才回落出厂值,
+     * 读不到设置不该让编辑器开不出来。
+     */
+    private suspend fun newDraft(start: LocalDateTime): EventDraft = EventDefaults.draft(
+        start = start,
+        defaultLead = runCatching { settingsRepository.current().reminderLeadMinutes }
+            .getOrDefault(SettingsDefaults.REMINDER_LEAD_MINUTES),
+    )
 
     init {
         // 标签清单常驻刷新(新建标签对话框、其他入口改名/删除都要跟)
@@ -88,43 +115,64 @@ class EventEditViewModel @Inject constructor(
                 val event = repository.getEvent(editingId)
                 _uiState.update {
                     it.copy(
-                        draft = event?.toDraft() ?: EventDefaults.draft(navStart ?: LocalDateTime.now()),
+                        draft = event?.toDraft() ?: newDraft(navStart ?: LocalDateTime.now()),
                         isEditing = true,
                     )
                 }
             }
         } else if (navStart != null) {
-            _uiState.update { it.copy(draft = EventDefaults.draft(navStart)) }
+            val sessionId = ++session
+            _uiState.value = EventEditUiState()
+            viewModelScope.launch {
+                val draft = newDraft(navStart)
+                if (sessionId == session) _uiState.update { it.copy(draft = draft) }
+            }
         }
     }
 
     /**
      * 新建入口:由调用方给定预填时间(spec §3.5 的三入口规则)。
      * 无导航图时 ViewModel 挂在 Activity 上、跨多次打开存活,
-     * 所以这里必须**无条件**重置整个状态——否则第二次打开会残留上一次的草稿。
+     * 所以这里必须**无条件**重置本会话的状态——否则第二次打开会残留上一次的草稿。
+     *
+     * 草稿要等设置读回来才建(默认提醒档位来自设置),期间 `draft` 为 null、
+     * 编辑器渲染空壳(见 [EventEditScreen]);先清空再等,免得那几毫秒里留着上一份草稿。
+     *
+     * **标签清单要留着**:它来自常驻订阅,只在标签表变动时才重新吐值。
+     * 整份清零的话,第二次打开编辑器标签区就是空的,得等用户新建/删除一个标签才恢复。
      */
     fun initialize(start: LocalDateTime) {
         permissionAskedInSession = false // 新的一次编辑 → 重新获得一次索权机会
-        _uiState.value = EventEditUiState(draft = EventDefaults.draft(start))
+        val sessionId = ++session
+        val carried = _uiState.value
+        _uiState.value = EventEditUiState(tags = carried.tags, tagCreateError = carried.tagCreateError)
+        viewModelScope.launch {
+            val draft = newDraft(start)
+            // 期间调用方又 initialize 了(用户关掉又开)就丢弃这次,别覆盖新一轮
+            if (sessionId == session) _uiState.update { it.copy(draft = draft) }
+        }
     }
 
     /** 编辑入口:按 id 载入既有事件;事件已被删除时退化为新建 */
     fun initializeEvent(eventId: String) {
         permissionAskedInSession = false
-        val blank = EventEditUiState()
-        _uiState.value = blank
+        val sessionId = ++session
+        // 同 [initialize]:标签清单是常驻订阅的产物,别整份清零(见那里的说明)
+        val carried = _uiState.value
+        _uiState.value = EventEditUiState(tags = carried.tags, tagCreateError = carried.tagCreateError)
         viewModelScope.launch {
             val event = repository.getEvent(eventId)
             val tagIds = tagRepository.observeTagsOfEvent(eventId).first().map { it.id }.toSet()
-            // 载入是异步的:若期间调用方又 initialize(新建),丢弃这次过期结果
-            _uiState.compareAndSet(
-                blank,
-                blank.copy(
-                    draft = event?.toDraft() ?: EventDefaults.draft(LocalDateTime.now()),
-                    isEditing = event != null,
-                    selectedTagIds = tagIds,
-                ),
-            )
+            // 载入是异步的:若期间调用方又 initialize(新建),丢弃这次过期结果(见 [session])
+            if (sessionId == session) {
+                _uiState.update {
+                    it.copy(
+                        draft = event?.toDraft() ?: newDraft(LocalDateTime.now()),
+                        isEditing = event != null,
+                        selectedTagIds = tagIds,
+                    )
+                }
+            }
         }
     }
 
@@ -209,9 +257,10 @@ class EventEditViewModel @Inject constructor(
     /**
      * 本次编辑会话内只问一次通知权限。
      *
-     * spec §3.5 规定新建事件的草稿**默认就带 15 分钟提醒**,所以光靠"用户点了提醒档位"
-     * 索权会漏掉主路径:用户不碰提醒行直接保存,事件有提醒、闹钟也排了,却从没申请过
-     * `POST_NOTIFICATIONS`,通知永远不会出现。保存时也要兜一次底(见 [save])。
+     * spec §3.5 规定新建事件的草稿**默认就带提醒**(档位取设置,出厂 15),
+     * 所以光靠"用户点了提醒档位"索权会漏掉主路径:用户不碰提醒行直接保存,
+     * 事件有提醒、闹钟也排了,却从没申请过 `POST_NOTIFICATIONS`,通知永远不会出现。
+     * 保存时也要兜一次底(见 [save])。
      */
     private fun askNotificationPermissionOnce() {
         if (permissionAskedInSession) return

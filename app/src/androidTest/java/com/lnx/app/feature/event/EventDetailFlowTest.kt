@@ -170,6 +170,9 @@ class EventDetailFlowTest {
         rule.waitForIdle()
 
         rule.onNodeWithTag("fab_create").performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.waitForIdle()
         rule.onNodeWithTag("field_title").performTextInput("重叠测试")
         rule.onNodeWithTag("save_button").performClick()

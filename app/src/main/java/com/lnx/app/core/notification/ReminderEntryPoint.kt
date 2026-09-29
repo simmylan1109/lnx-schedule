@@ -1,5 +1,6 @@
 package com.lnx.app.core.notification
 
+import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -17,6 +18,9 @@ import dagger.hilt.components.SingletonComponent
 interface ReminderEntryPoint {
     fun reminderPlanner(): ReminderPlanner
     fun reminderNotifier(): ReminderNotifier
+
+    /** 免打扰窗口在**到点这一刻**读设置(spec §3.11 ②),不是排闹钟时定死 */
+    fun settingsRepository(): SettingsRepository
 }
 
 /** 取依赖;组件不可用时返回 null,调用方直接放弃这一次广播 */

@@ -6,8 +6,9 @@ import com.lnx.app.core.designsystem.ThemeSlot
 /**
  * 设置的**出厂值**(spec §3.11/§3.12)。
  *
- * 全局约束"默认值不得双源":以前提醒默认 15 分钟住在 `EventDefaults`、免打扰窗口住在
- * `DndSettings`,现在统一收口到这里,那两个类只保留"读不到设置时"的兜底。
+ * 全局约束"默认值不得双源":提醒的默认提前量以前是 `EventDefaults` 里的编译期常量、
+ * 免打扰窗口以前是 `DndSettings`,现在两者都在运行时读设置,这里只剩"读不到时"的兜底
+ * (`EventDefaults.draft` 的默认参数、接收器读设置失败时的回落都用它)。
  */
 object SettingsDefaults {
     val THEME_SLOT = ThemeSlot.MATERIAL_YOU

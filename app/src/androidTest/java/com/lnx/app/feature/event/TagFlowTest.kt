@@ -72,6 +72,20 @@ class TagFlowTest {
         rule.waitForIdle()
     }
 
+    /**
+     * 等编辑器内容画出来再操作。
+     *
+     * M6 起新建草稿的默认提醒档位要**从设置里读**(spec §3.5"默认值不得双源"),
+     * 草稿因此晚几毫秒才建成,那之前 `field_title` 这些节点还不存在 ——
+     * 不等就会 "Failed to perform text input"。标题栏在,就说明整页可操作了。
+     */
+    private fun awaitEditor() {
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.waitForIdle()
+    }
+
     @Test
     fun `编辑器选两个标签保存后详情卡显示`() {
         val work = runBlocking { tagRepository.createTag("工作", 4).getOrThrow() }
@@ -79,7 +93,7 @@ class TagFlowTest {
         awaitHome()
 
         rule.onNodeWithTag("fab_create").performClick()
-        rule.waitForIdle()
+        awaitEditor()
         rule.onNodeWithTag("field_title").performTextInput("带标签的事")
         rule.onNodeWithTag("tag_chip_${work.id}").performClick()
         rule.onNodeWithTag("tag_chip_${life.id}").performClick()
@@ -104,7 +118,7 @@ class TagFlowTest {
     fun `新建标签对话框第8个色点可滑动到并选中`() {
         awaitHome()
         rule.onNodeWithTag("fab_create").performClick()
-        rule.waitForIdle()
+        awaitEditor()
         rule.onNodeWithTag("tag_create").performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("tag_name_field").performTextInput("第八色")
@@ -124,13 +138,16 @@ class TagFlowTest {
     }
 
     @Test
-    fun `重名标签当场报错且对话框不关`() = runBlocking {
+    fun `重名标签当场报错且对话框不关`() {
         // 回归:曾经重名会静默"成功"返回一个库里不存在的 id,事件就此挂上幽灵标签,
         // 抽屉里没有对应项、连未分类也藏不住它 —— 用户再也看不到这个事件。
-        tagRepository.createTag("工作", 4).getOrThrow()
+        //
+        // 注意**不能**把整个测试体包进 runBlocking(早期写法):那会把 Compose 的帧回调
+        // 和草稿协程一起堵死,编辑器永远画不出来(awaitEditor 超时 10s)。
+        runBlocking { tagRepository.createTag("工作", 4).getOrThrow() }
         awaitHome()
         rule.onNodeWithTag("fab_create").performClick()
-        rule.waitForIdle()
+        awaitEditor()
         rule.onNodeWithTag("tag_create").performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("tag_name_field").performTextInput("工作")
@@ -141,7 +158,7 @@ class TagFlowTest {
         }
         // 对话框还开着,用户能改名字;库里仍然只有一个标签
         rule.onNodeWithTag("tag_name_field").assertExists()
-        assertEquals(1, tagRepository.observeTags().first().size)
+        runBlocking { assertEquals(1, tagRepository.observeTags().first().size) }
     }
 
     @Test

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.lnx.app.core.settings.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,7 +13,8 @@ import kotlinx.coroutines.launch
 /**
  * 到点接收器:弹通知 + 立刻补排下一次(spec §3.8"重复事件逐次排期")。
  *
- * 静默与否在**到点这一刻**才算 —— 排闹钟时把静音标志写死是错的,排期和响铃时刻可能差几天。
+ * 静默与否在**到点这一刻**才算 —— 排闹钟时把静音标志写死是错的,排期和响铃时刻可能差几天;
+ * 免打扰窗口也是这一刻从设置里读(spec §3.11 ②),用户中途改设置对还没响的提醒同样生效。
  *
  * **`goAsync()` 整个 `onReceive` 只能调一次,且返回值必须按可空处理**:
  * AOSP 实现是 `res = mPendingResult; mPendingResult = null; return res` —— 第二次调用恒返回 null,
@@ -60,15 +62,18 @@ class AlarmReceiver : BroadcastReceiver() {
             title = intent.getStringExtra(ReminderScheduler.EXTRA_TITLE).orEmpty(),
             location = intent.getStringExtra(ReminderScheduler.EXTRA_LOCATION),
         )
+        // 免打扰窗口在这一刻才读(spec §3.11 ②):用户在设置里改过之后,到点就该按新的窗口判。
+        // 读失败只能退回出厂值 —— 读设置是"静不静"的问题,不该把通知本身一起弄丢。
+        val dnd = runCatching { deps.settingsRepository().current() }.getOrNull()
         // 和下面的补排对称:这是裸 CoroutineScope,未捕获异常会直接杀进程
         runCatching {
             deps.reminderNotifier().show(
                 reminder = reminder,
                 silent = DndPolicy.isSilent(
                     at = fromEpochMillis(System.currentTimeMillis()),
-                    enabled = DndSettings.enabled(),
-                    startMinute = DndSettings.startMinute(),
-                    endMinute = DndSettings.endMinute(),
+                    enabled = dnd?.dndEnabled ?: SettingsDefaults.DND_ENABLED,
+                    startMinute = dnd?.dndStartMinute ?: SettingsDefaults.DND_START_MINUTE,
+                    endMinute = dnd?.dndEndMinute ?: SettingsDefaults.DND_END_MINUTE,
                 ),
             )
         }.onFailure { Log.w(TAG, "notify for $eventId failed", it) }

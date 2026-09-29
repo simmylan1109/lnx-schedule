@@ -60,6 +60,9 @@ class RuleEditorFlowTest {
             rule.onAllNodesWithTag("fab_create").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithTag("fab_create").performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.waitForIdle()
         rule.onNodeWithTag("field_title").performTextInput("每周例会")
 
@@ -107,6 +110,9 @@ class RuleEditorFlowTest {
             rule.onAllNodesWithTag("fab_create").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithTag("fab_create").performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.waitForIdle()
         rule.onNodeWithTag("field_title").performTextInput("三次小会")
         rule.onNodeWithTag("rule_row").performClick()

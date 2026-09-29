@@ -46,6 +46,10 @@ class EventEditFlowTest {
     @Test
     fun `加号入口建事件并出现在周视图`() {
         rule.onNodeWithTag("fab_create").performClick()
+        // 新建草稿要等设置读完才建成(默认提醒档位来自设置),标题栏在才说明可操作
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.waitForIdle()
 
         // 编辑页:标题可输入,开始时间已预填
@@ -65,6 +69,9 @@ class EventEditFlowTest {
     @Test
     fun `空标题保存被拦下且不落库`() {
         rule.onNodeWithTag("fab_create").performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.waitForIdle()
         rule.onNodeWithTag("save_button").performClick()
         rule.waitForIdle()

@@ -4,6 +4,7 @@ import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.model.RuleEnd
 import com.lnx.app.core.domain.model.RuleType
+import com.lnx.app.core.settings.SettingsDefaults
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -19,8 +20,8 @@ data class EventDraft(
     val notes: String = "",
     val colorSlot: Int = 0,
     val priority: Priority = Priority.P2,
-    /** null = 不提醒 */
-    val reminderLeadMinutes: Int? = 15,
+    /** null = 不提醒;默认档位来自设置(spec §3.5),这里兜底出厂值 */
+    val reminderLeadMinutes: Int? = SettingsDefaults.REMINDER_LEAD_MINUTES,
     val rule: EventRule = EventRule(RuleType.NONE, end = RuleEnd.Never),
     val createdAt: Long = 0L,
 )
@@ -50,7 +51,6 @@ fun normalizeAllDay(draft: EventDraft): EventDraft {
 /** 新建/编辑的默认值与预填规则(spec §3.5),纯函数便于单测 */
 object EventDefaults {
     const val DEFAULT_DURATION_MINUTES = 60L
-    private const val DEFAULT_REMINDER_MINUTES = 15
 
     /**
      * 入口预填(spec §3.5):
@@ -67,10 +67,17 @@ object EventDefaults {
         return selectedDate.atStartOfDay().plusMinutes(clamped.toLong())
     }
 
-    fun draft(start: LocalDateTime): EventDraft = EventDraft(
+    /**
+     * 新建草稿。`defaultLead` 由调用方从设置注入(spec §3.5:提醒 = 设置中的默认值,
+     * 出厂 15);读不到设置时留默认值即可,不要在这里写死档位 —— 那会变成第二份来源。
+     */
+    fun draft(
+        start: LocalDateTime,
+        defaultLead: Int? = SettingsDefaults.REMINDER_LEAD_MINUTES,
+    ): EventDraft = EventDraft(
         start = start,
         end = start.plusMinutes(DEFAULT_DURATION_MINUTES),
-        reminderLeadMinutes = DEFAULT_REMINDER_MINUTES,
+        reminderLeadMinutes = defaultLead,
     )
 
     /** 定时 → 全天:单日按当天;跨零点的定时事件按起止两天转为全天 */
