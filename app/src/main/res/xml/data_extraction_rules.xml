@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+(API 31)起的备份/换机规则。
+
+  为什么要显式写:不写就是"全都要",看着省事,但"哪些数据会跟着用户换手机走"
+  这件事就没有答案了 —— 而对日程 App 来说这恰恰是最要紧的一件事
+  (手机丢了/换了,日程不该跟着丢)。
+
+  规则本身只有两条:
+  - database 域 = Room 的 lnx.db(+wal/shm),**要**备份;
+  - file 域 = DataStore 的设置,**要**备份。
+
+  只要写了 `<include>`,没被 include 的域就一律不备份,所以 external 域(本 App 不用,
+  备份是走系统分享面板让用户自己存网盘)天然被排掉,**不需要再写 exclude** ——
+  写了反而非法:exclude 的路径必须落在某个 include 之内(被 `lintVitalRelease` 拦下过)。
+
+  备份导出的 json 落在 `cacheDir/backup/`,cache 域系统本来就不备份,也不用管。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="." />
+        <include domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="." />
+        <include domain="file" path="." />
+    </device-transfer>
+</data-extraction-rules>

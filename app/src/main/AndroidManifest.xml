@@ -14,11 +14,17 @@
     <application
         android:name=".LnxApplication"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
+        <!-- 没有 android:localeConfig,这是有意的(M9 裁定):
+             语言由设置页自己那套开关管(spec §3.11),走 LocaleContext 换 Configuration。
+             再加 localeConfig 等于把同一个设置暴露成两个入口,系统按应用语言改完,
+             下次进设置页又按存储的值覆盖回去,两边打架。 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

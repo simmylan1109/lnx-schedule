@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11(API 30)及以下的备份规则,内容与 data_extraction_rules.xml 一致。
+  API 31 起系统改读 dataExtractionRules,这份就成了兜底 —— 两份必须同步改。
+-->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="file" path="." />
+</full-backup-content>

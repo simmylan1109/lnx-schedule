@@ -74,7 +74,22 @@ class ReminderNotifier @Inject constructor(
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun ensureChannel() {
+    /**
+     * 建通知渠道。**开机时就建,不等第一次提醒**(M9)。
+     *
+     * 之前是懒建的:只有 [show] 里才调。后果是用户刚在引导页授了通知权限、去系统
+     * "应用 → 通知"里想调一下提醒的响铃/震动,却找不到"日程提醒"这个渠道 —— 得先等到
+     * 第一次提醒真的响了,它才会出现在列表里。渠道建好后名字会被系统缓存,所以更得
+     * 在用户可能去看之前就建好。
+     *
+     * 重复调用安全(系统侧幂等),所以 [show] 里那次保留也无妨。
+     *
+     * 闸门在 `ReminderNotifierTest`(仪器测试):断言建完之后渠道确实在。
+     * **但"Application 启动时会调它"这一句没有测试覆盖** —— 仪器测试跑的是
+     * `HiltTestApplication`,不会执行 [com.lnx.app.LnxApplication]。和 M8 那次
+     * "迁移注册被 TestDatabaseModule 顶掉"是同一类缺口,记在这里免得以后忘了。
+     */
+    fun ensureChannel() {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         // NotificationChannelCompat 只在 API 26+ 真正有意义(渠道机制本身就是 26 引入的),

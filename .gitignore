@@ -17,6 +17,7 @@ edge-tmp*/
 keystore.properties
 *.jks
 *.keystore
-# 会话临时脚本,用完即删
-_gw.bat
+# 会话临时脚本与探针文件,用完即删
+_*.bat
+_*.json
 _t.txt

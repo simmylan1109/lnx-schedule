@@ -1,8 +1,12 @@
 package com.lnx.app.core.notification
 
+import android.app.NotificationManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.LocalDateTime
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -97,5 +101,38 @@ class ReminderNotifierTest {
         android.util.Log.i("lnx-notify", "NORMAL-RECORD >>>$record<<<")
         assertTrue("dumpsys 里应能看到本应用刚发的那条通知", record.isNotEmpty())
         assertTrue("对照组不该带静音标记", !record.contains("groupKey=silent"))
+    }
+
+    /**
+     * 渠道必须在**用户去看之前**就存在(M9)。
+     *
+     * 之前 [ReminderNotifier.ensureChannel] 只在 [ReminderNotifier.show] 里被调,
+     * 于是"刚授完通知权限、去系统设置里调提醒响铃"的用户根本找不到这个渠道。
+     * 这里把渠道删干净再让它建,证明这一下是真的建出来了、而且能重复调。
+     */
+    @Test
+    fun 渠道建好之后在系统设置里查得到_且可以重复调用() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val manager = context.getSystemService(NotificationManager::class.java)!!
+        // 别的测试可能已经建过,先删掉才能证明"是这一次建出来的"
+        manager.deleteNotificationChannel(ReminderNotifier.CHANNEL_ID)
+        assertNull(
+            "前置条件:此刻渠道不该存在",
+            manager.getNotificationChannel(ReminderNotifier.CHANNEL_ID),
+        )
+
+        notifier.ensureChannel()
+
+        val channel = manager.getNotificationChannel(ReminderNotifier.CHANNEL_ID)
+        assertNotNull(
+            "ensureChannel 之后渠道应当存在 —— 否则用户授完权限去系统设置里找不到它",
+            channel,
+        )
+        assertEquals(ReminderNotifier.CHANNEL_ID, channel!!.id)
+
+        // 重复调用必须安全:show() 里还会再调一次,开机也会调一次
+        notifier.ensureChannel()
+        notifier.ensureChannel()
+        assertNotNull(manager.getNotificationChannel(ReminderNotifier.CHANNEL_ID))
     }
 }
