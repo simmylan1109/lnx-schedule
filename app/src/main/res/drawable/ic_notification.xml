@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  通知栏小图标(spec §3.8)。
+  系统只取它的**轮廓**并按状态栏颜色重新着色,所以:
+  - 纯白 + 透明底,不要主题色、不要渐变、不要多色;
+  - 线条要够粗(1.8/24),细线在小尺寸下会被系统抽细到看不见;
+  - 图形必须居中留边,系统会按外接方框裁。
+  画的是一枚日历(外框 + 装订钉 + 头线 + 一个点),与 App 的日程语义一致。
+  spec §5.3:矢量绘制,不用 emoji。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 两根装订钉 -->
+    <path
+        android:pathData="M8,2.8 L8,6.4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M16,2.8 L16,6.4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+
+    <!-- 日历外框 -->
+    <path
+        android:pathData="M5.5,5.6 L18.5,5.6 A2,2 0 0 1 20.5,7.6 L20.5,18.4 A2,2 0 0 1 18.5,20.4 L5.5,20.4 A2,2 0 0 1 3.5,18.4 L3.5,7.6 A2,2 0 0 1 5.5,5.6 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000" />
+
+    <!-- 头部分隔线 -->
+    <path
+        android:pathData="M3.9,10.2 L20.1,10.2"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+
+    <!-- 当天标记 -->
+    <path
+        android:pathData="M12,13.6 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0"
+        android:fillColor="#FFFFFFFF" />
+</vector>

@@ -43,7 +43,9 @@ class ReminderNotifier @Inject constructor(
             reminder.location?.takeIf { it.isNotBlank() }?.let { append(" · ").append(it) }
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            // 自己的日历图标,不再借系统的 ic_dialog_info —— 后者会带着系统主题色,
+            // 跟 lnx 摆在一起一眼就看出不是本 App(M5 欠到 M7 才还)。
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(reminder.title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
