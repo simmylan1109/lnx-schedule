@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,16 @@ plugins {
     alias(libs.plugins.ksp)
     // M7:备份 JSON 的编解码(spec §3.13)
     alias(libs.plugins.kotlin.serialization)
+}
+
+/**
+ * 发布签名凭据。文件在仓库根、且已 gitignore;密钥本体在仓库外。
+ * 文件不存在时 release 退回未签名(能编出 APK,只是装不上)——
+ * 这样别人克隆下来跑 `assembleRelease` 不会因为缺凭据直接炸。
+ */
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -30,8 +42,32 @@ android {
      */
     // versionCode = 1
 
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            // 混淆 + 资源压缩。风险在"库靠反射/字符串活着的地方会被裁掉",
+            // 所以 proguard-rules.pro 只补官方 consumer rules 覆盖不到的,
+            // 并且**靠真机装 release 包跑一遍走查来验**,不靠读规则自证。
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            if (keystoreProperties.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

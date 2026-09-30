@@ -12,3 +12,11 @@ edge-tmp*/
 .superpowers/
 .kotlin/
 *.hprof
+# 发布签名(M9):凭据不入库。密钥本体本来就在仓库外(D:\lnx-release),
+# 这里只是防止有人手滑把口令提交上去。
+keystore.properties
+*.jks
+*.keystore
+# 会话临时脚本,用完即删
+_gw.bat
+_t.txt
