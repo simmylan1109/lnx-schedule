@@ -82,11 +82,13 @@ fun WeekView(
     occurrences: List<Occurrence> = emptyList(),
     onEventClick: (Occurrence) -> Unit = {},
     onEmptySlotClick: (LocalDateTime) -> Unit = {},
+    /** spec §3.11 ①:周一起始(默认)或周日起始,来自设置 */
+    weekStartMonday: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalLnxLocale.current
     val pagerState = rememberPagerState(
-        initialPage = dateToPage(state.selectedDate),
+        initialPage = dateToPage(state.selectedDate, weekStartMonday),
         // 40001 页 ≈ 以 1970-01-05 为中心的前后各约 200 年,足够任何现实日期
         pageCount = { PAGE_COUNT },
     )
@@ -95,17 +97,17 @@ fun WeekView(
     val userPaged = remember { mutableStateOf(false) }
     // 选中日期变化(如"今天"按钮)时同步翻页
     // 注:M1 接受"今天"按钮在本周时不发射(值相同)的合流限制,故当前周内不滚动
-    LaunchedEffect(state.selectedDate) {
-        val target = dateToPage(state.selectedDate)
+    LaunchedEffect(state.selectedDate, weekStartMonday) {
+        val target = dateToPage(state.selectedDate, weekStartMonday)
         if (pagerState.currentPage != target) pagerState.scrollToPage(target)
     }
-    // 翻页 → 选中日锚点(仅用户驱动):当前周锚定"今天",其他周锚定"该周周一"
+    // 翻页 → 选中日锚点(仅用户驱动):当前周锚定"今天",其他周锚定"该周起始日"
     // 不变量:锚点永远落在 currentPage 所在的那一周内,因此 dateToPage(anchor) == currentPage,
     // 上面的 selectedDate→翻页 effect 不会反向触发,两个 effect 不会互相打架。
     // (M3 若加"点别周日期跳转",需重新审视这条不变量)
-    LaunchedEffect(pagerState.currentPage) {
+    LaunchedEffect(pagerState.currentPage, weekStartMonday) {
         if (userPaged.value) {
-            val weekStart = pageToDate(pagerState.currentPage)
+            val weekStart = pageToDate(pagerState.currentPage, weekStartMonday)
             val weekEnd = weekStart.plusDays(6)
             val anchor = if (!today.isBefore(weekStart) && !today.isAfter(weekEnd)) today else weekStart
             onSelectDate(anchor)
@@ -124,7 +126,7 @@ fun WeekView(
                 .fillMaxSize()
                 .testTag("week_pager"),
         ) { page ->
-            val weekStart = pageToDate(page)
+            val weekStart = pageToDate(page, weekStartMonday)
             Column(modifier = Modifier.testTag("week_header_${weekStart}")) {
                 WeekHeader(
                     weekStart = weekStart,

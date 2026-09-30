@@ -16,6 +16,11 @@ import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEngine
 import com.lnx.app.core.notification.RecordingAlarmSink
 import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.designsystem.DarkMode
+import com.lnx.app.core.designsystem.ThemeSlot
+import com.lnx.app.core.settings.LnxSettings
+import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.SettingsRepository
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -137,6 +142,7 @@ class CalendarViewModelTest {
             TagFilterState(),
             RecurrenceEditHandler(repo),
             ReminderPlanner(repo, RecordingAlarmSink()),
+            FakeSettingsRepository(),
         )
 
     @Test
@@ -183,7 +189,7 @@ class CalendarViewModelTest {
                 occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
             ),
         )
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -198,7 +204,7 @@ class CalendarViewModelTest {
     @Test
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
         val before = repo.observedRanges
             .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
@@ -217,7 +223,7 @@ class CalendarViewModelTest {
             listOf(occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00")),
         )
         val filterState = TagFilterState()
-        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()))
+        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -280,6 +286,7 @@ class CalendarViewModelTest {
         val repo = FakeEventRepository(masters = mapOf("m1" to master))
         val vm = CalendarViewModel(
             repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, sink),
+            FakeSettingsRepository(),
         )
 
         vm.deleteOccurrence(
@@ -295,4 +302,23 @@ class CalendarViewModelTest {
         assertEquals(seriesStart, repo.saved.single().start)
         assertEquals(1, sink.rescheduleCount)
     }
+}
+
+/** 设置假实现:日历只需要"周起始日"这一项(M6 起视图由它决定) */
+private class FakeSettingsRepository(
+    initial: LnxSettings = SettingsDefaults.snapshot(),
+) : SettingsRepository {
+    private val state = MutableStateFlow(initial)
+    override val settings: Flow<LnxSettings> = state
+    override suspend fun current(): LnxSettings = state.value
+    override suspend fun setThemeSlot(slot: ThemeSlot) = Unit
+    override suspend fun setDarkMode(mode: DarkMode) = Unit
+    override suspend fun setReminderLead(minutes: Int?) = Unit
+    override suspend fun setDnd(enabled: Boolean, startMinute: Int, endMinute: Int) = Unit
+    override suspend fun setWeekStartMonday(monday: Boolean) {
+        state.value = state.value.copy(weekStartMonday = monday)
+    }
+
+    override suspend fun setLanguage(language: String) = Unit
+    override suspend fun setOnboardingDone() = Unit
 }

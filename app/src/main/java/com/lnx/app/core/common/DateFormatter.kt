@@ -16,13 +16,32 @@ fun dayOfWeekCn(date: LocalDate): String = LnxLocale.weekday(date, Locale.SIMPLI
 
 fun formatTitle(date: LocalDate, locale: Locale): String = LnxLocale.title(date, locale)
 
-/** spec §3.2:周一起始(ISO) */
-fun weekStartOf(date: LocalDate): LocalDate =
-    date.with(DayOfWeek.MONDAY)
+/**
+ * 该日期所在周的**周起始日**(spec §3.11 ①:周一(默认)或周日,可在设置里改)。
+ * 默认周一,老调用方不用改。
+ *
+ * 周日起始**必须用减法**,不能写 `date.with(DayOfWeek.MONDAY)` 的对称形式
+ * `date.with(DayOfWeek.SUNDAY)`:后者的语义是"同一个 ISO 周(周一起算)里的那个周日",
+ * 对周三会返回**之后**的周日(10-04),而不是本周的周首(09-27)。这个 bug 是被
+ * `WeekLogicTest` 抓出来的 —— 当时它让"周日起始"整整错位一周。
+ */
+fun weekStartOf(date: LocalDate, mondayFirst: Boolean = true): LocalDate =
+    if (mondayFirst) {
+        date.with(DayOfWeek.MONDAY)
+    } else {
+        // ISO: 周一=1 … 周日=7;周日起始时,周日自己偏移 0,周一偏移 1,……
+        date.minusDays((date.dayOfWeek.value % 7).toLong())
+    }
 
-private val PAGE_EPOCH: LocalDate = LocalDate.of(1970, 1, 5) // 周一
+/** 两种周起始各自的页锚点(都是各自的"周起始日") */
+private val PAGE_EPOCH_MONDAY: LocalDate = LocalDate.of(1970, 1, 5) // 周一
+private val PAGE_EPOCH_SUNDAY: LocalDate = LocalDate.of(1970, 1, 4) // 周日
 
-fun dateToPage(date: LocalDate): Int =
-    ChronoUnit.WEEKS.between(PAGE_EPOCH, weekStartOf(date)).toInt()
+fun dateToPage(date: LocalDate, mondayFirst: Boolean = true): Int =
+    ChronoUnit.WEEKS.between(
+        if (mondayFirst) PAGE_EPOCH_MONDAY else PAGE_EPOCH_SUNDAY,
+        weekStartOf(date, mondayFirst),
+    ).toInt()
 
-fun pageToDate(page: Int): LocalDate = PAGE_EPOCH.plusWeeks(page.toLong())
+fun pageToDate(page: Int, mondayFirst: Boolean = true): LocalDate =
+    (if (mondayFirst) PAGE_EPOCH_MONDAY else PAGE_EPOCH_SUNDAY).plusWeeks(page.toLong())

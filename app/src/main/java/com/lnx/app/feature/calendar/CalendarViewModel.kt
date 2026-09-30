@@ -12,6 +12,8 @@ import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -53,8 +55,19 @@ class CalendarViewModel @Inject constructor(
     private val tagFilterState: TagFilterState,
     private val recurrenceHandler: RecurrenceEditHandler,
     private val reminderPlanner: ReminderPlanner,
+    settingsRepository: SettingsRepository,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
+
+    /**
+     * 周起始日(spec §3.11 ①):true = 周一(出厂),false = 周日。
+     * 周视图的翻页锚点、周查询窗口、月视图表头与格子的首位都由它决定 ——
+     * 只存不用的话用户在设置里改了"周起始日",日历纹丝不动(验收走查踩到过)。
+     */
+    val weekStartMonday: StateFlow<Boolean> = settingsRepository.settings
+        .map { it.weekStartMonday }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsDefaults.WEEK_START_MONDAY)
 
     private val selection = MutableStateFlow(
         CalendarUiState(selectedDate = today, viewMode = ViewMode.WEEK)
@@ -72,9 +85,10 @@ class CalendarViewModel @Inject constructor(
     fun toggleUntagged() = tagFilterState.toggleUntagged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val occurrences: StateFlow<List<Occurrence>> = selection
+    private val occurrences: StateFlow<List<Occurrence>> = combine(selection, weekStartMonday) { sel, monday ->
+        weekStartOf(sel.selectedDate, monday)
+    }
         // 只在"周"变化时重查:切视图模式不该触发查询
-        .map { weekStartOf(it.selectedDate) }
         .distinctUntilChanged()
         .flatMapLatest { weekStart ->
             repository.observeOccurrences(weekStart, weekStart.plusWeeks(1))
@@ -190,8 +204,9 @@ class CalendarViewModel @Inject constructor(
         _openTarget.value = null
     }
 
-    private fun weekStartOf(date: LocalDate): LocalDateTime =
-        weekStartOfDate(date).atStartOfDay()
+    /** 所选日期所在周的周起始零点(按设置的周起始日) */
+    private fun weekStartOf(date: LocalDate, mondayFirst: Boolean): LocalDateTime =
+        weekStartOfDate(date, mondayFirst).atStartOfDay()
 
     fun selectDate(date: LocalDate) = selection.update { it.copy(selectedDate = date) }
 

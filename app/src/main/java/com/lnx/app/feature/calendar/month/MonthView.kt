@@ -46,6 +46,7 @@ import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.CalendarUiState
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -57,11 +58,13 @@ private val MONTH_PAGE_EPOCH = YearMonth.of(1970, 1)
 private const val MONTH_PAGE_COUNT = 4_801
 
 /**
- * 星期表头(周一起始,ISO 1..7):按当前 App 语言生成,不再写死中文字面量。
+ * 星期表头:按当前 App 语言生成,首位跟随**周起始日**设置(spec §3.11 ①)。
  * 中文走 LnxLocale 的 周一…周日 表,英文走 `EEE`(Mon…Sun)。
  */
-internal fun dowHeader(locale: Locale): List<String> =
-    (1..7).map { LnxLocale.weekday(it, locale) }
+internal fun dowHeader(locale: Locale, weekStartMonday: Boolean = true): List<String> {
+    val order = if (weekStartMonday) (1..7) else listOf(7) + (1..6)
+    return order.map { LnxLocale.weekday(it, locale) }
+}
 
 private val AGENDA_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
 
@@ -78,10 +81,12 @@ fun MonthView(
     occurrences: List<Occurrence> = emptyList(),
     onEventClick: (Occurrence) -> Unit = {},
     onCreateAt: (LocalDate) -> Unit = {},
+    /** spec §3.11 ①:周一起始(默认)或周日起始,来自设置 */
+    weekStartMonday: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalLnxLocale.current
-    val header = remember(locale) { dowHeader(locale) }
+    val header = remember(locale, weekStartMonday) { dowHeader(locale, weekStartMonday) }
     val pageOf = { month: YearMonth ->
         (month.year - MONTH_PAGE_EPOCH.year) * 12 + month.monthValue - 1
     }
@@ -134,7 +139,9 @@ fun MonthView(
                 .testTag("month_pager"),
         ) { page ->
             val month = MONTH_PAGE_EPOCH.plusMonths(page.toLong())
-            val cells = remember(month) { monthCells(month) }
+            val cells = remember(month, weekStartMonday) {
+                monthCells(month, if (weekStartMonday) DayOfWeek.MONDAY else DayOfWeek.SUNDAY)
+            }
             // 彩点按日索引一次算好(记得 occurrences),别在 42 个格子里各 filter 一遍
             val dayIndex = remember(occurrences) { indexByDay(occurrences) }
             Column(modifier = Modifier.fillMaxWidth().fillMaxHeight().testTag("month_page_$month")) {

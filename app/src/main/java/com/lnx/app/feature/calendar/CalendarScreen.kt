@@ -80,6 +80,7 @@ fun CalendarScreen(
     val hideUntagged by viewModel.hideUntagged.collectAsStateWithLifecycle()
     val openTarget by viewModel.openTarget.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
+    val weekStartMonday by viewModel.weekStartMonday.collectAsStateWithLifecycle()
     val locale = LocalLnxLocale.current
 
     // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
@@ -171,6 +172,7 @@ fun CalendarScreen(
                     occurrences = state.occurrences,
                     onEventClick = onEventClick,
                     onEmptySlotClick = onEmptySlotClick,
+                    weekStartMonday = weekStartMonday,
                     modifier = Modifier.weight(1f),
                 )
                 // M3:月视图(上 6×7 月历 + 下当日列表联动)
@@ -182,6 +184,7 @@ fun CalendarScreen(
                     onEventClick = onEventClick,
                     // spec §3.5:月视图空态「＋ 新建日程」= 该日 09:00(不做下半点预填)
                     onCreateAt = { date -> editorTarget = EditorTarget(start = date.atTime(9, 0)) },
+                    weekStartMonday = weekStartMonday,
                     modifier = Modifier.weight(1f),
                 )
             }
