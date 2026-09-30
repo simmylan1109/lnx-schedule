@@ -24,9 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lnx.app.R
+import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.recurrence.EditScope
@@ -77,6 +80,7 @@ fun CalendarScreen(
     val hideUntagged by viewModel.hideUntagged.collectAsStateWithLifecycle()
     val openTarget by viewModel.openTarget.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
+    val locale = LocalLnxLocale.current
 
     // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -95,11 +99,12 @@ fun CalendarScreen(
     }
     // 重叠提示落在日历页:编辑页保存后即关闭,提示得由这里弹(spec §3.5:不阻止保存)
     val snackbar = remember { SnackbarHostState() }
-    var overlapNotice by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(overlapNotice) {
-        overlapNotice?.let {
-            snackbar.showSnackbar("与\"$it\"时间重叠")
-            overlapNotice = null
+    var overlapTitle by remember { mutableStateOf<String?>(null) }
+    val overlapTemplate = stringResource(R.string.calendar_overlap)
+    LaunchedEffect(overlapTitle) {
+        overlapTitle?.let {
+            snackbar.showSnackbar(overlapTemplate.format(it))
+            overlapTitle = null
         }
     }
     // 点提醒通知进来(spec §3.8)。两个 effect 必须分开:openEvent 是异步查库,
@@ -138,7 +143,7 @@ fun CalendarScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 CalendarTopBar(
-                    title = formatTitle(state.selectedDate),
+                    title = formatTitle(state.selectedDate, locale),
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onTodayClick = viewModel::backToToday,
                     onSearchClick = { /* 搜索在 M7 接入 */ },
@@ -190,7 +195,7 @@ fun CalendarScreen(
                 .padding(16.dp)
                 .testTag("fab_create"),
         ) {
-            Icon(Icons.Default.Add, contentDescription = "新建事件")
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_new_event))
         }
 
         // 时间重叠提示(spec §3.5:提示不阻止保存)
@@ -209,7 +214,7 @@ fun CalendarScreen(
                 occurrence = target.occurrence,
                 scope = target.scope,
                 onClose = { editorTarget = null },
-                onSaved = { overlaps -> overlapNotice = overlaps.firstOrNull() },
+                onSaved = { overlaps -> overlapTitle = overlaps.firstOrNull() },
             )
         }
 

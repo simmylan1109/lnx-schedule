@@ -35,11 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.ExperimentalFoundationApi
-import com.lnx.app.core.common.dayOfWeekCn
+import com.lnx.app.R
+import com.lnx.app.core.common.LocalLnxLocale
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.CalendarUiState
@@ -53,7 +56,12 @@ private val MONTH_PAGE_EPOCH = YearMonth.of(1970, 1)
 /** ±200 年,与周/日 pager 同量级 */
 private const val MONTH_PAGE_COUNT = 4_801
 
-private val DOW_HEADER = listOf("一", "二", "三", "四", "五", "六", "日")
+/**
+ * 星期表头(周一起始,ISO 1..7):按当前 App 语言生成,不再写死中文字面量。
+ * 中文走 LnxLocale 的 周一…周日 表,英文走 `EEE`(Mon…Sun)。
+ */
+internal fun dowHeader(locale: Locale): List<String> =
+    (1..7).map { LnxLocale.weekday(it, locale) }
 
 private val AGENDA_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
 
@@ -72,6 +80,8 @@ fun MonthView(
     onCreateAt: (LocalDate) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalLnxLocale.current
+    val header = remember(locale) { dowHeader(locale) }
     val pageOf = { month: YearMonth ->
         (month.year - MONTH_PAGE_EPOCH.year) * 12 + month.monthValue - 1
     }
@@ -104,7 +114,7 @@ fun MonthView(
     Column(modifier = modifier.fillMaxSize()) {
         // 星期表头(周一起始,spec §3.4)
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            DOW_HEADER.forEach { label ->
+            header.forEach { label ->
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
@@ -153,6 +163,7 @@ fun MonthView(
             occurrences = occurrences,
             onEventClick = onEventClick,
             onCreateAt = onCreateAt,
+            locale = locale,
             modifier = Modifier.weight(1f),
         )
     }
@@ -251,12 +262,13 @@ private fun DayAgendaList(
     occurrences: List<Occurrence>,
     onEventClick: (Occurrence) -> Unit,
     onCreateAt: (LocalDate) -> Unit,
+    locale: Locale,
     modifier: Modifier = Modifier,
 ) {
     val dayEvents = eventsOn(selectedDate, occurrences).sortedBy { it.start }
     Column(modifier = modifier.fillMaxWidth().testTag("month_agenda")) {
         Text(
-            text = "${selectedDate.monthValue}月${selectedDate.dayOfMonth}日 ${dayOfWeekCn(selectedDate)}",
+            text = LnxLocale.dateWithWeekday(selectedDate, locale),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
@@ -266,7 +278,10 @@ private fun DayAgendaList(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "${selectedDate.monthValue}月${selectedDate.dayOfMonth}日 · 无日程",
+                    text = stringResource(
+                        R.string.month_empty,
+                        LnxLocale.monthDay(selectedDate, locale),
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -276,7 +291,7 @@ private fun DayAgendaList(
                         .padding(top = 12.dp)
                         .testTag("month_empty_create"),
                 ) {
-                    Text("＋ 新建日程")
+                    Text(stringResource(R.string.month_create_event))
                 }
             }
         } else {
@@ -315,7 +330,7 @@ private fun AgendaItem(occ: Occurrence, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (occ.event.allDay) "全天"
+                text = if (occ.event.allDay) stringResource(R.string.all_day)
                        else "${occ.start.format(AGENDA_TIME_FMT)} – ${occ.end.format(AGENDA_TIME_FMT)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

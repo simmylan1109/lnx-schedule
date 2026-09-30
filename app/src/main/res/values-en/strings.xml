@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">lnx</string>
+
+    <!-- Calendar: top bar and view switch -->
+    <string name="calendar_today">Today</string>
+    <string name="calendar_menu">Menu</string>
+    <string name="calendar_search">Search</string>
+    <string name="calendar_view_day">Day</string>
+    <string name="calendar_view_week">Week</string>
+    <string name="calendar_view_month">Month</string>
+    <string name="calendar_new_event">New event</string>
+    <string name="calendar_overlap">Overlaps with “%1$s”</string>
+
+    <!-- Drawer (spec §3.10) -->
+    <string name="drawer_filter">Filter</string>
+    <string name="drawer_untagged">Untagged</string>
+    <string name="drawer_settings">Settings</string>
+
+    <!-- Empty states and month view -->
+    <string name="empty_today">Nothing scheduled today — enjoy the free time</string>
+    <string name="empty_day">Nothing scheduled — enjoy the free time</string>
+    <string name="month_empty">%1$s · No events</string>
+    <string name="month_create_event">＋ New event</string>
+    <string name="all_day">All day</string>
+
+    <!-- Event detail sheet (spec §3.6) -->
+    <string name="detail_time">Time</string>
+    <string name="detail_repeat">Repeat</string>
+    <string name="detail_location">Location</string>
+    <string name="detail_priority">Priority</string>
+    <string name="detail_notes">Notes</string>
+    <string name="detail_tags">Tags</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_delete">Delete</string>
+    <string name="detail_delete_title">Delete event</string>
+    <string name="detail_delete_confirm">Delete “%1$s”?</string>
+    <string name="detail_scope_edit">Edit scope</string>
+    <string name="detail_scope_delete">Delete scope</string>
+    <string name="detail_scope_prompt">This event repeats. Choose which occurrences to apply this to:</string>
+    <string name="detail_scope_this_only">This occurrence</string>
+    <string name="detail_scope_this_and_future">This and future</string>
+    <string name="detail_scope_all">All events</string>
+    <string name="detail_all_day_single">All day on %1$s</string>
+    <string name="detail_all_day_range">%1$s – %2$s (all day)</string>
+    <string name="detail_time_range">%1$s – %2$s</string>
+
+    <!-- Shared actions -->
+    <string name="action_confirm">OK</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Event editor (spec §3.5) -->
+    <string name="editor_new">New event</string>
+    <string name="editor_edit">Edit event</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_title">Title</string>
+    <string name="editor_all_day">All-day</string>
+    <string name="editor_start_date">Start date</string>
+    <string name="editor_end_date">End date</string>
+    <string name="editor_start">Start</string>
+    <string name="editor_end">End</string>
+    <string name="editor_location">Location (optional)</string>
+    <string name="editor_repeat">Repeat</string>
+    <string name="editor_notes">Notes</string>
+    <string name="editor_error_title">Please enter a title</string>
+    <string name="editor_error_end">End time must be after start time</string>
+    <string name="editor_reminder">Reminder</string>
+    <string name="editor_reminder_minutes">%1$d min</string>
+    <string name="editor_reminder_none">No reminder</string>
+    <string name="editor_color">Color</string>
+    <string name="editor_priority">Priority</string>
+
+    <!-- Recurrence section -->
+    <string name="rule_repeat">Repeat</string>
+    <string name="rule_interval">Every</string>
+    <string name="rule_unit_day">day(s)</string>
+    <string name="rule_unit_week">week(s)</string>
+    <string name="rule_unit_month">month(s)</string>
+    <string name="rule_by_date">By date</string>
+    <string name="rule_by_weekday">By weekday</string>
+    <string name="rule_nth_prefix">the </string>
+    <string name="rule_nth_suffix">th</string>
+    <string name="rule_never">Never</string>
+    <string name="rule_until">On date</string>
+    <string name="rule_day_unit"></string>
+    <string name="rule_count">Repeat count</string>
+    <string name="rule_end_date">End date</string>
+    <string name="rule_times">time(s)</string>
+    <string name="rule_type_none">Does not repeat</string>
+    <string name="rule_type_daily">Daily</string>
+    <string name="rule_type_weekly">Weekly</string>
+    <string name="rule_type_monthly">Monthly on day</string>
+    <string name="rule_type_yearly">Yearly</string>
+
+    <!-- Tags (spec §3.10) -->
+    <string name="tag_section">Tags</string>
+    <string name="tag_create">＋ New</string>
+    <string name="tag_create_title">New tag</string>
+    <string name="tag_name">Name</string>
+    <string name="tag_create_confirm">Create</string>
+    <string name="tag_error_empty">Tag name cannot be empty</string>
+    <string name="tag_error_duplicate">A tag named “%1$s” already exists</string>
+    <string name="tag_create_failed">Couldn’t create the tag</string>
+
+    <!-- Reminder notifications (spec §3.8) -->
+    <string name="notif_channel_name">Reminders</string>
+    <string name="notif_channel_desc">Alerts before an event starts</string>
+    <string name="notif_starts_at">Starts at %1$s</string>
+
+    <!-- Settings (spec §3.11) -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_reminder">Reminders</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_data">Data</string>
+
+    <string name="settings_appearance_mode">Appearance mode</string>
+    <string name="settings_mode_light">Light</string>
+    <string name="settings_mode_dark">Dark</string>
+    <string name="settings_mode_follow">Follow system</string>
+
+    <string name="settings_default_lead">Default reminder</string>
+    <string name="settings_lead_none">No reminder</string>
+    <string name="settings_lead_5">5 minutes</string>
+    <string name="settings_lead_15">15 minutes</string>
+    <string name="settings_lead_30">30 minutes</string>
+    <string name="settings_lead_60">60 minutes</string>
+
+    <string name="settings_dnd">Do not disturb</string>
+    <string name="settings_dnd_window">Quiet hours</string>
+    <string name="settings_dnd_start">%1$s · From</string>
+    <string name="settings_dnd_end">%1$s · To</string>
+    <string name="settings_notification_permission">Notifications</string>
+    <string name="settings_permission_granted">Allowed</string>
+    <string name="settings_permission_denied">Not allowed — reminders won’t appear</string>
+    <string name="settings_open_system_settings">Open settings</string>
+
+    <string name="settings_week_start">Week starts on</string>
+    <string name="settings_week_monday">Monday</string>
+    <string name="settings_week_sunday">Sunday</string>
+
+    <string name="settings_language">Language</string>
+    <string name="settings_lang_zh">中文</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_lang_system">Follow system</string>
+
+    <string name="settings_export">Export</string>
+    <string name="settings_import">Import</string>
+    <string name="settings_coming_soon">Coming in M7</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- First-run onboarding (spec §3.12) -->
+    <string name="onboarding_tagline">A light, good-looking schedule</string>
+    <string name="onboarding_start">Get started</string>
+    <string name="onboarding_pick_theme">Pick a theme</string>
+    <string name="onboarding_pick_theme_hint">You can change it later in Settings</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_notification_title">Don’t miss what matters</string>
+    <string name="onboarding_notification_body">Allow notifications and lnx will remind you when an event is about to start. You can turn this on later in Settings.</string>
+    <string name="onboarding_allow">Enable reminders</string>
+    <string name="onboarding_later">Maybe later</string>
+
+    <!-- Theme names (spec §5.1) -->
+    <string name="theme_material_you">Material You</string>
+    <string name="theme_paper">Paper</string>
+    <string name="theme_warm">Warm</string>
+    <string name="theme_serene">Serene</string>
+</resources>

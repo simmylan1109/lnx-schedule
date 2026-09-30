@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.formatTitle
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -74,10 +75,10 @@ class CalendarScreenTest {
     @Test
     fun `翻到下周后点今天回到今天`() {
         val today = LocalDate.now()
-        val todayTitle = formatTitle(today)
+        val todayTitle = formatTitle(today, LnxLocale.resolve(LnxLocale.SYSTEM))
         val nextMonday = today.plusWeeks(1).with(DayOfWeek.MONDAY)
         rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
-        rule.onNodeWithText(formatTitle(nextMonday)).assertExists()
+        rule.onNodeWithText(formatTitle(nextMonday, LnxLocale.resolve(LnxLocale.SYSTEM))).assertExists()
         rule.onNodeWithTag("today_button").performClick()
         rule.waitForIdle()
         rule.onNodeWithText(todayTitle).assertExists()
@@ -86,7 +87,7 @@ class CalendarScreenTest {
     // WEEK 分支离开组合会销毁 pagerState,重挂载时不得把"今天"改写成本周周一
     @Test
     fun `点击今天后切日Tab再回周Tab标题仍是今天`() {
-        val todayTitle = formatTitle(LocalDate.now())
+        val todayTitle = formatTitle(LocalDate.now(), LnxLocale.resolve(LnxLocale.SYSTEM))
         rule.onNodeWithTag("today_button").performClick()
         rule.waitForIdle()
         rule.onNodeWithText(todayTitle).assertExists()
@@ -98,12 +99,12 @@ class CalendarScreenTest {
     // 注:测试方法名不得含空格(minSdk 26 → DEX 037,D8 拒绝 SimpleName 中的空格)
     @Test
     fun `标题跟随选中日期_点击今天按钮回到今天`() {
-        val todayTitle = formatTitle(LocalDate.now())
+        val todayTitle = formatTitle(LocalDate.now(), LnxLocale.resolve(LnxLocale.SYSTEM))
         rule.onNodeWithTag("top_bar").assertExists()
         rule.onNodeWithText(todayTitle).assertExists()
         rule.onNodeWithTag("today_button").performClick()
         rule.waitForIdle()
-        // 钉住 CalendarScreen 中 formatTitle(state.selectedDate) 的接线
+        // 钉住 CalendarScreen 里"标题跟随选中日期"的接线(formatTitle(state.selectedDate, locale))
         rule.onNodeWithText(todayTitle).assertExists()
     }
 }

@@ -47,6 +47,7 @@ internal fun GeneralSettingsSection(
     )
     ChipChoice(
         options = listOf(
+            // 中文/英文这两个名字**故意不翻译**:用户是在选这两种语言本身
             stringResource(R.string.settings_lang_zh),
             stringResource(R.string.settings_lang_en),
             stringResource(R.string.settings_lang_system),
@@ -56,13 +57,9 @@ internal fun GeneralSettingsSection(
             "en" -> 1
             else -> 2
         },
+        // 界面重建由 SettingsScreen 统一做:要等"新语言已写进进程缓存"之后再重建,
+        // 否则重建出来的还是旧语言
         onSelect = { onSetLanguage(listOf("zh", "en", "system")[it]) },
         tagPrefix = "lang_",
-    )
-    Text(
-        text = stringResource(R.string.settings_lang_restart_hint),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag("settings_lang_hint"),
     )
 }

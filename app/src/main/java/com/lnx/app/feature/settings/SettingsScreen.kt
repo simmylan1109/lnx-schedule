@@ -15,16 +15,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lnx.app.R
+import com.lnx.app.core.common.LocaleContext
 import com.lnx.app.core.designsystem.DarkMode
+import com.lnx.app.core.notification.findActivity
 
 /**
  * 设置页(spec §3.11):四组 —— 外观(4 主题卡 + 深浅色)、提醒(默认提前/免打扰/权限)、
@@ -40,6 +44,14 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+
+    // 换语言后重建一次界面:语言只在 attachBaseContext 里生效,那是同步方法,只能靠重建。
+    // 判据是"当前生效的语言"和"设置里的语言"是否一致 —— 一致就不重建,避免自我循环;
+    // 且设置流吐新值时进程缓存已经写好了(见 SettingsViewModel.setLanguage 的顺序)。
+    val activity = LocalContext.current.findActivity()
+    LaunchedEffect(settings.language) {
+        if (LocaleContext.appliedLanguage != settings.language) activity?.recreate()
+    }
 
     Column(
         modifier = modifier

@@ -4,6 +4,8 @@ import com.lnx.app.core.database.dao.TagDao
 import com.lnx.app.core.database.entity.TagEntity
 import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.model.TagNameError
+import com.lnx.app.core.domain.model.TagNameException
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -18,13 +20,15 @@ class TagRepositoryImpl @Inject constructor(
 
     override suspend fun createTag(name: String, colorSlot: Int): Result<Tag> {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return Result.failure(IllegalArgumentException("标签名不能为空"))
+        if (trimmed.isEmpty()) {
+            return Result.failure(TagNameException(TagNameError.EMPTY))
+        }
         val now = System.currentTimeMillis()
         // 必须先按名字查:name 上有唯一索引,重名时 @Upsert 会吞掉约束异常再按 id 更新(0 行),
         // 表面上"成功"返回一个不存在的 id,后面事件就会挂上永远看不见也删不掉的幽灵关联。
         val existing = dao.findByName(trimmed)
         if (existing != null && !existing.isDeleted) {
-            return Result.failure(IllegalArgumentException("已有同名标签「$trimmed」,换个名字吧"))
+            return Result.failure(TagNameException(TagNameError.DUPLICATE, trimmed))
         }
         val entity = (existing ?: TagEntity(
             id = UUID.randomUUID().toString(),

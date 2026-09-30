@@ -13,6 +13,8 @@ import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.model.RuleEnd
 import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.model.TagNameError
+import com.lnx.app.core.domain.model.TagNameException
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
 import com.lnx.app.core.notification.ReminderPlanner
@@ -30,7 +32,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** 编辑页 UI 状态 */
+    /** 新建标签对话框里的错误;`name` 用于重名提示里回显用户输入的名字。`kind` 为 null = 非预期的失败 */
+    data class TagCreateError(val kind: TagNameError?, val name: String? = null)
+
+    /** 编辑页 UI 状态 */
 data class EventEditUiState(
     val draft: EventDraft? = null,
     val isEditing: Boolean = false,
@@ -43,7 +48,7 @@ data class EventEditUiState(
     /** 该事件已选中的标签 */
     val selectedTagIds: Set<String> = emptySet(),
     /** 新建标签失败的原因(重名等),给对话框内联显示 */
-    val tagCreateError: String? = null,
+    val tagCreateError: TagCreateError? = null,
     /** 用户刚设了提醒 → 该问一次通知权限了(spec §3.8),编辑器消费后置回 false */
     val askNotificationPermission: Boolean = false,
     /**
@@ -215,9 +220,12 @@ class EventEditViewModel @Inject constructor(
         if (!next.add(id)) next.remove(id)
         s.copy(selectedTagIds = next)
     }
-    /**
-     * 新建标签并自动选中。返回是否成功:重名等失败要把原因留在对话框里让用户改,
+
+    /** 新建标签并自动选中。返回是否成功:重名等失败要把原因留在对话框里让用户改,
      * 不能弹一下就没了(静默失败过一次,结果是事件挂上不存在的标签 id,界面里再也藏不掉它)。
+     *
+     * 失败只报**错误类型**([TagNameError]),中文/英文句子由界面按当前语言渲染 ——
+     * ViewModel 里存句子就等于把中文焊死在数据流上(换语言后报错仍是中文)。
      */
     suspend fun createTag(name: String, colorSlot: Int): Boolean =
         tagRepository.createTag(name, colorSlot).fold(
@@ -228,7 +236,11 @@ class EventEditViewModel @Inject constructor(
                 true
             },
             onFailure = { e ->
-                _uiState.update { it.copy(tagCreateError = e.message ?: "创建标签失败") }
+                val error = when (e) {
+                    is TagNameException -> TagCreateError(e.kind, e.name)
+                    else -> TagCreateError(null) // 非预期异常:界面显示通用失败文案
+                }
+                _uiState.update { it.copy(tagCreateError = error) }
                 false
             },
         )

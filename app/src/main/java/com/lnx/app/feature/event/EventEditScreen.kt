@@ -41,9 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lnx.app.R
+import com.lnx.app.core.common.LocalLnxLocale
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
@@ -53,7 +57,6 @@ import com.lnx.app.core.notification.NotificationPermission
 import com.lnx.app.core.notification.findActivity
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -77,6 +80,8 @@ fun EventEditScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val draft = state.draft
     val activity = LocalContext.current.findActivity()
+    // 日期/时间/重复描述的显示语言(spec §10);子组件各自取 LocalLnxLocale,这里给只读行用
+    val locale = LocalLnxLocale.current
 
     // 没有导航图时由调用方显式给定入口;ViewModel 跨多次打开存活,每次进入组合必须重置
     LaunchedEffect(start, eventId, occurrence, scope) {
@@ -119,9 +124,11 @@ fun EventEditScreen(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onClose) { Text("取消") }
+                TextButton(onClick = onClose) { Text(stringResource(R.string.action_cancel)) }
                 Text(
-                    text = if (state.isEditing) "编辑事件" else "新建事件",
+                    text = stringResource(
+                        if (state.isEditing) R.string.editor_edit else R.string.editor_new,
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -129,7 +136,7 @@ fun EventEditScreen(
                 TextButton(
                     onClick = { viewModel.save() },
                     modifier = Modifier.testTag("save_button"),
-                ) { Text("保存") }
+                ) { Text(stringResource(R.string.editor_save)) }
             }
         },
     ) { padding ->
@@ -145,7 +152,7 @@ fun EventEditScreen(
             OutlinedTextField(
                 value = draft.title,
                 onValueChange = viewModel::setTitle,
-                label = { Text("标题") },
+                label = { Text(stringResource(R.string.editor_title)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -157,7 +164,7 @@ fun EventEditScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("全天事件")
+                Text(stringResource(R.string.editor_all_day))
                 Switch(
                     checked = draft.allDay,
                     onCheckedChange = viewModel::toggleAllDay,
@@ -167,13 +174,13 @@ fun EventEditScreen(
 
             if (draft.allDay) {
                 DateField(
-                    label = "开始日期",
+                    label = stringResource(R.string.editor_start_date),
                     date = draft.start.toLocalDate(),
                     onPick = { viewModel.setStart(it.atStartOfDay()) },
                     tag = "field_start_date",
                 )
                 DateField(
-                    label = "结束日期",
+                    label = stringResource(R.string.editor_end_date),
                     date = draft.end.toLocalDate().minusDays(1),
                     onPick = { picked ->
                         // 结束日期排他:存次日零点
@@ -183,13 +190,13 @@ fun EventEditScreen(
                 )
             } else {
                 DateTimeField(
-                    label = "开始",
+                    label = stringResource(R.string.editor_start),
                     value = draft.start,
                     onPickDateTime = viewModel::setStart,
                     tag = "field_start",
                 )
                 DateTimeField(
-                    label = "结束",
+                    label = stringResource(R.string.editor_end),
                     value = draft.end,
                     onPickDateTime = viewModel::setEnd,
                     tag = "field_end",
@@ -199,7 +206,7 @@ fun EventEditScreen(
             OutlinedTextField(
                 value = draft.location,
                 onValueChange = viewModel::setLocation,
-                label = { Text("地点(可选)") },
+                label = { Text(stringResource(R.string.editor_location)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -214,7 +221,10 @@ fun EventEditScreen(
                     onChange = viewModel::setRule,
                 )
             } else {
-                ReadonlyRow("重复", RuleDescription.of(draft.rule))
+                ReadonlyRow(
+                    stringResource(R.string.editor_repeat),
+                    RuleDescription.of(draft.rule, locale),
+                )
             }
             ReminderPicker(
                 selected = draft.reminderLeadMinutes,
@@ -240,7 +250,7 @@ fun EventEditScreen(
             OutlinedTextField(
                 value = draft.notes,
                 onValueChange = viewModel::setNotes,
-                label = { Text("备注") },
+                label = { Text(stringResource(R.string.editor_notes)) },
                 minLines = 3,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -248,21 +258,24 @@ fun EventEditScreen(
             )
 
             if (state.errors.contains(ValidationError.TITLE_REQUIRED)) {
-                Text("请填写标题", color = MaterialTheme.colorScheme.error)
+                Text(
+                    stringResource(R.string.editor_error_title),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             if (state.errors.contains(ValidationError.END_NOT_AFTER_START)) {
-                Text("结束时间必须晚于开始时间", color = MaterialTheme.colorScheme.error)
+                Text(
+                    stringResource(R.string.editor_error_end),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-// 应用界面文案是中文(v0.1 不做 i18n):钉住 locale,否则 "E" 会随设备语言变成 Mon/周日 混排
-private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
-private val DATETIME_FMT: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("M月d日 E HH:mm", Locale.CHINA)
-private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日 E", Locale.CHINA)
+// 日期/时间的显示格式统一走 [LnxLocale]:它按 App 语言给中文 `9月29日 周二 14:30`
+// 或英文 `Sep 29, Tue 2:30 PM`,不随设备语言乱跳(spec §10)
 
 @Composable
 private fun ReadonlyRow(label: String, value: String) {
@@ -311,7 +324,7 @@ private fun DateTimeField(
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(
-            text = value.format(DATETIME_FMT),
+            text = LnxLocale.dateTime(value, LocalLnxLocale.current),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -344,7 +357,10 @@ internal fun DateField(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(date.format(DATE_FMT), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            LnxLocale.dateWithWeekday(date, LocalLnxLocale.current),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -352,11 +368,13 @@ internal fun DateField(
 @Composable
 private fun ReminderPicker(selected: Int?, onSelect: (Int?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("提醒", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.editor_reminder), style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(null, 5, 15, 30, 60).forEach { minutes ->
                 ChipOption(
-                    text = minutes?.let { "$it 分" } ?: "不提醒",
+                    text = minutes?.let {
+                        stringResource(R.string.editor_reminder_minutes, it)
+                    } ?: stringResource(R.string.editor_reminder_none),
                     selected = minutes == selected,
                     onClick = { onSelect(minutes) },
                     tag = "reminder_${minutes ?: "none"}",
@@ -369,7 +387,7 @@ private fun ReminderPicker(selected: Int?, onSelect: (Int?) -> Unit) {
 @Composable
 private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("颜色", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.editor_color), style = MaterialTheme.typography.bodyMedium)
         // 8 个 48dp 触达点一行放不下:允许横向滑动(固定 8 项,滑动成本很低)
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -409,7 +427,7 @@ private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
 @Composable
 private fun PriorityPicker(selected: Priority, onSelect: (Priority) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("优先级", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.editor_priority), style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Priority.entries.forEach { p ->
                 ChipOption(

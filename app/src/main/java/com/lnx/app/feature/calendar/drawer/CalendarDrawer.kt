@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lnx.app.R
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Tag
 
@@ -57,7 +59,7 @@ fun CalendarDrawer(
                 HorizontalDivider()
 
                 Text(
-                    text = "筛选",
+                    text = stringResource(R.string.drawer_filter),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
@@ -72,7 +74,7 @@ fun CalendarDrawer(
                     )
                 }
                 FilterRow(
-                    label = "未分类",
+                    label = stringResource(R.string.drawer_untagged),
                     checked = !hideUntagged,
                     dotColor = null,
                     onToggle = onToggleUntagged,
@@ -84,7 +86,7 @@ fun CalendarDrawer(
             // 清单滚动、设置贴底:标签再多也把"设置"压在抽屉最下面。
             HorizontalDivider()
             Text(
-                text = "设置",
+                text = stringResource(R.string.drawer_settings),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier

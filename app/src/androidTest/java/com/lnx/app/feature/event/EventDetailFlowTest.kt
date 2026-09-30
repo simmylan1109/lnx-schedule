@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Event
@@ -177,8 +178,10 @@ class EventDetailFlowTest {
         rule.onNodeWithTag("field_title").performTextInput("重叠测试")
         rule.onNodeWithTag("save_button").performClick()
 
+        // 用资源里的真实文案拼期望值:文案本身会被改(甚至换语言),不该在这里再抄一份
+        val overlapText = rule.activity.getString(R.string.calendar_overlap, "占满今天的事")
         rule.waitUntil(timeoutMillis = 5_000) {
-            rule.onAllNodesWithText("与\"占满今天的事\"时间重叠").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText(overlapText).fetchSemanticsNodes().isNotEmpty()
         }
         // 轻提示不阻止保存:编辑页关闭,事件照常落库并出现在周视图
         rule.waitUntil(timeoutMillis = 5_000) {

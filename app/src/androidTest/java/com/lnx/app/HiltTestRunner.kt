@@ -12,6 +12,10 @@ import dagger.hilt.android.testing.HiltTestApplication
  * 同时在启动时预授权通知权限:Android 13+ 通知权限默认不给,而 App 在"保存带提醒的事件"
  * 那一刻会弹系统权限框(spec §3.8 的语境化索权)。这个框会盖住整个首屏,后续 Compose 断言
  * 全部报 "No compose hierarchies found" —— 权限流本身另有专项测试,其余用例不该被系统弹窗打断。
+ *
+ * 另外把进程默认语言钉成中文:套件里大量断言写的是中文文案(M6 起 App 会按系统语言
+ * 切中英,模拟器是英文环境时这些断言会全红)。钉住之后用例结果与模拟器语言无关,
+ * 中英双语本身由 `LocaleSwitchTest` 专门覆盖。
  */
 class HiltTestRunner : AndroidJUnitRunner() {
 
@@ -22,8 +26,21 @@ class HiltTestRunner : AndroidJUnitRunner() {
     ): Application = super.newApplication(classLoader, HiltTestApplication::class.java.name, context)
 
     override fun onStart() {
+        pinDefaultLocale()
         grantNotificationPermission()
         super.onStart()
+    }
+
+    /** 固定默认语言为简体中文(spec §10:App 的"跟随系统"会读它) */
+    private fun pinDefaultLocale() {
+        val zh = java.util.Locale.SIMPLIFIED_CHINESE
+        java.util.Locale.setDefault(zh)
+        // 资源解析看的是 Configuration,不是 Locale.getDefault();两边一起钉
+        val context = targetContext
+        val config = android.content.res.Configuration(context.resources.configuration)
+        config.setLocale(zh)
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
     }
 
     private fun grantNotificationPermission() {

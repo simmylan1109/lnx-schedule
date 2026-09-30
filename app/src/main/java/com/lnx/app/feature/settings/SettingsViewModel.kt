@@ -2,6 +2,7 @@ package com.lnx.app.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lnx.app.core.common.LocaleContext
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.ThemeSlot
 import com.lnx.app.core.notification.ReminderPlanner
@@ -45,5 +46,14 @@ class SettingsViewModel @Inject constructor(
 
     fun setWeekStartMonday(monday: Boolean) = viewModelScope.launch { repository.setWeekStartMonday(monday) }
 
-    fun setLanguage(language: String) = viewModelScope.launch { repository.setLanguage(language) }
+    /**
+     * 换语言(spec §3.11 ②)。**先写进程缓存、再落盘**:
+     * 缓存是 `attachBaseContext` 唯一能同步读到的地方(见 [LocaleContext]),
+     * 而设置流会在落盘后吐新值、触发界面重建 —— 那时缓存必须已经是新语言,
+     * 否则重建出来的还是旧语言(这个顺序踩过一次)。
+     */
+    fun setLanguage(language: String) = viewModelScope.launch {
+        LocaleContext.setLanguage(language)
+        repository.setLanguage(language)
+    }
 }

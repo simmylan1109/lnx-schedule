@@ -2,6 +2,111 @@
 <resources>
     <string name="app_name">lnx</string>
 
+    <!-- 日历:顶栏与视图切换 -->
+    <string name="calendar_today">今天</string>
+    <string name="calendar_menu">菜单</string>
+    <string name="calendar_search">搜索</string>
+    <string name="calendar_view_day">日</string>
+    <string name="calendar_view_week">周</string>
+    <string name="calendar_view_month">月</string>
+    <string name="calendar_new_event">新建事件</string>
+    <string name="calendar_overlap">与“%1$s”时间重叠</string>
+
+    <!-- 抽屉(spec §3.10) -->
+    <string name="drawer_filter">筛选</string>
+    <string name="drawer_untagged">未分类</string>
+    <string name="drawer_settings">设置</string>
+
+    <!-- 空状态与月视图 -->
+    <string name="empty_today">今天没有日程,享受自由时光</string>
+    <string name="empty_day">这天没有日程,享受自由时光</string>
+    <string name="month_empty">%1$s · 无日程</string>
+    <string name="month_create_event">＋ 新建日程</string>
+    <string name="all_day">全天</string>
+
+    <!-- 事件详情卡(spec §3.6) -->
+    <string name="detail_time">时间</string>
+    <string name="detail_repeat">重复</string>
+    <string name="detail_location">地点</string>
+    <string name="detail_priority">优先级</string>
+    <string name="detail_notes">备注</string>
+    <string name="detail_tags">标签</string>
+    <string name="detail_edit">编辑</string>
+    <string name="detail_delete">删除</string>
+    <string name="detail_delete_title">删除事件</string>
+    <string name="detail_delete_confirm">确定删除「%1$s」吗?</string>
+    <string name="detail_scope_edit">修改范围</string>
+    <string name="detail_scope_delete">删除范围</string>
+    <string name="detail_scope_prompt">这个日程重复发生,请选择作用范围:</string>
+    <string name="detail_scope_this_only">仅本次</string>
+    <string name="detail_scope_this_and_future">本次及以后</string>
+    <string name="detail_scope_all">全部</string>
+    <string name="detail_all_day_single">%1$s 全天</string>
+    <string name="detail_all_day_range">%1$s 至 %2$s 全天</string>
+    <string name="detail_time_range">%1$s 至 %2$s</string>
+
+    <!-- 通用动作 -->
+    <string name="action_confirm">确定</string>
+    <string name="action_cancel">取消</string>
+
+    <!-- 事件编辑器(spec §3.5) -->
+    <string name="editor_new">新建事件</string>
+    <string name="editor_edit">编辑事件</string>
+    <string name="editor_save">保存</string>
+    <string name="editor_title">标题</string>
+    <string name="editor_all_day">全天事件</string>
+    <string name="editor_start_date">开始日期</string>
+    <string name="editor_end_date">结束日期</string>
+    <string name="editor_start">开始</string>
+    <string name="editor_end">结束</string>
+    <string name="editor_location">地点(可选)</string>
+    <string name="editor_repeat">重复</string>
+    <string name="editor_notes">备注</string>
+    <string name="editor_error_title">请填写标题</string>
+    <string name="editor_error_end">结束时间必须晚于开始时间</string>
+    <string name="editor_reminder">提醒</string>
+    <string name="editor_reminder_minutes">%1$d 分</string>
+    <string name="editor_reminder_none">不提醒</string>
+    <string name="editor_color">颜色</string>
+    <string name="editor_priority">优先级</string>
+
+    <!-- 重复规则区 -->
+    <string name="rule_repeat">重复</string>
+    <string name="rule_interval">间隔</string>
+    <string name="rule_unit_day">天</string>
+    <string name="rule_unit_week">周</string>
+    <string name="rule_unit_month">个月</string>
+    <string name="rule_by_date">按日期</string>
+    <string name="rule_by_weekday">按星期</string>
+    <string name="rule_nth_prefix">第</string>
+    <string name="rule_nth_suffix">个</string>
+    <string name="rule_never">永不结束</string>
+    <string name="rule_until">到日期</string>
+    <string name="rule_day_unit">日</string>
+    <string name="rule_count">重复次数</string>
+    <string name="rule_end_date">结束日期</string>
+    <string name="rule_times">次</string>
+    <string name="rule_type_none">不重复</string>
+    <string name="rule_type_daily">每天</string>
+    <string name="rule_type_weekly">每周</string>
+    <string name="rule_type_monthly">每月</string>
+    <string name="rule_type_yearly">每年</string>
+
+    <!-- 标签(spec §3.10) -->
+    <string name="tag_section">标签</string>
+    <string name="tag_create">＋ 新建</string>
+    <string name="tag_create_title">新建标签</string>
+    <string name="tag_name">名称</string>
+    <string name="tag_create_confirm">创建</string>
+    <string name="tag_error_empty">标签名不能为空</string>
+    <string name="tag_error_duplicate">已有同名标签「%1$s」,换个名字吧</string>
+    <string name="tag_create_failed">创建标签失败</string>
+
+    <!-- 提醒通知(spec §3.8) -->
+    <string name="notif_channel_name">日程提醒</string>
+    <string name="notif_channel_desc">事件开始前的提醒</string>
+    <string name="notif_starts_at">%1$s 开始</string>
+
     <!-- 设置页(spec §3.11) -->
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
@@ -24,6 +129,8 @@
 
     <string name="settings_dnd">免打扰</string>
     <string name="settings_dnd_window">免打扰时段</string>
+    <string name="settings_dnd_start">%1$s · 开始</string>
+    <string name="settings_dnd_end">%1$s · 结束</string>
     <string name="settings_notification_permission">通知权限</string>
     <string name="settings_permission_granted">已开启</string>
     <string name="settings_permission_denied">未开启,提醒不会弹出</string>
@@ -37,7 +144,6 @@
     <string name="settings_lang_zh">中文</string>
     <string name="settings_lang_en">English</string>
     <string name="settings_lang_system">跟随系统</string>
-    <string name="settings_lang_restart_hint">切换语言后需重启 App 生效(系统版本低于 Android 13)</string>
 
     <string name="settings_export">导出</string>
     <string name="settings_import">导入</string>

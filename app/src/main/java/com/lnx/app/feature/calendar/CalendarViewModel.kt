@@ -32,7 +32,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class ViewMode(val label: String) { DAY("日"), WEEK("周"), MONTH("月") }
+/** 视图模式。**标签是界面文案,归 `ViewModeTabs` 用 `stringResource` 取**,枚举里不带中文 */
+enum class ViewMode { DAY, WEEK, MONTH }
 
 data class CalendarUiState(
     val selectedDate: LocalDate,

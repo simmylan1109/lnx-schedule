@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.domain.EventRepository
@@ -91,7 +92,7 @@ class DayViewTest {
         rule.waitForIdle()
 
         // 顶栏标题跟随所选日期(与 M1 CalendarScreenTest 同款断言)
-        rule.onNodeWithText(formatTitle(tomorrow)).assertExists()
+        rule.onNodeWithText(formatTitle(tomorrow, LnxLocale.resolve(LnxLocale.SYSTEM))).assertExists()
         // 该日的事件块进入组合(数据窗口按所选日查询)
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithTag("event_block_e-day").fetchSemanticsNodes().isNotEmpty()

@@ -9,17 +9,58 @@ import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** 规则中文描述(spec §3.6 详情卡 + 编辑器折叠行),文案逐句钉住 */
+/** 规则描述(spec §3.6 详情卡 + 编辑器折叠行),中英两套文案逐句钉住 */
 class RuleDescriptionTest {
+
+    private val en = java.util.Locale.ENGLISH
+
     @Test
     fun `不重复`() {
         assertEquals("不重复", RuleDescription.of(EventRule()))
+        assertEquals("Does not repeat", RuleDescription.of(EventRule(), en))
     }
 
     @Test
     fun `每天`() {
         assertEquals("每天重复,永不结束", RuleDescription.of(EventRule(RuleType.DAILY)))
         assertEquals("每 3 天重复,永不结束", RuleDescription.of(EventRule(RuleType.DAILY, interval = 3)))
+    }
+
+    @Test
+    fun `英文每天与每N天`() {
+        assertEquals("Every day, never ends", RuleDescription.of(EventRule(RuleType.DAILY), en))
+        assertEquals(
+            "Every 3 days, never ends",
+            RuleDescription.of(EventRule(RuleType.DAILY, interval = 3), en),
+        )
+    }
+
+    @Test
+    fun `英文每周单日与双日`() {
+        assertEquals(
+            "Every Wed, never ends",
+            RuleDescription.of(EventRule(RuleType.WEEKLY, weekdays = setOf(DayOfWeek.WEDNESDAY)), en),
+        )
+        assertEquals(
+            "Every Mon, Fri, never ends",
+            RuleDescription.of(EventRule(RuleType.WEEKLY, weekdays = setOf(DayOfWeek.FRIDAY, DayOfWeek.MONDAY)), en),
+        )
+    }
+
+    @Test
+    fun `英文按次数结束`() {
+        assertEquals(
+            "Every 2 weeks on Mon, Fri, ends after 5 times",
+            RuleDescription.of(
+                EventRule(
+                    RuleType.WEEKLY,
+                    interval = 2,
+                    weekdays = setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY),
+                    end = RuleEnd.Count(5),
+                ),
+                en,
+            ),
+        )
     }
 
     @Test

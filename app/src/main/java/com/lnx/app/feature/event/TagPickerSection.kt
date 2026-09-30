@@ -34,9 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lnx.app.R
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Tag
+import com.lnx.app.core.domain.model.TagNameError
 
 /**
  * 编辑器标签选择(spec §3.5 字段序的"标签"位;§3.10 多对多、颜色取 8 色位)。
@@ -49,13 +52,13 @@ fun TagPickerSection(
     selectedIds: Set<String>,
     onToggle: (String) -> Unit,
     onCreate: suspend (name: String, colorSlot: Int) -> Boolean,
-    createError: String? = null,
+    createError: TagCreateError? = null,
     onClearError: () -> Unit = {},
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("标签", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.tag_section), style = MaterialTheme.typography.bodyMedium)
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -82,7 +85,7 @@ fun TagPickerSection(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "＋ 新建",
+                    text = stringResource(R.string.tag_create),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -138,7 +141,7 @@ private fun TagChip(tag: Tag, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun CreateTagDialog(
-    createError: String?,
+    createError: TagCreateError?,
     onConfirm: suspend (String, Int) -> Boolean,
     onDismiss: () -> Unit,
     onCreated: () -> Unit,
@@ -149,13 +152,13 @@ private fun CreateTagDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("新建标签") },
+        title = { Text(stringResource(R.string.tag_create_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称") },
+                    label = { Text(stringResource(R.string.tag_name)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -199,7 +202,7 @@ private fun CreateTagDialog(
             }
             if (createError != null) {
                 Text(
-                    text = createError,
+                    text = tagErrorText(createError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.testTag("tag_create_error"),
@@ -215,10 +218,19 @@ private fun CreateTagDialog(
                     }
                 },
                 modifier = Modifier.testTag("tag_create_confirm"),
-            ) { Text("创建") }
+            ) { Text(stringResource(R.string.tag_create_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
+}
+
+/** 失败只报"哪种错",句子在这里按当前语言拼(spec §3.10) */
+@Composable
+private fun tagErrorText(error: TagCreateError): String = when (error.kind) {
+    TagNameError.EMPTY -> stringResource(R.string.tag_error_empty)
+    TagNameError.DUPLICATE -> stringResource(R.string.tag_error_duplicate, error.name ?: "")
+    // 仓库抛了非 TagNameException 的异常:通用失败文案
+    else -> stringResource(R.string.tag_create_failed)
 }

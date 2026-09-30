@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lnx.app.R
+import com.lnx.app.core.common.LocalLnxLocale
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.notification.NotificationPermission
 import com.lnx.app.core.settings.SettingsDefaults
 
@@ -69,8 +71,9 @@ internal fun ReminderSettingsSection(
     )
 
     // 时段两行:起、止各开一个时间选择器(spec §3.11 ②)
+    val locale = LocalLnxLocale.current
     SettingRow(
-        title = stringResource(R.string.settings_dnd_window) + " · 开始",
+        title = stringResource(R.string.settings_dnd_start, stringResource(R.string.settings_dnd_window)),
         modifier = Modifier.testTag("dnd_start_row"),
         onClick = {
             TimePickerDialog(
@@ -79,10 +82,10 @@ internal fun ReminderSettingsSection(
                 dndStartMinute / 60, dndStartMinute % 60, true,
             ).show()
         },
-        trailing = { Text(formatMinute(dndStartMinute), style = MaterialTheme.typography.bodyLarge) },
+        trailing = { Text(formatMinute(dndStartMinute, locale), style = MaterialTheme.typography.bodyLarge) },
     )
     SettingRow(
-        title = stringResource(R.string.settings_dnd_window) + " · 结束",
+        title = stringResource(R.string.settings_dnd_end, stringResource(R.string.settings_dnd_window)),
         modifier = Modifier.testTag("dnd_end_row"),
         onClick = {
             TimePickerDialog(
@@ -91,7 +94,7 @@ internal fun ReminderSettingsSection(
                 dndEndMinute / 60, dndEndMinute % 60, true,
             ).show()
         },
-        trailing = { Text(formatMinute(dndEndMinute), style = MaterialTheme.typography.bodyLarge) },
+        trailing = { Text(formatMinute(dndEndMinute, locale), style = MaterialTheme.typography.bodyLarge) },
     )
 
     // 通知权限状态 + 去开启(spec §3.11 ③):被拒时提醒静默失效,必须给用户一条路
@@ -113,7 +116,9 @@ internal fun ReminderSettingsSection(
     )
 }
 
-private fun formatMinute(minute: Int): String = "%02d:%02d".format(minute / 60, minute % 60)
+/** 24 小时制是中文习惯,英文习惯 12 小时制带 AM/PM(spec §10) */
+private fun formatMinute(minute: Int, locale: java.util.Locale): String =
+    LnxLocale.time(java.time.LocalTime.of(minute / 60, minute % 60), locale)
 
 /** 跳系统应用详情页的通知权限项;拿不到应用详情页就退回应用详情页 */
 private fun android.content.Context.openAppNotificationSettings() {

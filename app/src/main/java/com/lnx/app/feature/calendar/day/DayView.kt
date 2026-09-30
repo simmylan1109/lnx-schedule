@@ -28,7 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.lnx.app.core.common.dayOfWeekCn
+import com.lnx.app.core.common.LocalLnxLocale
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.feature.calendar.CalendarUiState
 import com.lnx.app.feature.calendar.week.AllDayStrip
@@ -36,6 +37,7 @@ import com.lnx.app.feature.calendar.week.TimeGrid
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Locale
 
 /**
  * 这条发生是否落在指定日期上(含跨天)。
@@ -70,6 +72,7 @@ fun DayView(
     onEmptySlotClick: (LocalDateTime) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalLnxLocale.current
     val pageOf = { date: LocalDate -> (date.toEpochDay() - DAY_PAGE_EPOCH).toInt() }
     val pagerState = rememberPagerState(
         initialPage = pageOf(state.selectedDate),
@@ -104,6 +107,7 @@ fun DayView(
                     selectedDate = state.selectedDate,
                     today = today,
                     onSelectDate = onSelectDate,
+                    locale = locale,
                 )
                 // 全天/跨天事件(spec §3.3"其余交互与周视图一致"):日视图也得有,
                 // 否则全天事件所在那天整页空白,连空态都不出现
@@ -138,6 +142,7 @@ private fun DayStrip(
     selectedDate: LocalDate,
     today: LocalDate,
     onSelectDate: (LocalDate) -> Unit,
+    locale: Locale,
 ) {
     val listState = rememberLazyListState()
     LaunchedEffect(selectedDate) {
@@ -160,6 +165,7 @@ private fun DayStrip(
                 selected = date == selectedDate,
                 isToday = date == today,
                 onClick = { onSelectDate(date) },
+                locale = locale,
             )
         }
     }
@@ -171,6 +177,7 @@ private fun DayStripCell(
     selected: Boolean,
     isToday: Boolean,
     onClick: () -> Unit,
+    locale: Locale,
 ) {
     Column(
         modifier = Modifier
@@ -180,7 +187,7 @@ private fun DayStripCell(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = dayOfWeekCn(date),
+            text = LnxLocale.weekday(date, locale),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

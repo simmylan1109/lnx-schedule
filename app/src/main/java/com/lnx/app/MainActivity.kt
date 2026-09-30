@@ -1,5 +1,6 @@
 package com.lnx.app
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,12 +10,16 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lnx.app.core.common.LocaleContext
+import com.lnx.app.core.common.LnxLocale
+import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.designsystem.LnxMotion
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.notification.ReminderNotifier
@@ -38,11 +43,22 @@ class MainActivity : ComponentActivity() {
     /** 点提醒通知带过来的打开请求(spec §3.8);Activity 是 singleTask,已在前台时走 onNewIntent */
     private var openRequest by mutableStateOf<OpenEventRequest?>(null)
 
+    /**
+     * 语言在这里换(spec §10):`attachBaseContext` 是同步方法,读不了 DataStore,
+     * 所以语言值放在 [LocaleContext] 的进程缓存里,这里直接取。
+     * 用户在设置里改语言 → 写缓存 → `recreate()` → 重新走这里,新语言生效。
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleContext.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 首次进入进程:从存储同步读一次语言(之后都走缓存,不碰磁盘)
+        LocaleContext.refreshFromDisk { settingsRepository.current().language }
         // 通知权限不在这里要:用户点开 App 的那一刻还不知道提醒是干什么的。
-        // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页在 M7 接入。
+        // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页会问一次。
         handleOpenRequest(intent)
         setContent {
             // null = 设置还没吐出真值(首帧那一刻)。
@@ -58,14 +74,20 @@ class MainActivity : ComponentActivity() {
                 label = "theme-slot",
             ) { slot ->
                 LnxTheme(slot = slot, darkMode = settings.darkMode) {
-                    Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
-                        if (loaded != null && !settings.onboardingDone) {
-                            OnboardingScreen()
-                        } else {
-                            CalendarScreen(
-                                openRequest = openRequest,
-                                onOpenRequestConsumed = { openRequest = null },
-                            )
+                    // 程序化文案(日期/星期/规则描述)从这里取语言;界面文案由 Context 的
+                    // Configuration 决定,两者同源,不会出现"中文标题 + 英文日期"
+                    CompositionLocalProvider(
+                        LocalLnxLocale provides LnxLocale.resolve(settings.language),
+                    ) {
+                        Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
+                            if (loaded != null && !settings.onboardingDone) {
+                                OnboardingScreen()
+                            } else {
+                                CalendarScreen(
+                                    openRequest = openRequest,
+                                    onOpenRequestConsumed = { openRequest = null },
+                                )
+                            }
                         }
                     }
                 }

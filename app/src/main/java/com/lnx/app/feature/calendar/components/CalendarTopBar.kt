@@ -17,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lnx.app.R
 
 @Composable
 fun CalendarTopBar(
@@ -38,7 +40,7 @@ fun CalendarTopBar(
         IconButton(onClick = onMenuClick, modifier = Modifier.testTag("menu_button")) {
             Icon(
                 imageVector = Icons.Default.Menu,
-                contentDescription = "菜单",
+                contentDescription = stringResource(R.string.calendar_menu),
                 modifier = Modifier.padding(8.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -50,12 +52,12 @@ fun CalendarTopBar(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onTodayClick, modifier = Modifier.testTag("today_button")) {
-                Text("今天")
+                Text(stringResource(R.string.calendar_today))
             }
             IconButton(onClick = onSearchClick) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "搜索",
+                    contentDescription = stringResource(R.string.calendar_search),
                     modifier = Modifier.padding(8.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )

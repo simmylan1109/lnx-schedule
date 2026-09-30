@@ -26,15 +26,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lnx.app.R
+import com.lnx.app.core.common.LnxLocale
+import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Event
 import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
-import java.time.format.DateTimeFormatter
+import com.lnx.app.core.domain.recurrence.RuleDescription
+import java.time.LocalDate
+import java.time.LocalTime
 import java.util.Locale
 
 /**
@@ -52,6 +58,7 @@ fun EventDetailContent(
     var confirmDelete by remember { mutableStateOf(false) }
     // 重复事件:按钮先选作用范围(编辑/删除共用一个弹窗,靠 pendingAction 区分)
     var pendingAction by remember { mutableStateOf<DetailAction?>(null) }
+    val locale = LocalLnxLocale.current
 
     Column(
         modifier = Modifier
@@ -59,14 +66,14 @@ fun EventDetailContent(
             .padding(top = 4.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        DetailRow("时间", detailTimeText(event))
-        DetailRow("重复", detailRuleText(event.rule))
-        event.location?.takeIf { it.isNotBlank() }?.let { DetailRow("地点", it) }
+        DetailRow(stringResource(R.string.detail_time), detailTimeText(event, locale))
+        DetailRow(stringResource(R.string.detail_repeat), detailRuleText(event.rule, locale))
+        event.location?.takeIf { it.isNotBlank() }?.let { DetailRow(stringResource(R.string.detail_location), it) }
         if (tags.isNotEmpty()) {
             TagRow(tags)
         }
-        DetailRow("优先级", event.priority.label)
-        event.notes?.takeIf { it.isNotBlank() }?.let { DetailRow("备注", it) }
+        DetailRow(stringResource(R.string.detail_priority), event.priority.label)
+        event.notes?.takeIf { it.isNotBlank() }?.let { DetailRow(stringResource(R.string.detail_notes), it) }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
@@ -76,7 +83,7 @@ fun EventDetailContent(
                 modifier = Modifier
                     .weight(1f)
                     .testTag("detail_edit"),
-            ) { Text("编辑") }
+            ) { Text(stringResource(R.string.detail_edit)) }
             Button(
                 onClick = {
                     if (event.isRecurring) pendingAction = DetailAction.DELETE else confirmDelete = true
@@ -84,7 +91,7 @@ fun EventDetailContent(
                 modifier = Modifier
                     .weight(1f)
                     .testTag("detail_delete"),
-            ) { Text("删除") }
+            ) { Text(stringResource(R.string.detail_delete)) }
         }
     }
 
@@ -92,8 +99,8 @@ fun EventDetailContent(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("删除事件") },
-            text = { Text("确定删除「${event.title}」吗?") },
+            title = { Text(stringResource(R.string.detail_delete_title)) },
+            text = { Text(stringResource(R.string.detail_delete_confirm, event.title)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -101,10 +108,10 @@ fun EventDetailContent(
                         onDelete(EditScope.ALL)
                     },
                     modifier = Modifier.testTag("delete_confirm"),
-                ) { Text("删除") }
+                ) { Text(stringResource(R.string.detail_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("取消") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -114,16 +121,24 @@ fun EventDetailContent(
     if (action != null) {
         AlertDialog(
             onDismissRequest = { pendingAction = null },
-            title = { Text(if (action == DetailAction.EDIT) "修改范围" else "删除范围") },
-            text = { Text("这个日程重复发生,请选择作用范围:") },
+            title = {
+                Text(
+                    if (action == DetailAction.EDIT) {
+                        stringResource(R.string.detail_scope_edit)
+                    } else {
+                        stringResource(R.string.detail_scope_delete)
+                    },
+                )
+            },
+            text = { Text(stringResource(R.string.detail_scope_prompt)) },
             confirmButton = {
                 // 三个作用范围并排;AlertDialog 只有两个按钮槽,三选一塞进 confirm 槽
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    ScopeButton("仅本次", EditScope.THIS_ONLY) {
+                    ScopeButton(stringResource(R.string.detail_scope_this_only), EditScope.THIS_ONLY) {
                         pendingAction = null
                         if (action == DetailAction.EDIT) onEdit(EditScope.THIS_ONLY) else onDelete(EditScope.THIS_ONLY)
                     }
-                    ScopeButton("本次及以后", EditScope.THIS_AND_FUTURE) {
+                    ScopeButton(stringResource(R.string.detail_scope_this_and_future), EditScope.THIS_AND_FUTURE) {
                         pendingAction = null
                         if (action == DetailAction.EDIT) {
                             onEdit(EditScope.THIS_AND_FUTURE)
@@ -131,14 +146,14 @@ fun EventDetailContent(
                             onDelete(EditScope.THIS_AND_FUTURE)
                         }
                     }
-                    ScopeButton("全部", EditScope.ALL) {
+                    ScopeButton(stringResource(R.string.detail_scope_all), EditScope.ALL) {
                         pendingAction = null
                         if (action == DetailAction.EDIT) onEdit(EditScope.ALL) else onDelete(EditScope.ALL)
                     }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingAction = null }) { Text("取消") }
+                TextButton(onClick = { pendingAction = null }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -176,7 +191,7 @@ private fun DetailRow(label: String, value: String) {
 private fun TagRow(tags: List<Tag>) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "标签",
+            text = stringResource(R.string.detail_tags),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(end = 16.dp),
@@ -204,31 +219,79 @@ private fun TagRow(tags: List<Tag>) {
     }
 }
 
-// 应用界面文案是中文(v0.1 不做 i18n):钉住 locale,保证设备语言不影响展示与测试
-private val DETAIL_DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日 E", Locale.CHINA)
-private val DETAIL_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
+/**
+ * 时间行的**形状**(纯函数,可 JVM 单测):全天显示日期区间(排他存储 → 展示时收回到
+ * "含当天"),定时显示起止、同日不重复日期。
+ *
+ * 这里只决定"用哪种句式、显示哪几天/几点",**不拼字符串** —— 句子在 `strings.xml` 里,
+ * 日期格式在 [LnxLocale] 里,都由 Composable 那层按当前语言取。
+ * (早先这里直接返回拼好的中文,换语言就露馅;那样也测不了。)
+ */
+data class DetailTimeParts(
+    val kind: Kind,
+    /** 要显示的日期:全天 1 或 2 天,定时 1 或 2 天 */
+    val dates: List<LocalDate>,
+    /** 只有定时事件才有 */
+    val times: List<LocalTime> = emptyList(),
+) {
+    enum class Kind { ALL_DAY_SINGLE, ALL_DAY_RANGE, TIMED_SAME_DAY, TIMED_RANGE }
+}
 
-/** 时间行文案:全天显示日期区间(排他存储 → 展示时收回到"含当天"),定时显示起止 */
-fun detailTimeText(event: Event): String {
+fun detailTimeParts(event: Event): DetailTimeParts {
+    val firstDay = event.start.toLocalDate()
     return if (event.allDay) {
-        val firstDay = event.start.toLocalDate()
         val lastDay = event.end.toLocalDate().minusDays(1) // 存储排他,展示含当天
-        if (firstDay == lastDay) {
-            "${firstDay.format(DETAIL_DATE_FMT)} 全天"
-        } else {
-            "${firstDay.format(DETAIL_DATE_FMT)} 至 ${lastDay.format(DETAIL_DATE_FMT)} 全天"
-        }
+        DetailTimeParts(
+            kind = if (firstDay == lastDay) {
+                DetailTimeParts.Kind.ALL_DAY_SINGLE
+            } else {
+                DetailTimeParts.Kind.ALL_DAY_RANGE
+            },
+            dates = listOf(firstDay, lastDay).distinct(),
+        )
     } else {
-        val firstDay = event.start.toLocalDate()
         val lastDay = event.end.toLocalDate()
-        if (firstDay == lastDay) {
-            "${firstDay.format(DETAIL_DATE_FMT)} ${event.start.format(DETAIL_TIME_FMT)} – ${event.end.format(DETAIL_TIME_FMT)}"
-        } else {
-            "${firstDay.format(DETAIL_DATE_FMT)} ${event.start.format(DETAIL_TIME_FMT)}" +
-                " 至 ${lastDay.format(DETAIL_DATE_FMT)} ${event.end.format(DETAIL_TIME_FMT)}"
+        // 同日不重复日期,跨天才把结束那天的日期也带上
+        DetailTimeParts(
+            kind = if (firstDay == lastDay) {
+                DetailTimeParts.Kind.TIMED_SAME_DAY
+            } else {
+                DetailTimeParts.Kind.TIMED_RANGE
+            },
+            dates = listOf(firstDay, lastDay).distinct(),
+            times = listOf(event.start.toLocalTime(), event.end.toLocalTime()),
+        )
+    }
+}
+
+/** 时间行文案:按 [detailTimeParts] 决定的形状取对应句子 */
+@Composable
+fun detailTimeText(event: Event, locale: Locale): String {
+    val parts = detailTimeParts(event)
+    val days = parts.dates.map { LnxLocale.monthDay(it, locale) }
+    val dated = parts.dates.map { LnxLocale.dateWithWeekday(it, locale) }
+    return when (parts.kind) {
+        DetailTimeParts.Kind.ALL_DAY_SINGLE ->
+            stringResource(R.string.detail_all_day_single, days.single())
+
+        DetailTimeParts.Kind.ALL_DAY_RANGE ->
+            stringResource(R.string.detail_all_day_range, days[0], days[1])
+
+        DetailTimeParts.Kind.TIMED_SAME_DAY -> {
+            val times = parts.times.map { LnxLocale.time(it, locale) }
+            stringResource(R.string.detail_time_range, "${dated.single()} ${times[0]}", times[1])
+        }
+
+        DetailTimeParts.Kind.TIMED_RANGE -> {
+            val times = parts.times.map { LnxLocale.time(it, locale) }
+            stringResource(
+                R.string.detail_time_range,
+                "${dated[0]} ${times[0]}",
+                "${dated[1]} ${times[1]}",
+            )
         }
     }
 }
 
-/** 重复规则描述(spec §3.6):M4 起是完整中文描述,与编辑器折叠行同一份文案 */
-fun detailRuleText(rule: EventRule): String = com.lnx.app.core.domain.recurrence.RuleDescription.of(rule)
+/** 重复规则描述(spec §3.6):M4 起是完整本地化描述,与编辑器折叠行同一份文案 */
+fun detailRuleText(rule: EventRule, locale: Locale): String = RuleDescription.of(rule, locale)

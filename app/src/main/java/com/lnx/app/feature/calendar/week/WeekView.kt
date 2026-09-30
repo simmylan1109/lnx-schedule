@@ -40,9 +40,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lnx.app.R
+import com.lnx.app.core.common.LocalLnxLocale
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
 import com.lnx.app.core.designsystem.EventColors
@@ -54,10 +58,17 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Locale
 
-private val DOW_HEADER = listOf("一", "二", "三", "四", "五", "六", "日")
+/**
+ * 星期头表(周一起始,ISO 1..7):按当前 App 语言生成,不再写死中文字面量。
+ * 中文走 LnxLocale 的 周一…周日 表,英文走 `EEE`(Mon…Sun)。
+ */
+internal fun dowHeader(locale: Locale): List<String> =
+    (1..7).map { LnxLocale.weekday(it, locale) }
 
-fun dayOfWeekCnShort(dow: DayOfWeek): String = DOW_HEADER[dow.value - 1]
+fun dayOfWeekCnShort(dow: DayOfWeek, locale: Locale): String =
+    dowHeader(locale)[dow.value - 1]
 
 /**
  * M2 起 WeekView 接收事件与两个点击回调。
@@ -73,6 +84,7 @@ fun WeekView(
     onEmptySlotClick: (LocalDateTime) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalLnxLocale.current
     val pagerState = rememberPagerState(
         initialPage = dateToPage(state.selectedDate),
         // 40001 页 ≈ 以 1970-01-05 为中心的前后各约 200 年,足够任何现实日期
@@ -114,7 +126,12 @@ fun WeekView(
         ) { page ->
             val weekStart = pageToDate(page)
             Column(modifier = Modifier.testTag("week_header_${weekStart}")) {
-                WeekHeader(weekStart = weekStart, selectedDate = state.selectedDate, today = today)
+                WeekHeader(
+                    weekStart = weekStart,
+                    selectedDate = state.selectedDate,
+                    today = today,
+                    locale = locale,
+                )
                 AllDayStrip(
                     occurrences = occurrences,
                     weekStart = weekStart,
@@ -139,6 +156,7 @@ private fun WeekHeader(
     weekStart: LocalDate,
     selectedDate: LocalDate,
     today: LocalDate,
+    locale: Locale,
 ) {
     Row(
         modifier = Modifier
@@ -156,7 +174,7 @@ private fun WeekHeader(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = dayOfWeekCnShort(date.dayOfWeek),
+                    text = dayOfWeekCnShort(date.dayOfWeek, locale),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -542,8 +560,9 @@ internal fun TimeGrid(
                     SunGlyph(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (selectedDate == today) "今天没有日程,享受自由时光"
-                               else "这天没有日程,享受自由时光",
+                        text = stringResource(
+                            if (selectedDate == today) R.string.empty_today else R.string.empty_day
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

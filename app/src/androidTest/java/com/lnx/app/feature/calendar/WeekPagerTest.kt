@@ -8,6 +8,7 @@ import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.formatTitle
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -45,11 +46,11 @@ class WeekPagerTest {
         // 左滑到非当前周:头部切到下周一,选中日锚定为该周周一
         rule.onNodeWithTag("week_pager").performTouchInput { swipeLeft() }
         rule.onNodeWithTag("week_header_$nextMonday").assertExists()
-        rule.onNodeWithText(formatTitle(nextMonday)).assertExists()
+        rule.onNodeWithText(formatTitle(nextMonday, LnxLocale.resolve(LnxLocale.SYSTEM))).assertExists()
         // 右滑回到当前周:锚点规则要求回到"今天",而不是该周周一
         rule.onNodeWithTag("week_pager").performTouchInput { swipeRight() }
         rule.onNodeWithTag("week_header_$thisMonday").assertExists()
-        rule.onNodeWithText(formatTitle(today)).assertExists()
+        rule.onNodeWithText(formatTitle(today, LnxLocale.resolve(LnxLocale.SYSTEM))).assertExists()
     }
 
     // 冷启动(spec §3.1):无任何交互时标题必须是"今天",不能被改写成本周周一
@@ -58,6 +59,6 @@ class WeekPagerTest {
         val today = LocalDate.now()
         rule.onNodeWithTag("week_pager").assertExists()
         rule.onNodeWithTag("week_header_${mondayOf(today)}").assertExists()
-        rule.onNodeWithText(formatTitle(today)).assertExists()
+        rule.onNodeWithText(formatTitle(today, LnxLocale.resolve(LnxLocale.SYSTEM))).assertExists()
     }
 }
