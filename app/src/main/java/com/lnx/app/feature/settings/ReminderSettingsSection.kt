@@ -11,11 +11,19 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.lnx.app.R
 import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.common.LnxLocale
@@ -97,8 +105,19 @@ internal fun ReminderSettingsSection(
         trailing = { Text(formatMinute(dndEndMinute, locale), style = MaterialTheme.typography.bodyLarge) },
     )
 
-    // 通知权限状态 + 去开启(spec §3.11 ③):被拒时提醒静默失效,必须给用户一条路
-    val granted = NotificationPermission.isGranted(context)
+    // 通知权限状态 + 去开启(spec §3.11 ③):被拒时提醒静默失效,必须给用户一条路。
+    // 权限是**在系统设置里**改的,回来时必须重新查一次 —— 否则用户点完「去开启」、
+    // 授权回来,这一行还写着"未开启"(终审 P2)。用 ON_RESUME 计数驱动重算。
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeCount by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeCount++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val granted = remember(resumeCount) { NotificationPermission.isGranted(context) }
     SettingRow(
         title = stringResource(R.string.settings_notification_permission),
         subtitle = stringResource(

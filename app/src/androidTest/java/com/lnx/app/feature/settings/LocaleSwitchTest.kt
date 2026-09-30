@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
+import com.lnx.app.core.common.LocaleContext
 import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -46,10 +47,14 @@ class LocaleSwitchTest {
     @Before
     fun setUp() {
         hiltRule.inject()
-        // 不在这里动语言:测试存储每个用例都是全新的(见 TestSettingsModule),
-        // 出厂值是"跟随系统",而套件把系统语言钉成了中文 —— 起点本来就是中文。
-        // 若在这里写一次 "zh",会和"生效中"的 system 不一致而多触发一次重建,
-        // 反而把后面那条"切英文"的断言搅乱。
+        // **明确定义起点 = 中文**,不依赖上一个用例留下的语言:
+        // 本类第一个用例会把语言切成英文并落盘,同类的第二个用例若直接跑,起点就是英文,
+        // "中文环境下设置页应有「设置」"这类前置断言必然失败(踩过)。
+        // 语言缓存是进程级的,所以除了写设置,还要同步缓存并重建一次界面。
+        runBlocking { settings.setLanguage("zh") }
+        LocaleContext.setLanguage("zh")
+        rule.activityRule.scenario.onActivity { it.recreate() }
+        rule.waitForIdle()
     }
 
     private fun openSettings() {

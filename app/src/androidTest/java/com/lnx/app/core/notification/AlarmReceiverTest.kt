@@ -6,9 +6,12 @@ import android.content.Context
 import android.content.Intent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.LocalDateTime
+import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -40,6 +43,10 @@ class AlarmReceiverTest {
     /** 创建 Hilt 测试组件(见类注释:少了它接收器取不到依赖) */
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
+
+    /** 免打扰链路测试要改设置(M6 起接收器到点读设置) */
+    @Inject
+    lateinit var settings: SettingsRepository
 
     private lateinit var scheduler: ReminderScheduler
     private val context: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
@@ -97,5 +104,84 @@ class AlarmReceiverTest {
             ok = continueSlotExists()
         }
         assertTrue("发完广播 5 秒内应重新排上续排闹钟(说明 fire 路径跑完没崩)", ok)
+    }
+
+    // —— 免打扰:设置 → 接收器的整条链路(spec §3.11 ② + §3.8) ——
+    // 这是 M6「去双源」的核心改动(免打扰窗口从编译期常量改成运行时读设置),
+    // 但此前只有纯函数单测(参数直传),"改了设置对到点提醒真的生效"没人验过(终审点名)。
+
+    private fun dumpsys(): String {
+        val pfd = InstrumentationRegistry.getInstrumentation().uiAutomation
+            .executeShellCommand("dumpsys notification --noredact")
+        return java.io.FileInputStream(pfd.fileDescriptor).bufferedReader().use { it.readText() }
+            .also { pfd.close() }
+    }
+
+    /** 按通知 id 定位该条记录的 dump 片段(拿不到时返回空串) */
+    private fun awaitRecordOf(eventId: String, timeoutMillis: Long = 5_000): String {
+        val id = ReminderNotifier.notificationId(
+            ScheduledReminder(eventId, LocalDateTime.now(), LocalDateTime.now(), "", null),
+        )
+        val marker = "key=0|com.lnx.app|$id|"
+        val deadline = System.currentTimeMillis() + timeoutMillis
+        while (System.currentTimeMillis() < deadline) {
+            val dump = dumpsys()
+            val from = dump.indexOf(marker)
+            if (from >= 0) {
+                val start = dump.lastIndexOf("NotificationRecord", from)
+                val end = dump.indexOf("pkg=", from)
+                return dump.substring(start, if (end < 0) dump.length else end)
+            }
+            Thread.sleep(200)
+        }
+        return ""
+    }
+
+    /** 发一条"到点"广播并等它的通知出现 */
+    private fun fireAndAwaitRecord(eventId: String): String {
+        val occurrenceStart = LocalDateTime.now().plusMinutes(5)
+        val intent = Intent(ReminderScheduler.ACTION_FIRE)
+            .setComponent(ComponentName(context, AlarmReceiver::class.java))
+            .putExtra(ReminderScheduler.EXTRA_EVENT_ID, eventId)
+            .putExtra(ReminderScheduler.EXTRA_OCCURRENCE_START, occurrenceStart.toEpochMillis())
+            .putExtra(ReminderScheduler.EXTRA_REMIND_AT, System.currentTimeMillis())
+            .putExtra(ReminderScheduler.EXTRA_TITLE, "免打扰链路测试")
+        context.sendBroadcast(intent)
+        return awaitRecordOf(eventId)
+    }
+
+    @Test
+    fun 免打扰开着时到点通知被标静音_关掉后不静音() {
+        val nowMinute = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
+        // 开一个"覆盖此刻"的窗口(前后各 1 分钟),不管跑测试时是几点几分
+        runBlocking {
+            settings.setDnd(
+                enabled = true,
+                startMinute = (nowMinute + 1439) % 1440,
+                endMinute = (nowMinute + 2) % 1440,
+            )
+        }
+
+        val quietRecord = fireAndAwaitRecord("dnd-quiet-probe")
+        assertTrue("开着免打扰时应能看到通知记录", quietRecord.isNotEmpty())
+        assertTrue(
+            "免打扰窗口内,接收器应把通知标成静音(groupKey=silent);实际 dump:${quietRecord.take(200)}",
+            quietRecord.contains("groupKey=silent"),
+        )
+
+        // 关掉免打扰再发一条:同一条链路,标记应该反过来
+        runBlocking {
+            settings.setDnd(
+                enabled = false,
+                startMinute = (nowMinute + 1439) % 1440,
+                endMinute = (nowMinute + 2) % 1440,
+            )
+        }
+        val loudRecord = fireAndAwaitRecord("dnd-loud-probe")
+        assertTrue("关掉免打扰后也应能看到通知记录", loudRecord.isNotEmpty())
+        assertTrue(
+            "免打扰关掉后不该再带静音标记;实际 dump:${loudRecord.take(200)}",
+            !loudRecord.contains("groupKey=silent"),
+        )
     }
 }

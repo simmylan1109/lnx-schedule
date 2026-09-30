@@ -81,6 +81,24 @@ object LnxLocale {
     /** 只到分:`14:30` / `2:30 PM` */
     fun time(value: LocalTime, locale: Locale): String = fmt(locale, "HH:mm", "h:mm a").format(value)
 
+    /**
+     * 英文序数后缀:1st / 2nd / 3rd / 4th…(11–13 例外,都是 th)。
+     * 中文返回空串 —— 中文用「第 N 个」的说法,由界面按自己那套键拼。
+     *
+     * (此前英文是"the 3 th",因为后缀被写死成 "th";序数不是加后缀就完事的。)
+     */
+    fun ordinalSuffix(n: Int, locale: Locale): String {
+        if (isChinese(locale)) return ""
+        val mod100 = n % 100
+        if (mod100 in 11..13) return "th"
+        return when (n % 10) {
+            1 -> "st"
+            2 -> "nd"
+            3 -> "rd"
+            else -> "th"
+        }
+    }
+
     // formatter 构造不算免费,而这些方法在重组时会被反复调,按 (语言,格式) 缓存
     private val cache = HashMap<String, DateTimeFormatter>()
 

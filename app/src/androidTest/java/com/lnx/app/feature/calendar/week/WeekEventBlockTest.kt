@@ -131,7 +131,10 @@ class WeekEventBlockTest {
         val now = java.time.LocalTime.now()
         seed("e-a", "评审A", now.hour, now.minute, 60)
         seed("e-b", "评审B", now.hour, now.minute, 60)
-        rule.waitForIdle()
+        // 等数据库回流(写库 → Flow → 重组是异步的,只 waitForIdle 会在慢机器上偶发空断言)
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("event_block_e-a").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onAllNodesWithTag("event_block_e-a").onFirst().assertExists()
         rule.onAllNodesWithTag("event_block_e-b").onFirst().assertExists()
     }

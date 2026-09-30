@@ -66,8 +66,6 @@ internal fun dowHeader(locale: Locale, weekStartMonday: Boolean = true): List<St
     return order.map { LnxLocale.weekday(it, locale) }
 }
 
-private val AGENDA_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
-
 /**
  * 月视图(spec §3.4):上半 6×7 月历(今天强调圈、事件彩点≤3),下半为所选日期的事件列表;
  * 点日期切换列表,左右滑切月,空态提供「＋ 新建日程」(预填该日 09:00)。
@@ -304,7 +302,7 @@ private fun DayAgendaList(
         } else {
             LazyColumn {
                 items(dayEvents, key = { "${it.event.id}@${it.start}" }) { occ ->
-                    AgendaItem(occ = occ, onClick = { onEventClick(occ) })
+                    AgendaItem(occ = occ, locale = locale, onClick = { onEventClick(occ) })
                 }
             }
         }
@@ -312,7 +310,7 @@ private fun DayAgendaList(
 }
 
 @Composable
-private fun AgendaItem(occ: Occurrence, onClick: () -> Unit) {
+private fun AgendaItem(occ: Occurrence, locale: Locale, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -338,7 +336,7 @@ private fun AgendaItem(occ: Occurrence, onClick: () -> Unit) {
             )
             Text(
                 text = if (occ.event.allDay) stringResource(R.string.all_day)
-                       else "${occ.start.format(AGENDA_TIME_FMT)} – ${occ.end.format(AGENDA_TIME_FMT)}",
+                       else "${LnxLocale.time(occ.start.toLocalTime(), locale)} – ${LnxLocale.time(occ.end.toLocalTime(), locale)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

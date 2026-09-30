@@ -67,4 +67,20 @@ class LnxLocaleTest {
         assertEquals("14:30", LnxLocale.time(LocalTime.of(14, 30), zh))
         assertEquals("2:30 PM", LnxLocale.time(LocalTime.of(14, 30), en))
     }
+
+    @Test
+    fun `英文序数后缀_一到四与十几都对`() {
+        assertEquals("1st", LnxLocale.ordinalSuffix(1, en).let { "1$it" })
+        assertEquals("2nd", LnxLocale.ordinalSuffix(2, en).let { "2$it" })
+        assertEquals("3rd", LnxLocale.ordinalSuffix(3, en).let { "3$it" })
+        assertEquals("4th", LnxLocale.ordinalSuffix(4, en).let { "4$it" })
+        // 11–13 是例外,都是 th;21/22/23 又回到 st/nd/rd
+        assertEquals("th", LnxLocale.ordinalSuffix(11, en))
+        assertEquals("th", LnxLocale.ordinalSuffix(12, en))
+        assertEquals("th", LnxLocale.ordinalSuffix(13, en))
+        assertEquals("st", LnxLocale.ordinalSuffix(21, en))
+        assertEquals("rd", LnxLocale.ordinalSuffix(23, en))
+        // 中文不用后缀(中文说「第 N 个」,由界面拼)
+        assertEquals("", LnxLocale.ordinalSuffix(3, zh))
+    }
 }

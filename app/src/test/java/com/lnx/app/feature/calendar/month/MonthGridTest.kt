@@ -1,5 +1,6 @@
 package com.lnx.app.feature.calendar.month
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import org.junit.Assert.assertEquals
@@ -7,7 +8,7 @@ import org.junit.Test
 
 /**
  * 月历格子(spec §3.4:周一起始;M3 裁决:固定 6 行 × 7 列 = 42 格,不足补前后月,
- * 保证月与月之间网格高度稳定不跳)。
+ * 保证月与月之间网格高度稳定不跳)。周起始日可设为周日(spec §3.11 ①)。
  */
 class MonthGridTest {
 
@@ -17,6 +18,16 @@ class MonthGridTest {
         assertEquals(42, cells.size)
         assertEquals(LocalDate.of(2026, 8, 31), cells.first())
         assertEquals(LocalDate.of(2026, 10, 11), cells.last()) // 8-31 + 41
+    }
+
+    @Test
+    fun `周日起始时_2026年9月的首格提前一天到8月30日`() {
+        // 9-01 是周二;周日起始时它所在周的周首是 8-30(周日)
+        val cells = monthCells(YearMonth.of(2026, 9), weekStart = DayOfWeek.SUNDAY)
+        assertEquals(42, cells.size)
+        assertEquals(LocalDate.of(2026, 8, 30), cells.first())
+        assertEquals(DayOfWeek.SUNDAY, cells.first().dayOfWeek)
+        assertEquals(LocalDate.of(2026, 10, 10), cells.last())
     }
 
     @Test

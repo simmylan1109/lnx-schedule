@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
 import com.lnx.app.core.designsystem.DarkMode
@@ -147,5 +148,36 @@ class SettingsScreenTest {
             "新建日程应默认选中 30 分钟提醒档",
             rule.onAllNodesWithTag("reminder_30").fetchSemanticsNodes().isNotEmpty(),
         )
+    }
+
+    /**
+     * 外观模式三选(spec §3.11 ②):点"深色"→ 底色变深;点回"浅色"→ 变亮。
+     *
+     * 之前只有"从仓库写值"的旁路测试(`ThemeSwitchTest`),界面上的 index↔DarkMode 映射
+     * 写反了也不会有人发现(终审点名)。这里走真实点击路径,并用 app_root 的真实渲染像素判定。
+     */
+    @Test
+    fun 外观模式点深色变深_点回浅色变亮() {
+        openSettings()
+
+        rule.onNodeWithTag("mode_2").performScrollTo().performClick() // mode_2 = 深色
+        rule.waitUntil(timeoutMillis = 10_000) {
+            runBlocking { settings.current().darkMode } == DarkMode.DARK
+        }
+        rule.waitUntil(timeoutMillis = 10_000) { isDarkBackground() }
+        assertTrue("点深色后底色应变深", isDarkBackground())
+
+        rule.onNodeWithTag("mode_1").performScrollTo().performClick() // mode_1 = 浅色
+        rule.waitUntil(timeoutMillis = 10_000) {
+            runBlocking { settings.current().darkMode } == DarkMode.LIGHT
+        }
+        rule.waitUntil(timeoutMillis = 10_000) { !isDarkBackground() }
+        assertTrue("点回浅色后底色应变亮", !isDarkBackground())
+    }
+
+    /** 底色是否偏深(三通道和 < 3×120) */
+    private fun isDarkBackground(): Boolean {
+        val c = renderedBackground()
+        return AndroidColor.red(c) + AndroidColor.green(c) + AndroidColor.blue(c) < 3 * 120
     }
 }

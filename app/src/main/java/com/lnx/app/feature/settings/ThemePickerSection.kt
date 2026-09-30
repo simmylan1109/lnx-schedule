@@ -3,6 +3,7 @@ package com.lnx.app.feature.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,10 +76,12 @@ private fun ThemeCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // 预览要与"点下去实际会得到什么"一致:跟随系统时必须看系统当前是深还是浅,
+    // 之前写死 false,深色系统下 4 张卡全是浅色预览、点进去却是深色(终审 P2)
     val dark = when (darkMode) {
         DarkMode.LIGHT -> false
         DarkMode.DARK -> true
-        DarkMode.FOLLOW_SYSTEM -> false
+        DarkMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
     }
     val scheme = schemeFor(slot, dark)
     Column(

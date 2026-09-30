@@ -148,7 +148,12 @@ fun RuleEditorSection(
                 if (rule.monthlyMode == MonthlyMode.BY_NTH_WEEKDAY) {
                     NumberStepper(
                         label = stringResource(R.string.rule_nth_prefix),
-                        unit = stringResource(R.string.rule_nth_suffix),
+                        // 中文是"第 N 个",英文是序数"the 3rd" —— 后缀得按语言算,不能写死
+                        unit = if (LnxLocale.isChinese(locale)) {
+                            stringResource(R.string.rule_nth_suffix)
+                        } else {
+                            LnxLocale.ordinalSuffix(rule.monthlyNth ?: 1, locale)
+                        },
                         value = rule.monthlyNth ?: 1,
                         range = 1..5,
                         onChange = { onChange(rule.copy(monthlyNth = it)) },

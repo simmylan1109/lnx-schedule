@@ -44,19 +44,19 @@ class MainActivity : ComponentActivity() {
     private var openRequest by mutableStateOf<OpenEventRequest?>(null)
 
     /**
-     * 语言在这里换(spec §10):`attachBaseContext` 是同步方法,读不了 DataStore,
-     * 所以语言值放在 [LocaleContext] 的进程缓存里,这里直接取。
-     * 用户在设置里改语言 → 写缓存 → `recreate()` → 重新走这里,新语言生效。
+     * 语言在这里换(spec §10):`attachBaseContext` 是同步方法、读不了 DataStore,
+     * 所以先让 [LocaleContext] 从磁盘**同步读一次**(进程内只读一次,之后走缓存),
+     * 再用它包一层 Context。这一步必须在 `super.attachBaseContext` 之前 ——
+     * 界面语言就是在这一句定下来的(终审 P1:晚一步就会出现"界面中文 + 日期英文")。
      */
     override fun attachBaseContext(newBase: Context) {
+        LocaleContext.ensureLoaded(newBase)
         super.attachBaseContext(LocaleContext.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // 首次进入进程:从存储同步读一次语言(之后都走缓存,不碰磁盘)
-        LocaleContext.refreshFromDisk { settingsRepository.current().language }
         // 通知权限不在这里要:用户点开 App 的那一刻还不知道提醒是干什么的。
         // 改成在编辑器里"真的设了提醒"那一刻才问(spec §3.8),引导页第 3 页会问一次。
         handleOpenRequest(intent)

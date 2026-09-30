@@ -3,6 +3,7 @@ package com.lnx.app.core.common
 import android.content.Context
 import android.content.res.Configuration
 import com.lnx.app.core.settings.SettingsDefaults
+import com.lnx.app.core.settings.settingsEntryPoint
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -34,16 +35,43 @@ object LocaleContext {
     /** 设置页改了语言时调用;之后 `recreate()` 的 Activity 就会用新语言 */
     fun setLanguage(value: String) {
         language = value
+        loaded = true
+    }
+
+    /** 进程内是否已从磁盘读过一次 */
+    @Volatile
+    private var loaded = false
+
+    /**
+     * **仅供测试**:仪器测试每跑一个用例就换一份设置存储(等价于"换了一个安装"),
+     * 进程级缓存必须跟着失效,否则第二个用例读到的还是上一个用例的语言。
+     * 由 `TestSettingsModule` 在创建新存储时调用。
+     */
+    @androidx.annotation.VisibleForTesting
+    fun resetForTest() {
+        loaded = false
+        language = SettingsDefaults.LANGUAGE
+        appliedLanguage = SettingsDefaults.LANGUAGE
     }
 
     /**
-     * 首次进入进程时从存储读一次(同步)。
-     * 只在 Application/首次 Activity 启动时调,读的是个几百字节的小文件;
-     * 之后一律走缓存,不再碰磁盘。
+     * 进程内**第一次**需要语言时,同步从存储读一次并缓存。
+     *
+     * 调用点是 `MainActivity.attachBaseContext` 的最前面 —— 那是"界面语言即将定下来"的
+     * 唯一时刻,比它晚了就来不及(终审 P1:读盘原本在 `onCreate`,而界面语言在
+     * `attachBaseContext` 就定了,于是"上次设成 English"的用户冷启动后界面是系统语言、
+     * 日期却已是英文,中英混排,必须开一次设置页才恢复)。
+     *
+     * 从 Application.onCreate 读更早,但仪器测试跑 HiltTestApplication、不执行被测的
+     * Application 子类,那样这条链路就测不到;放在这里生产与测试走同一条路。
      */
-    fun refreshFromDisk(read: suspend () -> String) {
-        language = runCatching { runBlocking { read() } }
-            .getOrDefault(SettingsDefaults.LANGUAGE)
+    fun ensureLoaded(context: Context) {
+        if (loaded) return
+        loaded = true
+        val value = runCatching {
+            runBlocking { settingsEntryPoint(context)?.settingsRepository()?.current()?.language }
+        }.getOrNull()
+        if (!value.isNullOrBlank()) language = value
     }
 
     /** 用当前语言包一层 Context;界面文案与日期格式都跟着变 */
