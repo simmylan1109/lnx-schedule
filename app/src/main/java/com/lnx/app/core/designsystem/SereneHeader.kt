@@ -56,9 +56,11 @@ fun headerContentColor(): Color = when (LocalLnxTheme.current.slot) {
     else -> MaterialTheme.colorScheme.onSurface
 }
 
-/** 头部区里"次级文字"(Tab 未选中项等)的颜色 */
+/** 头部区里"次级文字"(Tab 未选中项、星期头)的颜色 */
 @Composable
 fun headerSecondaryContentColor(): Color = when (LocalLnxTheme.current.slot) {
-    ThemeSlot.SERENE -> headerContentColor().copy(alpha = 0.75f)
+    // 浅色渐变的紫端(#A29BFE)很亮,alpha 0.75 时对比度只有约 4.1:1,差 AA 一线;
+    // 提到 0.85 才稳过 4.5:1(终审 P2-3)
+    ThemeSlot.SERENE -> headerContentColor().copy(alpha = 0.85f)
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

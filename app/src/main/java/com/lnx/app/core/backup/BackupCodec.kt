@@ -3,6 +3,10 @@ package com.lnx.app.core.backup
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * 解析结果(spec §3.13:导入失败时提示错误,**不改动现有数据**)。
@@ -42,12 +46,22 @@ class BackupCodec @Inject constructor() {
     fun encode(backup: Backup): String = json.encodeToString(Backup.serializer(), backup)
 
     fun decode(text: String): BackupParse {
+        // 先看顶层有没有 format/version 这两个键,再谈解码。
+        // 只靠"解码后字段值对不对"挡不住别的 App 的 json:kotlinx 会给缺省键填默认值,
+        // `{"foo":1}` 解出来 format 恰好等于 "lnx-backup",闸门等于没装。
+        // (终审 P1-1:任意形状相同的 JSON 都会被当备份读进来,走覆盖就是清库。)
+        val root = runCatching { json.parseToJsonElement(text).jsonObject }
+            .getOrElse { return BackupParse.Corrupted(it.message ?: it::class.java.simpleName) }
+        val declaredFormat = root["format"]?.jsonPrimitive?.contentOrNull
+            ?: return BackupParse.NotLnxBackup
+        val declaredVersion = root["version"]?.jsonPrimitive?.intOrNull
+            ?: return BackupParse.NotLnxBackup
+        if (declaredFormat != Backup.FORMAT) return BackupParse.NotLnxBackup
+        if (declaredVersion > Backup.FORMAT_VERSION) {
+            return BackupParse.UnsupportedVersion(declaredVersion)
+        }
         val parsed = runCatching { json.decodeFromString(Backup.serializer(), text) }
             .getOrElse { return BackupParse.Corrupted(it.message ?: it::class.java.simpleName) }
-        if (parsed.format != Backup.FORMAT) return BackupParse.NotLnxBackup
-        if (parsed.version > Backup.FORMAT_VERSION) {
-            return BackupParse.UnsupportedVersion(parsed.version)
-        }
         return BackupParse.Ok(parsed)
     }
 

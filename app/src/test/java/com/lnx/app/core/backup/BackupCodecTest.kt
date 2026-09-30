@@ -105,10 +105,16 @@ class BackupCodecTest {
     }
 
     @Test
-    fun `空备份也能被认出是 lnx 备份`() {
-        // 反面:只靠"形状对得上"的 json 也会被放行,那 format 标记就白写了
-        assertTrue(codec.decode("""{"events":[]}""") is BackupParse.Ok)
+    fun `缺format键的json一律拒收`() {
+        // 终审 P1-1:解码器会给缺省键填默认值,`{"events":[]}` 解出来 format 恰好等于
+        // "lnx-backup" —— 只查字段值的话,任意形状相同的 json 都会被当备份读进来,
+        // 走覆盖导入就是清库。必须要求这两个键**显式存在**。
+        assertEquals(BackupParse.NotLnxBackup, codec.decode("""{"events":[]}"""))
+        assertEquals(BackupParse.NotLnxBackup, codec.decode("""{"foo":1}"""))
+        assertEquals(BackupParse.NotLnxBackup, codec.decode("""{"format":"lnx-backup"}"""))
+        assertEquals(BackupParse.NotLnxBackup, codec.decode("""{"version":1}"""))
         assertEquals(BackupParse.NotLnxBackup, codec.decode("""{"format":"other","version":1}"""))
+        assertTrue(codec.decode("""{"format":"lnx-backup","version":1}""") is BackupParse.Ok)
     }
 
     @Test

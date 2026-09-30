@@ -71,7 +71,8 @@ class BackupRepositoryImpl @Inject constructor(
             tagDao.clearAll()
             writeAll(backup)
             return@withTransaction ImportResult(
-                eventsAdded = backup.events.size,
+                // 计数口径与摘要一致:数**未删**的事件,墓碑不算"导入了一条"
+                eventsAdded = backup.events.count { !it.isDeleted },
                 eventsSkipped = 0,
                 tagsAdded = backup.tags.size,
                 eventsReplaced = 0,
@@ -113,21 +114,52 @@ class BackupRepositoryImpl @Inject constructor(
             exceptionDao.upsert(incoming)
             existingExceptions[incoming.id] = incoming
         }
+
+        // 标签合并有个 id 之外的坑:tags.name 上有唯一索引,而两台设备各自建的
+        // "工作"标签 id 必然不同。直接 upsert 会撞唯一索引 —— @Upsert 吞掉约束异常、
+        // 回退按新 id 做 UPDATE 影响 0 行,标签静默消失,但指向它的关联照样插入,
+        // 留下一串永远查不到的幽灵关联(终审 P1-2)。
+        // 所以先按名字对齐:同名不同 id 视为同一个标签,沿用库里的 id,关联重映射过去。
+        val tagIdRemap = HashMap<String, String>()
         var tagsAdded = 0
         for (incoming in backup.tags.map { it.toEntity() }) {
             val current = existingTags[incoming.id]
-            if (current != null && incoming.updatedAt <= current.updatedAt) continue
+            if (current != null) {
+                if (incoming.updatedAt <= current.updatedAt) {
+                    tagIdRemap[incoming.id] = current.id
+                    continue
+                }
+                // 同 id 且更新:名字若已被别的行占用,更新同样会撞唯一索引,只跳过
+                val nameOwner = tagDao.findByName(incoming.name)
+                if (nameOwner != null && nameOwner.id != current.id) {
+                    tagIdRemap[incoming.id] = nameOwner.id
+                    continue
+                }
+                tagDao.upsert(incoming)
+                existingTags[incoming.id] = incoming
+                tagIdRemap[incoming.id] = incoming.id
+                continue
+            }
+            val sameName = tagDao.findByName(incoming.name)
+            if (sameName != null) {
+                // 名字已在(哪怕已软删):沿用那一行,绝不造第二个同名标签
+                tagIdRemap[incoming.id] = sameName.id
+                existingTags[sameName.id] = sameName
+                continue
+            }
             tagDao.upsert(incoming)
             existingTags[incoming.id] = incoming
-            if (current == null) tagsAdded++
+            tagIdRemap[incoming.id] = incoming.id
+            tagsAdded++
         }
-        // 关联:按 (eventId, tagId) 去重,只补缺的。指向不存在的事件/标签的关联直接丢,
-        // 否则插进去就是一行永远查不到的外键垃圾。
+
+        // 关联:按 (eventId, tagId) 去重,只补缺的;标签 id 先过一遍上面的重映射。
+        // 指向不存在的事件/标签的关联直接丢,否则插进去就是一行永远查不到的外键垃圾。
         val eventIds = existingEvents.keys
         val tagIds = existingTags.keys
         val newRefs = backup.eventTags
-            .filter { it.eventId in eventIds && it.tagId in tagIds }
-            .map { (it.eventId to it.tagId) }
+            .map { it.eventId to (tagIdRemap[it.tagId] ?: it.tagId) }
+            .filter { it.first in eventIds && it.second in tagIds }
             .filterNot { it in existingRefs }
             .distinct()
             .map { EventTagCrossRef(it.first, it.second) }
@@ -148,7 +180,13 @@ class BackupRepositoryImpl @Inject constructor(
             exceptionDao.upsertAll(backup.exceptions.map { it.toEntity() })
         }
         if (backup.eventTags.isNotEmpty()) {
-            tagDao.insertCrossRefs(backup.eventTags.map { EventTagCrossRef(it.eventId, it.tagId) })
+            // 覆盖导入同样要去重:event_tag_cross_ref 主键是 (eventId, tagId),
+            // 文件里出现重复对会撞主键,整个事务回滚,用户看到的却只是"文件读写失败"
+            tagDao.insertCrossRefs(
+                backup.eventTags
+                    .map { EventTagCrossRef(it.eventId, it.tagId) }
+                    .distinct(),
+            )
         }
     }
 }

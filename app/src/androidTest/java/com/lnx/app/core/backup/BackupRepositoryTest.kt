@@ -231,6 +231,118 @@ class BackupRepositoryTest {
         assertEquals(0, snap.events.size)
         assertEquals(0, repository.currentEventCount())
     }
+
+    // —— 例外(重复事件的命门)——
+    // 终审指出例外链路此前零真库用例:覆盖导入把例外清掉再灌回来,
+    // 这一步错了,重复事件的"仅本次修改/取消"会整段失效。
+
+    private fun exception(
+        masterId: String,
+        epochDay: Long,
+        cancelled: Boolean = true,
+        updatedAt: Long = 0L,
+    ) = com.lnx.app.core.database.entity.EventExceptionEntity(
+        id = com.lnx.app.core.database.entity.eventExceptionId(
+            masterId, java.time.LocalDate.ofEpochDay(epochDay),
+        ),
+        masterEventId = masterId,
+        originalDate = epochDay,
+        isCancelled = cancelled,
+        overrideTitle = null,
+        overrideAllDay = null,
+        overrideStartAt = null,
+        overrideEndAt = null,
+        overrideLocation = null,
+        overrideNotes = null,
+        overrideColorSlot = null,
+        overridePriority = null,
+        overrideReminderLeadMinutes = null,
+        createdAt = 0L,
+        updatedAt = updatedAt,
+    )
+
+    @Test
+    fun 例外跟着导出也能跟着回来() = runBlocking {
+        eventDao.upsert(event("m1"))
+        exceptionDao.upsert(exception("m1", 20_000))
+        val exported = repository.snapshot(0L)
+        assertEquals(1, exported.exceptions.size)
+
+        eventDao.clearAll()
+        exceptionDao.clearAll()
+        repository.import(exported, ImportMode.OVERWRITE)
+
+        val restored = exceptionDao.getFor("m1", 20_000)
+        assertEquals(true, restored?.isCancelled)
+    }
+
+    @Test
+    fun 覆盖导入把库里的旧例外清干净() = runBlocking {
+        eventDao.upsert(event("m1"))
+        exceptionDao.upsert(exception("m1", 19_000))
+        val backup = Backup(events = listOf(event("m1").toBackup()))
+
+        repository.import(backup, ImportMode.OVERWRITE)
+
+        // 备份里没有例外 → 导入后也不该有,否则被取消的那次会复活
+        assertTrue(exceptionDao.allOnce().isEmpty())
+    }
+
+    @Test
+    fun 合并_例外的updatedAt较新者赢() = runBlocking {
+        exceptionDao.upsert(exception("m1", 20_000, cancelled = false, updatedAt = 100))
+        val backup = Backup(
+            events = listOf(event("m1").toBackup()),
+            exceptions = listOf(
+                BackupException(
+                    id = com.lnx.app.core.database.entity.eventExceptionId(
+                        "m1", java.time.LocalDate.ofEpochDay(20_000),
+                    ),
+                    masterEventId = "m1",
+                    originalDate = 20_000,
+                    isCancelled = true,
+                    updatedAt = 200,
+                ),
+            ),
+        )
+        repository.import(backup, ImportMode.MERGE)
+        assertEquals(true, exceptionDao.getFor("m1", 20_000)?.isCancelled)
+    }
+
+    @Test
+    fun 合并_同名不同id的标签沿用库里的那条() = runBlocking {
+        // 终审 P1-2:两台设备各自建了"工作",id 不同。直接 upsert 撞 name 唯一索引,
+        // @Upsert 吞异常后按新 id UPDATE 影响 0 行 —— 标签消失但关联插进去了(幽灵关联)
+        eventDao.upsert(event("e1"))
+        tagDao.upsert(TagEntity(id = "local-1", name = "工作", colorSlot = 1, 0L, 0L, false))
+        val backup = Backup(
+            events = listOf(event("e1").toBackup()),
+            tags = listOf(BackupTag("remote-9", "工作", 1)),
+            eventTags = listOf(BackupEventTag("e1", "remote-9")),
+        )
+
+        val result = repository.import(backup, ImportMode.MERGE)
+
+        // 标签没有凭空多出一条,关联重映射到库里那条 id 上,可查、不悬空
+        assertEquals(1, tagDao.allOnce().count { it.name == "工作" })
+        assertEquals(
+            listOf(EventTagCrossRef("e1", "local-1")),
+            tagDao.allEventTags(),
+        )
+        assertEquals(0, result.tagsAdded)
+    }
+
+    @Test
+    fun 合并_同id但名字被别的行占用时不覆盖() = runBlocking {
+        tagDao.upsert(TagEntity(id = "a", name = "工作", colorSlot = 1, 0L, 0L, false))
+        tagDao.upsert(TagEntity(id = "b", name = "生活", colorSlot = 2, 0L, 0L, false))
+        val backup = Backup(
+            tags = listOf(BackupTag("b", "工作", 1, updatedAt = 999)),
+        )
+        repository.import(backup, ImportMode.MERGE)
+        // b 想改名成"工作",但"工作"已被 a 占用:宁可不动也不能撞唯一索引
+        assertEquals("生活", tagDao.getById("b")?.name)
+    }
 }
 
 private fun EventEntity.toBackup() = BackupEvent(

@@ -276,7 +276,9 @@ class CalendarViewModel @Inject constructor(
         weekStartOfDate(date, mondayFirst).atStartOfDay()
 
     fun selectDate(date: LocalDate) {
-        _highlight.value = null
+        // 日期没变就不撤高亮:DayView 翻页回写会带着"同一个日期"再进来一次
+        // (程序化翻页也会触发回写),那时高亮是刚由搜索跳转设上的,清掉它高亮就没了。
+        if (selection.value.selectedDate != date) _highlight.value = null
         selection.update { it.copy(selectedDate = date) }
     }
 

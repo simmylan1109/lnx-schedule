@@ -168,8 +168,11 @@ private fun SearchResultRow(
 ) {
     val locale = LocalLnxLocale.current
     val event = result.event
+    // 全天事件也要带日期(spec §3.9 结果列表要显示"日期时间"):
+    // 只写"全天"的话,两条不同天的全天事件在结果里一模一样,
+    // 重复 + 全天的组合还会渲染成「下次发生:全天」这种没有日期的话。
     val whenText = if (event.allDay) {
-        stringResource(R.string.all_day)
+        stringResource(R.string.detail_all_day_single, LnxLocale.dateWithWeekday(result.start.toLocalDate(), locale))
     } else {
         "${LnxLocale.dateWithWeekday(result.start.toLocalDate(), locale)} " +
             LnxLocale.time(result.start.toLocalTime(), locale)

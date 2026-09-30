@@ -122,8 +122,14 @@ class BackupViewModel @Inject constructor(
 
     /** 覆盖不是一步到位:先弹二次警告,确认后才真删 */
     fun chooseOverwrite() {
-        val summary = _state.value.pending?.summary ?: return
-        _state.update { it.copy(overwriteWarning = OverwriteWarning(summary.currentCount)) }
+        if (_state.value.pending == null) return
+        viewModelScope.launch {
+            // 警告里的 N 必须**此刻**数一遍:从选文件到点"覆盖"之间用户可能又建了几条,
+            // 用选文件时的快照会吓唬错人(或吓唬不够)
+            val current = runCatching { repository.currentEventCount() }
+                .getOrDefault(_state.value.pending?.summary?.currentCount ?: 0)
+            _state.update { it.copy(overwriteWarning = OverwriteWarning(current)) }
+        }
     }
 
     fun confirmOverwrite() {

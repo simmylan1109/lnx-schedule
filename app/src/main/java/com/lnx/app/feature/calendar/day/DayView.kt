@@ -30,6 +30,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.common.LnxLocale
+import com.lnx.app.core.designsystem.LocalLnxTheme
+import com.lnx.app.core.designsystem.SereneHeaderBackground
+import com.lnx.app.core.designsystem.ThemeSlot
+import com.lnx.app.core.designsystem.headerContentColor
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.search.HighlightTarget
 import com.lnx.app.feature.calendar.CalendarUiState
@@ -89,7 +93,11 @@ fun DayView(
     }
     LaunchedEffect(pagerState.currentPage) {
         if (userPaged.value) {
-            onSelectDate(LocalDate.ofEpochDay(DAY_PAGE_EPOCH + pagerState.currentPage))
+            val date = LocalDate.ofEpochDay(DAY_PAGE_EPOCH + pagerState.currentPage)
+            // 目标页就是当前选中日时不回写:程序化翻页(搜索跳转)也会走到这里,
+            // 回写会经 selectDate 把刚设上的搜索高亮清掉(spec §3.9 高亮失效)。
+            // 与 WeekView 的锚点不变量同一思路:回写只发生在"真的换了天"。
+            if (date != state.selectedDate) onSelectDate(date)
         } else {
             userPaged.value = true
         }
@@ -106,12 +114,16 @@ fun DayView(
             // 查询窗口是 ±1 天,判空和画条带都只看当天,否则"昨天有事件"会盖掉今天的空态
             val dayOccurrences = occurrences.filter { it.touchesDay(date) }
             Column(modifier = Modifier.fillMaxSize()) {
-                DayStrip(
-                    selectedDate = state.selectedDate,
-                    today = today,
-                    onSelectDate = onSelectDate,
-                    locale = locale,
-                )
+                // 日视图的"星期头"就是这条日期条(spec §5.2 头部区):
+                // 主题 4 下它和顶栏/Tab 同一条渐变,否则蓝紫头部下面突然一段云白,观感断裂。
+                SereneHeaderBackground {
+                    DayStrip(
+                        selectedDate = state.selectedDate,
+                        today = today,
+                        onSelectDate = onSelectDate,
+                        locale = locale,
+                    )
+                }
                 // 全天/跨天事件(spec §3.3"其余交互与周视图一致"):日视图也得有,
                 // 否则全天事件所在那天整页空白,连空态都不出现
                 AllDayStrip(
@@ -184,6 +196,9 @@ private fun DayStripCell(
     onClick: () -> Unit,
     locale: Locale,
 ) {
+    // 主题 4 下日期条落在渐变上,文字/圆圈用头部前景色;其余主题照常用主题色
+    val serene = LocalLnxTheme.current.slot == ThemeSlot.SERENE
+    val onHeader = headerContentColor()
     Column(
         modifier = Modifier
             .clickable(onClick = onClick)
@@ -194,17 +209,27 @@ private fun DayStripCell(
         Text(
             text = LnxLocale.weekday(date, locale),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (serene) onHeader else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Box(
             modifier = Modifier
                 .padding(top = 2.dp)
                 .size(28.dp)
                 .clip(CircleShape)
-                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                .background(
+                    when {
+                        !selected -> Color.Transparent
+                        serene -> Color.White.copy(alpha = 0.28f)
+                        else -> MaterialTheme.colorScheme.primaryContainer
+                    }
+                )
                 .then(
                     if (isToday) {
-                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        Modifier.border(
+                            2.dp,
+                            if (serene) onHeader else MaterialTheme.colorScheme.primary,
+                            CircleShape,
+                        )
                     } else {
                         Modifier
                     }
@@ -214,7 +239,7 @@ private fun DayStripCell(
             Text(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (serene) onHeader else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
