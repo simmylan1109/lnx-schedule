@@ -1,11 +1,12 @@
 package com.lnx.app.feature.calendar.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.lnx.app.R
 import com.lnx.app.core.designsystem.LocalLnxTheme
@@ -34,6 +36,9 @@ fun ViewModeTabs(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // selectableGroup 告诉读屏"这一组里同时只有一个是选中的"(M9)。
+            // 少了它,读屏会把这三个当成三个普通按钮,用户不知道自己在哪个视图里
+            .selectableGroup()
             .padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -56,7 +61,11 @@ fun ViewModeTabs(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
                     .background(background)
-                    .clickable { onSelect(mode) }
+                    // selectable 而不是 clickable:选中状态要能被读屏报出来
+                    .selectable(
+                        selected = selected,
+                        role = Role.Tab,
+                    ) { onSelect(mode) }
                     .padding(horizontal = 24.dp, vertical = 8.dp)
                     .testTag("tab_${mode.name}"),
                 style = MaterialTheme.typography.labelLarge,

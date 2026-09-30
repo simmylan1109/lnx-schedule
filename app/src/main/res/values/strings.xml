@@ -206,4 +206,20 @@
     <string name="theme_paper">极致留白</string>
     <string name="theme_warm">暖橙活力</string>
     <string name="theme_serene">宁静冷色</string>
+
+    <!-- 无障碍朗读(M9)。只放"界面上没写、但读屏必须知道"的信息:颜色叫什么、
+         这一天有几个日程。日期/时间/标题界面上本来就有,交给读屏自己读。 -->
+    <string name="a11y_color_0">红</string>
+    <string name="a11y_color_1">橙</string>
+    <string name="a11y_color_2">黄</string>
+    <string name="a11y_color_3">绿</string>
+    <string name="a11y_color_4">蓝</string>
+    <string name="a11y_color_5">紫</string>
+    <string name="a11y_color_6">粉</string>
+    <string name="a11y_color_7">灰</string>
+    <string name="a11y_day_today">今天</string>
+    <string name="a11y_day_no_events">无日程</string>
+    <plurals name="a11y_day_events">
+        <item quantity="other">%d 个日程</item>
+    </plurals>
 </resources>

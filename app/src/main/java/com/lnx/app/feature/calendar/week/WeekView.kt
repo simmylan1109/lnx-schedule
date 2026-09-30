@@ -44,6 +44,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -407,6 +409,7 @@ internal fun TimeGrid(
     /** 搜索跳转后的高亮(spec §3.9);按 id **和**开始时间匹配 —— 同一天里被改期过的重复事件会占两块 */
     highlight: HighlightTarget? = null,
 ) {
+    val locale = LocalLnxLocale.current
     val scrollState = rememberScrollState()
     val nowState = remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
@@ -544,6 +547,27 @@ internal fun TimeGrid(
                 blocks.forEach { day ->
                     day.forEach { b ->
                         val w = colWidth / b.lanes
+                        val occ = b.occurrence
+                        // 读屏读完整时间段和地点(M9):界面上只画了标题和开始时间,
+                        // 光靠那两个 Text 读出来是"标题""09:00"两截,拼不成一个事件
+                        val spoken = buildString {
+                            append(occ.event.title)
+                            append(",")
+                            append(
+                                if (occ.event.allDay) {
+                                    stringResource(R.string.all_day)
+                                } else {
+                                    stringResource(
+                                        R.string.detail_time_range,
+                                        LnxLocale.time(occ.start.toLocalTime(), locale),
+                                        LnxLocale.time(occ.end.toLocalTime(), locale),
+                                    )
+                                },
+                            )
+                            occ.event.location?.takeIf { it.isNotBlank() }?.let {
+                                append(",").append(it)
+                            }
+                        }
                         Box(
                             modifier = Modifier
                                 .offset(x = w * b.lane, y = (b.topMinutes / 60f * HOUR_HEIGHT.value).dp)
@@ -554,10 +578,10 @@ internal fun TimeGrid(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(EventColors.of(b.occurrence.event.colorSlot))
+                                    .background(EventColors.of(occ.event.colorSlot))
                                     .then(
-                                        if (b.occurrence.event.id == highlight?.eventId &&
-                                            b.occurrence.start == highlight.start
+                                        if (occ.event.id == highlight?.eventId &&
+                                            occ.start == highlight.start
                                         ) {
                                             Modifier.border(
                                                 2.dp,
@@ -568,8 +592,9 @@ internal fun TimeGrid(
                                             Modifier
                                         }
                                     )
-                                    .clickable { onEventClick(b.occurrence) }
-                                    .testTag("event_block_${b.occurrence.event.id}"),
+                                    .clickable { onEventClick(occ) }
+                                    .semantics(mergeDescendants = true) { contentDescription = spoken }
+                                    .testTag("event_block_${occ.event.id}"),
                                 verticalArrangement = Arrangement.Center,
                             ) {
                                 Text(

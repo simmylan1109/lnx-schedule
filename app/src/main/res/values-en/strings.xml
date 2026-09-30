@@ -211,4 +211,23 @@
     <string name="theme_paper">Paper</string>
     <string name="theme_warm">Warm</string>
     <string name="theme_serene">Serene</string>
+
+    <!-- Screen-reader labels (M9). Only what the UI does not show but a screen reader
+         must know: what the colour is called, how many events a day has. Dates, times
+         and titles are already on screen, the screen reader reads those itself. -->
+    <string name="a11y_color_0">Red</string>
+    <string name="a11y_color_1">Orange</string>
+    <string name="a11y_color_2">Yellow</string>
+    <string name="a11y_color_3">Green</string>
+    <string name="a11y_color_4">Blue</string>
+    <string name="a11y_color_5">Purple</string>
+    <string name="a11y_color_6">Pink</string>
+    <string name="a11y_color_7">Gray</string>
+    <string name="a11y_day_today">Today</string>
+    <string name="a11y_day_no_events">No events</string>
+    <!-- 单复数分开写,和 backup_count_event 同一个坑(实机走查拍到过 "Contains 1 events") -->
+    <plurals name="a11y_day_events">
+        <item quantity="one">%d event</item>
+        <item quantity="other">%d events</item>
+    </plurals>
 </resources>

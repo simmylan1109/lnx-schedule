@@ -35,7 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -149,12 +152,14 @@ fun MonthView(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         week.forEach { date ->
+                            val dayEvents = dayIndex[date].orEmpty()
                             MonthCell(
                                 date = date,
                                 month = month,
                                 selectedDate = state.selectedDate,
                                 today = today,
-                                dots = dayIndex[date].orEmpty().take(3),
+                                dots = dayEvents.take(3),
+                                eventCount = dayEvents.size,
                                 onSelectDate = onSelectDate,
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                             )
@@ -210,16 +215,35 @@ private fun MonthCell(
     selectedDate: LocalDate,
     today: LocalDate,
     dots: List<Occurrence>,
+    /** 真实事件数。`dots` 只取前 3 个用来画点,朗读要报全量(M9) */
+    eventCount: Int,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val inMonth = YearMonth.from(date) == month
+    val locale = LocalLnxLocale.current
+    // 读屏要听到的是"9月30日 周三,有 2 个日程",而不是孤零零一个"30"(M9)
+    val spoken = buildString {
+        append(LnxLocale.dateWithWeekday(date, locale))
+        append(",")
+        if (date == today) append(stringResource(R.string.a11y_day_today))
+        append(",")
+        append(
+            if (eventCount == 0) {
+                stringResource(R.string.a11y_day_no_events)
+            } else {
+                pluralStringResource(R.plurals.a11y_day_events, eventCount, eventCount)
+            },
+        )
+    }
     // 高度由外层行(weight)分配,这里只管填满并把日期圆点垂直居中:
     // 写死 44dp 既撑不满行,也顶不到 Material 的 48dp 触达底线
     Column(
         modifier = modifier
             .fillMaxHeight()
             .clickable { onSelectDate(date) }
+            // 合并掉里面的"日号"文字和彩点,整格作为一个可朗读单元
+            .semantics(mergeDescendants = true) { contentDescription = spoken }
             .testTag("month_cell_$date"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

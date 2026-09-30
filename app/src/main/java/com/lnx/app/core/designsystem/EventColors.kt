@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import com.lnx.app.R
 import com.lnx.app.core.domain.model.Priority
 
 /**
@@ -55,6 +56,20 @@ object EventColors {
 
     /** 数据里的色位越界(脏数据/未来扩展)时钳到两端,不允许崩 */
     fun safeIndex(slot: Int, size: Int): Int = slot.coerceIn(0, size - 1)
+
+    /**
+     * 色位 → 颜色名字的字符串资源,**给读屏用**(M9)。
+     *
+     * 色板本身只有颜色值、没有名字,但 8 个色位在四套主题里色相是稳定对应的
+     * (0 红 / 1 橙 / 2 黄 / 3 绿 / 4 蓝 / 5 紫 / 6 粉 / 7 灰),所以可以按色相起名。
+     * 不这么做的话,读屏用户面对的是八个"按钮",一个都分不出。
+     */
+    fun nameRes(slot: Int): Int = NAME_RES[safeIndex(slot, NAME_RES.size)]
+
+    private val NAME_RES = listOf(
+        R.string.a11y_color_0, R.string.a11y_color_1, R.string.a11y_color_2, R.string.a11y_color_3,
+        R.string.a11y_color_4, R.string.a11y_color_5, R.string.a11y_color_6, R.string.a11y_color_7,
+    )
 
     @Composable
     @ReadOnlyComposable

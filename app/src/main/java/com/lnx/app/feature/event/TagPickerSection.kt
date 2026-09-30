@@ -29,12 +29,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.lnx.app.R
 import com.lnx.app.core.designsystem.EventColors
@@ -171,13 +175,19 @@ private fun CreateTagDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     EventColors.list().forEachIndexed { index, color ->
+                        val isSelected = index == colorSlot
+                        // semantics{} 不是 @Composable,stringResource 必须在外面取(M9)
+                        val colorName = stringResource(EventColors.nameRes(index))
                         Box(
                             modifier = Modifier
                                 .minimumInteractiveComponentSize()
-                                .clickable(
+                                .selectable(
+                                    selected = isSelected,
+                                    role = Role.RadioButton,
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
                                 ) { colorSlot = index }
+                                .semantics { contentDescription = colorName }
                                 .testTag("tag_color_$index"),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -187,7 +197,7 @@ private fun CreateTagDialog(
                                     .clip(CircleShape)
                                     .background(color)
                                     .then(
-                                        if (index == colorSlot) {
+                                        if (isSelected) {
                                             Modifier
                                                 .size(34.dp)
                                                 .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)

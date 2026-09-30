@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.lnx.app.R
 import com.lnx.app.core.designsystem.EventColors
@@ -107,10 +109,14 @@ private fun FilterRow(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 整行是复选框的本体(M9),CheckBox 自己不再单独成为可聚焦目标。
+    // 原来 Row 挂 clickable、末尾又挂一个能点的 Checkbox,于是语义树里出现**两个**可点节点,
+    // 而那个 Checkbox 什么标签都没有 —— 读屏用户滑到它只会听到"复选框,已勾选",
+    // 根本不知道勾的是哪个标签。合并成 toggleable 之后只剩一个节点:"未分类,复选框,已勾选"。
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .toggleable(value = checked, role = Role.Checkbox) { onToggle() }
             .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -133,6 +139,6 @@ private fun FilterRow(
                 .padding(start = 12.dp)
                 .weight(1f),
         )
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        Checkbox(checked = checked, onCheckedChange = null, enabled = true)
     }
 }

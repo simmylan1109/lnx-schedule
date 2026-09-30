@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +44,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -159,15 +164,27 @@ fun EventEditScreen(
                     .testTag("field_title"),
             )
 
+            // 整行都是开关的触达区,且**开关状态挂在这一行上**(M9)。
+            // 原来 Text 和 Switch 是两个独立节点,读屏会先读"全天"再读一个没名字的
+            // "开关,关闭",两句话对不上;合并成 toggleable 之后只报一个"全天,开关,关闭"。
+            // onCheckedChange 传 null:Switch 自己不再单独成为可聚焦目标,状态由这一行提供。
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = draft.allDay,
+                        role = Role.Switch,
+                        onValueChange = { viewModel.toggleAllDay(it) },
+                    )
+                    .testTag("row_allday"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(stringResource(R.string.editor_all_day))
                 Switch(
                     checked = draft.allDay,
-                    onCheckedChange = viewModel::toggleAllDay,
+                    onCheckedChange = null,
+                    enabled = true,
                     modifier = Modifier.testTag("switch_allday"),
                 )
             }
@@ -394,13 +411,23 @@ private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             EventColors.list().forEachIndexed { index, color ->
+                val isSelected = index == selected
+                // 必须在 semantics{} 外面取:那个 lambda 不是 @Composable,里面调 stringResource 编不过
+                val colorName = stringResource(EventColors.nameRes(index))
                 Box(
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
-                        .clickable(
+                        // selectable 而不是 clickable:读屏要能报出"已选中"这一个状态。
+                        // 不用 indication 是因为触达区大、涟漪会糊成一片,选中反馈靠下面的描边
+                        .selectable(
+                            selected = isSelected,
+                            role = Role.RadioButton,
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = null, // 触达区大,涟漪会糊;视觉反馈用选中描边
+                            indication = null,
                         ) { onSelect(index) }
+                        // 光有"已选中"不够 —— 八个圆点对读屏用户是八个没区别的按钮,
+                        // 必须报出颜色名(M9)
+                        .semantics { contentDescription = colorName }
                         .testTag("color_$index"),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -411,7 +438,7 @@ private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
                             .clip(CircleShape)
                             .background(color)
                             .then(
-                                if (index == selected) {
+                                if (isSelected) {
                                     Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 } else {
                                     Modifier
