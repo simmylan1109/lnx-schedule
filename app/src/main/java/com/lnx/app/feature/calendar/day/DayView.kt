@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.domain.model.Occurrence
+import com.lnx.app.core.domain.search.HighlightTarget
 import com.lnx.app.feature.calendar.CalendarUiState
 import com.lnx.app.feature.calendar.week.AllDayStrip
 import com.lnx.app.feature.calendar.week.TimeGrid
@@ -70,6 +71,8 @@ fun DayView(
     occurrences: List<Occurrence> = emptyList(),
     onEventClick: (Occurrence) -> Unit = {},
     onEmptySlotClick: (LocalDateTime) -> Unit = {},
+    /** 搜索跳转后的高亮(spec §3.9) */
+    highlight: HighlightTarget? = null,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalLnxLocale.current
@@ -116,6 +119,7 @@ fun DayView(
                     weekStart = date,
                     onEventClick = onEventClick,
                     dayCount = 1,
+                    highlight = highlight,
                 )
                 TimeGrid(
                     selectedDate = state.selectedDate,
@@ -126,6 +130,7 @@ fun DayView(
                     onEmptySlotClick = onEmptySlotClick,
                     dayCount = 1,
                     emptyCheck = dayOccurrences,
+                    highlight = highlight,
                     modifier = Modifier.weight(1f),
                 )
             }

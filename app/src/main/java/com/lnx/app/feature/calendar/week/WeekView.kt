@@ -52,6 +52,7 @@ import com.lnx.app.core.common.pageToDate
 import com.lnx.app.core.designsystem.EventColors
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
+import com.lnx.app.core.domain.search.HighlightTarget
 import com.lnx.app.feature.calendar.CalendarUiState
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
@@ -84,6 +85,8 @@ fun WeekView(
     onEmptySlotClick: (LocalDateTime) -> Unit = {},
     /** spec §3.11 ①:周一起始(默认)或周日起始,来自设置 */
     weekStartMonday: Boolean = true,
+    /** 搜索跳转后的高亮(spec §3.9);搜索总是跳日视图,这里是给"跳转后手动切回周视图"兜的 */
+    highlight: HighlightTarget? = null,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalLnxLocale.current
@@ -138,6 +141,7 @@ fun WeekView(
                     occurrences = occurrences,
                     weekStart = weekStart,
                     onEventClick = onEventClick,
+                    highlight = highlight,
                 )
                 TimeGrid(
                     selectedDate = state.selectedDate,
@@ -146,6 +150,7 @@ fun WeekView(
                     occurrences = occurrences,
                     onEventClick = onEventClick,
                     onEmptySlotClick = onEmptySlotClick,
+                    highlight = highlight,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -224,6 +229,8 @@ internal fun AllDayStrip(
     modifier: Modifier = Modifier,
     /** 7 = 周条带,1 = 日视图顶部那一行(同一套布局,按参数推列宽) */
     dayCount: Int = 7,
+    /** 搜索跳转后的高亮(spec §3.9);null = 不高亮 */
+    highlight: HighlightTarget? = null,
 ) {
     val bars = remember(occurrences, weekStart, dayCount) {
         AllDaySpan.layout(occurrences, weekStart, dayCount)
@@ -253,6 +260,19 @@ internal fun AllDayStrip(
                                     .padding(top = 1.dp)
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(EventColors.of(bar.occurrence.event.colorSlot))
+                                    .then(
+                                        if (bar.occurrence.event.id == highlight?.eventId &&
+                                            bar.occurrence.start == highlight.start
+                                        ) {
+                                            Modifier.border(
+                                                2.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(4.dp),
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                                     .clickable { onEventClick(bar.occurrence) }
                                     .testTag("all_day_bar_${bar.occurrence.event.id}"),
                                 contentAlignment = Alignment.CenterStart,
@@ -367,6 +387,8 @@ internal fun TimeGrid(
      * 因为它的查询窗口是 ±1 天——直接用窗口判空会出现"昨天有事件、今天没有"却什么都不显示。
      */
     emptyCheck: List<Occurrence> = occurrences,
+    /** 搜索跳转后的高亮(spec §3.9);按 id **和**开始时间匹配 —— 同一天里被改期过的重复事件会占两块 */
+    highlight: HighlightTarget? = null,
 ) {
     val scrollState = rememberScrollState()
     val nowState = remember { mutableStateOf(LocalTime.now()) }
@@ -498,6 +520,19 @@ internal fun TimeGrid(
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(EventColors.of(b.occurrence.event.colorSlot))
+                                    .then(
+                                        if (b.occurrence.event.id == highlight?.eventId &&
+                                            b.occurrence.start == highlight.start
+                                        ) {
+                                            Modifier.border(
+                                                2.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(4.dp),
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                                     .clickable { onEventClick(b.occurrence) }
                                     .testTag("event_block_${b.occurrence.event.id}"),
                                 verticalArrangement = Arrangement.Center,

@@ -6,6 +6,14 @@
     <string name="calendar_today">Today</string>
     <string name="calendar_menu">Menu</string>
     <string name="calendar_search">Search</string>
+
+    <!-- Search (spec §3.9) -->
+    <string name="search_hint">Search title, notes, location</string>
+    <string name="search_back">Back to calendar</string>
+    <string name="search_clear">Clear</string>
+    <string name="search_empty">No matching events</string>
+    <string name="search_next_occurrence">Next: %1$s</string>
+
     <string name="calendar_view_day">Day</string>
     <string name="calendar_view_week">Week</string>
     <string name="calendar_view_month">Month</string>

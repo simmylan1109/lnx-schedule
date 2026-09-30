@@ -6,6 +6,14 @@
     <string name="calendar_today">今天</string>
     <string name="calendar_menu">菜单</string>
     <string name="calendar_search">搜索</string>
+
+    <!-- 搜索(spec §3.9) -->
+    <string name="search_hint">搜索标题、备注、地点</string>
+    <string name="search_back">返回日历</string>
+    <string name="search_clear">清空</string>
+    <string name="search_empty">未找到相关日程</string>
+    <string name="search_next_occurrence">下次发生：%1$s</string>
+
     <string name="calendar_view_day">日</string>
     <string name="calendar_view_week">周</string>
     <string name="calendar_view_month">月</string>

@@ -11,6 +11,9 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEditHandler
+import com.lnx.app.core.domain.search.HighlightTarget
+import com.lnx.app.core.domain.search.SearchRepository
+import com.lnx.app.core.domain.search.SearchResult
 import com.lnx.app.core.notification.ReminderPlanner
 import com.lnx.app.core.settings.SettingsDefaults
 import com.lnx.app.core.settings.SettingsRepository
@@ -28,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -55,6 +59,7 @@ class CalendarViewModel @Inject constructor(
     private val tagFilterState: TagFilterState,
     private val recurrenceHandler: RecurrenceEditHandler,
     private val reminderPlanner: ReminderPlanner,
+    private val searchRepository: SearchRepository,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
     private val today: LocalDate = LocalDate.now()
@@ -204,11 +209,76 @@ class CalendarViewModel @Inject constructor(
         _openTarget.value = null
     }
 
+    // —— 搜索(spec §3.9)——
+    // 开合与查询词同样放 ViewModel,理由与 [showSettings] 一样:换主题会重建整棵子树。
+
+    private val _searchOpen = MutableStateFlow(false)
+    val searchOpen: StateFlow<Boolean> = _searchOpen.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val searchResults: StateFlow<List<SearchResult>> = _searchQuery
+        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else searchRepository.search(q) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * 结果行上的标签色点(spec §3.9)。关联表给的是标签 id,要转成色位号得再合一次标签表;
+     * 顺手在这里换算好,界面只管画圆点,不用认得标签实体。
+     */
+    val searchTagColors: StateFlow<Map<String, List<Int>>> =
+        combine(tagRepository.observeTags(), tagRepository.observeEventTagIds()) { tags, ids ->
+            val slotById = tags.associate { it.id to it.colorSlot }
+            ids.mapValues { (_, list) -> list.mapNotNull { slotById[it] } }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * 搜索结果跳转后的高亮目标(spec §3.9「定位 / 高亮」)。
+     * 换日期或打开详情卡时清掉 —— 高亮是一次性提示,留着会一直有个圈挂在别的事件上。
+     */
+    private val _highlight = MutableStateFlow<HighlightTarget?>(null)
+    val highlight: StateFlow<HighlightTarget?> = _highlight.asStateFlow()
+
+    fun openSearch() {
+        _searchQuery.value = ""
+        _searchOpen.value = true
+    }
+
+    fun closeSearch() {
+        _searchOpen.value = false
+        _searchQuery.value = ""
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    /**
+     * 点搜索结果(spec §3.9):跳日视图、定位到那天(重复事件用「下次发生」那天)、
+     * 高亮该次发生。选中的日期就是结果自己的开始日期,不做任何推算。
+     */
+    fun jumpToResult(result: SearchResult) {
+        selection.update {
+            it.copy(selectedDate = result.start.toLocalDate(), viewMode = ViewMode.DAY)
+        }
+        _highlight.value = HighlightTarget(result.event.id, result.start)
+        _searchOpen.value = false
+        _searchQuery.value = ""
+    }
+
+    fun clearHighlight() {
+        _highlight.value = null
+    }
+
     /** 所选日期所在周的周起始零点(按设置的周起始日) */
     private fun weekStartOf(date: LocalDate, mondayFirst: Boolean): LocalDateTime =
         weekStartOfDate(date, mondayFirst).atStartOfDay()
 
-    fun selectDate(date: LocalDate) = selection.update { it.copy(selectedDate = date) }
+    fun selectDate(date: LocalDate) {
+        _highlight.value = null
+        selection.update { it.copy(selectedDate = date) }
+    }
 
     fun selectViewMode(mode: ViewMode) = selection.update { it.copy(viewMode = mode) }
 

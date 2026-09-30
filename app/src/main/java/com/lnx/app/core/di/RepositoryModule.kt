@@ -1,11 +1,13 @@
 package com.lnx.app.core.di
 
 import com.lnx.app.core.data.EventRepositoryImpl
+import com.lnx.app.core.data.SearchRepositoryImpl
 import com.lnx.app.core.data.TagRepositoryImpl
 import com.lnx.app.core.domain.DefaultOccurrenceExpander
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.OccurrenceExpander
 import com.lnx.app.core.domain.TagRepository
+import com.lnx.app.core.domain.search.SearchRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,6 +24,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTagRepository(impl: TagRepositoryImpl): TagRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
 
     @Binds
     @Singleton

@@ -41,6 +41,9 @@ class EventRepositoryImplTest {
 
         override suspend fun getById(id: String): EventEntity? = stored.value.firstOrNull { it.id == id }
 
+        // 搜索(spec §3.9)归 SearchRepositoryImpl 用,这里只求能编译
+        override fun observeMatching(pattern: String): Flow<List<EventEntity>> = stored
+
         override suspend fun upsert(entity: EventEntity) {
             upserted += entity
         }

@@ -14,6 +14,8 @@ import com.lnx.app.core.domain.model.RuleType
 import com.lnx.app.core.domain.model.Tag
 import com.lnx.app.core.domain.recurrence.EditScope
 import com.lnx.app.core.domain.recurrence.RecurrenceEngine
+import com.lnx.app.core.domain.search.SearchRepository
+import com.lnx.app.core.domain.search.SearchResult
 import com.lnx.app.core.notification.RecordingAlarmSink
 import com.lnx.app.core.notification.ReminderPlanner
 import com.lnx.app.core.designsystem.DarkMode
@@ -142,6 +144,7 @@ class CalendarViewModelTest {
             TagFilterState(),
             RecurrenceEditHandler(repo),
             ReminderPlanner(repo, RecordingAlarmSink()),
+            FakeSearchRepository(),
             FakeSettingsRepository(),
         )
 
@@ -189,7 +192,7 @@ class CalendarViewModelTest {
                 occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00"),
             ),
         )
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSearchRepository(), FakeSettingsRepository())
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -204,7 +207,7 @@ class CalendarViewModelTest {
     @Test
     fun `切换到另一周会重新查询`() {
         val repo = FakeEventRepository()
-        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
+        val vm = CalendarViewModel(repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSearchRepository(), FakeSettingsRepository())
         val before = repo.observedRanges
             .count { java.time.Duration.between(it.first, it.second).toDays() == 7L }
         // 选一个肯定不同的周(今天所在的周往后三周),确保不是同值合流
@@ -223,7 +226,7 @@ class CalendarViewModelTest {
             listOf(occurrence("e1", "${thisMonday}T09:00", "${thisMonday}T10:00")),
         )
         val filterState = TagFilterState()
-        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSettingsRepository())
+        val vm = CalendarViewModel(repo, FakeTagRepository(mapOf("e1" to listOf("t1"))), filterState, RecurrenceEditHandler(repo), ReminderPlanner(repo, RecordingAlarmSink()), FakeSearchRepository(), FakeSettingsRepository())
         vm.selectDate(thisMonday)
         assertEquals(listOf("e1"), vm.uiState.value.occurrences.map { it.event.id })
 
@@ -286,6 +289,7 @@ class CalendarViewModelTest {
         val repo = FakeEventRepository(masters = mapOf("m1" to master))
         val vm = CalendarViewModel(
             repo, FakeTagRepository(), TagFilterState(), RecurrenceEditHandler(repo), ReminderPlanner(repo, sink),
+            FakeSearchRepository(),
             FakeSettingsRepository(),
         )
 
@@ -301,6 +305,72 @@ class CalendarViewModelTest {
 
         assertEquals(seriesStart, repo.saved.single().start)
         assertEquals(1, sink.rescheduleCount)
+    }
+
+    // —— 搜索(spec §3.9)——
+
+    private fun searchResult(start: String): SearchResult = SearchResult(
+        event = Event(
+            id = "hit",
+            title = "评审",
+            allDay = false,
+            start = LocalDateTime.parse(start),
+            end = LocalDateTime.parse(start).plusHours(1),
+            location = null,
+            notes = null,
+            colorSlot = 0,
+            priority = Priority.P2,
+            reminderLeadMinutes = null,
+            rule = EventRule(),
+            createdAt = 0L,
+            updatedAt = 0L,
+        ),
+        start = LocalDateTime.parse(start),
+        end = LocalDateTime.parse(start).plusHours(1),
+        recurring = false,
+        hasUpcoming = false,
+    )
+
+    @Test
+    fun `点搜索结果跳日视图并定位到那天`() {
+        val vm = vm()
+        vm.jumpToResult(searchResult("2026-03-18T14:00"))
+        assertEquals(ViewMode.DAY, vm.uiState.value.viewMode)
+        assertEquals(LocalDate.of(2026, 3, 18), vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `点搜索结果后高亮该次发生并关掉搜索页`() {
+        val vm = vm()
+        vm.openSearch()
+        assertTrue(vm.searchOpen.value)
+        vm.jumpToResult(searchResult("2026-03-18T14:00"))
+        assertEquals("hit", vm.highlight.value?.eventId)
+        assertEquals(LocalDateTime.parse("2026-03-18T14:00"), vm.highlight.value?.start)
+        assertTrue("跳走后搜索页必须关掉", !vm.searchOpen.value)
+    }
+
+    @Test
+    fun `重复事件按下次发生那天跳转`() {
+        val vm = vm()
+        val base = searchResult("2026-03-18T09:00")
+        vm.jumpToResult(
+            base.copy(
+                start = LocalDateTime.parse("2026-04-01T09:00"),
+                end = LocalDateTime.parse("2026-04-01T10:00"),
+                recurring = true,
+                hasUpcoming = true,
+            ),
+        )
+        assertEquals(LocalDate.of(2026, 4, 1), vm.uiState.value.selectedDate)
+    }
+
+    @Test
+    fun `换日期清掉搜索跳转留下的高亮`() {
+        val vm = vm()
+        vm.jumpToResult(searchResult("2026-03-18T14:00"))
+        vm.selectDate(LocalDate.of(2026, 3, 19))
+        assertEquals(null, vm.highlight.value)
     }
 }
 
@@ -321,4 +391,19 @@ private class FakeSettingsRepository(
 
     override suspend fun setLanguage(language: String) = Unit
     override suspend fun setOnboardingDone() = Unit
+}
+
+/**
+ * 搜索假实现(spec §3.9)。记下收到的查询词,并按预设结果回放 ——
+ * 真正的 SQL 匹配在 SearchRepositoryTest(真 Room)里测,这里只关心"点了结果去哪"。
+ */
+private class FakeSearchRepository(
+    private val results: MutableStateFlow<List<SearchResult>> = MutableStateFlow(emptyList()),
+) : SearchRepository {
+    val queries = mutableListOf<String>()
+
+    override fun search(query: String, now: LocalDateTime): Flow<List<SearchResult>> {
+        queries += query
+        return results
+    }
 }

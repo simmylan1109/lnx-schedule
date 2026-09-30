@@ -35,6 +35,24 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE id = :id AND isDeleted = 0")
     suspend fun getById(id: String): EventEntity?
 
+    /**
+     * 搜索命中(spec §3.9):标题 / 备注 / 地点任一命中即返回,**不限日期**。
+     * `ESCAPE '\'` 与 [SearchEngine.likePattern] 配对 —— 通配符必须当普通字符搜,
+     * 少了它 `100%` 会退化成"以 100 开头"的前缀匹配,`a_b` 会把任意字符算进去。
+     * 排序与 [observeBetween] 同序(LIKE 查询没有全序保证,不定序会让结果每查一次顺序都在跳)。
+     * 大小写:SQLite 的 LIKE 只对 ASCII 折叠大小写,中文/日文无大小写概念,实际够用。
+     * `IFNULL` 是防御性的:OR 链里 NULL 臂并不影响其余臂求值,但把可空列显式补成空串,
+     * 免得日后有人把 OR 改成 AND 时静默失效。
+     */
+    @Query(
+        "SELECT * FROM events WHERE isDeleted = 0 AND (" +
+            "title LIKE :pattern ESCAPE '\\' OR " +
+            "IFNULL(notes, '') LIKE :pattern ESCAPE '\\' OR " +
+            "IFNULL(location, '') LIKE :pattern ESCAPE '\\' " +
+            ") ORDER BY startAt, endAt, id",
+    )
+    fun observeMatching(pattern: String): Flow<List<EventEntity>>
+
     @Upsert
     suspend fun upsert(entity: EventEntity)
 

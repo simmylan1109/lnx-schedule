@@ -39,6 +39,7 @@ import com.lnx.app.feature.calendar.day.DayView
 import com.lnx.app.feature.calendar.drawer.CalendarDrawer
 import com.lnx.app.feature.calendar.month.MonthView
 import com.lnx.app.feature.calendar.week.WeekView
+import com.lnx.app.feature.search.SearchScreen
 import kotlinx.coroutines.launch
 import com.lnx.app.feature.event.EventDefaults
 import com.lnx.app.feature.event.EventDetailContent
@@ -81,6 +82,11 @@ fun CalendarScreen(
     val openTarget by viewModel.openTarget.collectAsStateWithLifecycle()
     val showSettings by viewModel.showSettings.collectAsStateWithLifecycle()
     val weekStartMonday by viewModel.weekStartMonday.collectAsStateWithLifecycle()
+    val searchOpen by viewModel.searchOpen.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val searchTagColors by viewModel.searchTagColors.collectAsStateWithLifecycle()
+    val highlight by viewModel.highlight.collectAsStateWithLifecycle()
     val locale = LocalLnxLocale.current
 
     // 抽屉(spec §3.10):汉堡菜单打开,勾选即隐藏对应事件
@@ -90,7 +96,14 @@ fun CalendarScreen(
     // M2: 编辑页/详情卡的临时态;M3 引入导航图后改为 NavHost 路由
     var detailTarget by remember { mutableStateOf<Occurrence?>(null) }
     var editorTarget by remember { mutableStateOf<EditorTarget?>(null) }
-    val onEventClick: (Occurrence) -> Unit = remember { { detailTarget = it } }
+    // 打开详情卡即撤掉搜索跳转的高亮(spec §3.9 的高亮是一次性定位提示,
+    // 留着会在事件块上一直挂个圈,用户还以为那里有新东西)
+    val onEventClick: (Occurrence) -> Unit = remember {
+        {
+            viewModel.clearHighlight()
+            detailTarget = it
+        }
+    }
     val onEmptySlotClick: (LocalDateTime) -> Unit = remember { { editorTarget = EditorTarget(start = it) } }
     val onFabClick: () -> Unit = remember {
         {
@@ -147,7 +160,7 @@ fun CalendarScreen(
                     title = formatTitle(state.selectedDate, locale),
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onTodayClick = viewModel::backToToday,
-                    onSearchClick = { /* 搜索在 M7 接入 */ },
+                    onSearchClick = viewModel::openSearch,
                 )
             ViewModeTabs(
                 current = state.viewMode,
@@ -162,6 +175,7 @@ fun CalendarScreen(
                     occurrences = state.dayOccurrences,
                     onEventClick = onEventClick,
                     onEmptySlotClick = onEmptySlotClick,
+                    highlight = highlight,
                     modifier = Modifier.weight(1f),
                 )
                 // M1: 进程内固定 today,跨零点需刷新(已记录为 minor)
@@ -173,6 +187,7 @@ fun CalendarScreen(
                     onEventClick = onEventClick,
                     onEmptySlotClick = onEmptySlotClick,
                     weekStartMonday = weekStartMonday,
+                    highlight = highlight,
                     modifier = Modifier.weight(1f),
                 )
                 // M3:月视图(上 6×7 月历 + 下当日列表联动)
@@ -224,6 +239,18 @@ fun CalendarScreen(
         // 设置页(spec §3.11):盖在最上层,返回关掉回日历
         if (showSettings) {
             SettingsScreen(onClose = viewModel::closeSettings)
+        }
+
+        // 搜索页(spec §3.9):盖在设置页之下、日历之上;点结果跳日视图并高亮
+        if (searchOpen) {
+            SearchScreen(
+                query = searchQuery,
+                results = searchResults,
+                tagColors = searchTagColors,
+                onQueryChange = viewModel::setSearchQuery,
+                onResultClick = viewModel::jumpToResult,
+                onClose = viewModel::closeSearch,
+            )
         }
 
         // 事件详情卡(spec §3.6):编辑/删除先选作用范围(重复事件三选一),再落库
