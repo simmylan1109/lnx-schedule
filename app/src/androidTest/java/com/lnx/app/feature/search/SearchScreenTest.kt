@@ -3,7 +3,6 @@ package com.lnx.app.feature.search
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -46,17 +45,18 @@ class SearchScreenTest {
         hiltRule.inject()
     }
 
-    private fun seedToday(id: String, title: String) = runBlocking {
-        val now = LocalDateTime.now()
+    private fun seedToday(id: String, title: String) = seedAt(id, title, LocalDateTime.now())
+
+    private fun seedAt(id: String, title: String, start: LocalDateTime) = runBlocking {
         dao.upsert(
             EventEntity(
                 id = id,
                 title = title,
                 allDay = false,
-                startAt = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                startAt = start.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
                 // 结束取"一小时后"而不是当天 23:00:23 点之后跑的用例里,23:00 已经过去,
                 // 这条事件就不与"今天"相交,块会消失,断言变成看时钟的 flaky
-                endAt = now.plusHours(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                endAt = start.plusHours(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
                 location = null,
                 notes = null,
                 colorSlot = 0,
@@ -80,7 +80,9 @@ class SearchScreenTest {
     }
 
     private fun openSearch() {
-        rule.onNodeWithContentDescription("搜索").performClick()
+        // 用 testTag 而不是中文 contentDescription:后者只在"进程默认语言被钉成中文"时成立
+        // (靠 HiltTestRunner),换台英文模拟器或哪天去掉钉死就会整类挂掉
+        rule.onNodeWithTag("search_button").performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("search_screen").assertIsDisplayed()
     }
@@ -127,6 +129,30 @@ class SearchScreenTest {
         rule.onNodeWithTag("day_pager").assertIsDisplayed()
         // 落点必须是这条事件所在的那天:块出现在日视图里,才说明"定位"真的生效
         rule.onNodeWithTag("event_block_ss-jump").assertExists()
+    }
+
+    @Test
+    fun 跳转后自动滚到那条事件的位置() {
+        // 种一条"离现在最远"的今天事件:12 点前种在 23:00,12 点后种在 00:30。
+        // 时间轴默认锚在"当前时刻",不滚的话这条在屏幕外 —— 高亮等于白高亮
+        // (spec §3.9 要的是"定位 / 高亮",两个都得有)。
+        val now = LocalDateTime.now()
+        val target = if (now.hour < 12) now.toLocalDate().atTime(23, 0)
+        else now.toLocalDate().atTime(0, 30)
+        seedAt("ss-scroll", "SCROLL 评审", target)
+
+        openSearch()
+        rule.onNodeWithTag("search_field").performTextInput("SCROLL")
+        rule.waitUntil(10_000) {
+            rule.onAllNodesWithTag("search_result_ss-scroll").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithTag("search_result_ss-scroll").performClick()
+
+        rule.waitUntil(10_000) {
+            rule.onAllNodesWithTag("event_block_ss-scroll").fetchSemanticsNodes().isNotEmpty()
+        }
+        // exists 不够:块在屏外也 exists。assertIsDisplayed 要求它真的落在视口里
+        rule.onNodeWithTag("event_block_ss-scroll").assertIsDisplayed()
     }
 
     @Test

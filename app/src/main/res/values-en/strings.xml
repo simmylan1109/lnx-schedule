@@ -42,6 +42,7 @@
     <string name="backup_error_version">This backup comes from a newer lnx. Update the app first.</string>
     <string name="backup_error_corrupted">The file is damaged or not a valid backup. Nothing was changed.</string>
     <string name="backup_error_io">Could not read the file. Nothing was changed.</string>
+    <string name="backup_error_database">Could not write to this device\'s storage. Your data was rolled back and left unchanged.</string>
     <string name="backup_share_title">Share lnx backup</string>
     <string name="backup_exported">Backup created: %1$s</string>
     <string name="backup_imported_merge">Merged %1$d, skipped %2$d, updated %3$d</string>

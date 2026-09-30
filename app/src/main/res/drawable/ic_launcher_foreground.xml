@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动图标前景层(M8)。一枚描边式日历:两根装订钉 + 圆角方框 + 一道装订线 + 三个日期点。
+
+  为什么是描边而不是实心(试了三版才定):
+  - 实心 + 挖一条横槽,不管槽开多高多宽,都读成"带盖的箱子/面包箱" —— 上盖、缝、箱身
+    这个结构本身就是箱子的形状;
+  - 描边方框内部透出背景色,一眼就是"一页日历",这是日历图标的通用画法;
+  - 线条够粗(6.5/108),缩到桌面 40–48dp 时约 3–4dp,不会被抽没。
+
+  尺寸:画布 108×108。系统只保证中间 66 直径的圆一定可见,所以整枚图形按
+  "外接圆半径 ≤ 33、形心 ≈ (54,54)"排布 —— 第一版方框下缘顶到了圆边,圆形遮罩下底角被切掉。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 两根装订钉 -->
+    <path
+        android:pathData="M45,27 L45,40"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M63,27 L63,40"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round" />
+
+    <!-- 日历外框 -->
+    <path
+        android:pathData="M44,36 L64,36 A10,10 0 0 1 74,46 L74,68 A10,10 0 0 1 64,78 L44,78 A10,10 0 0 1 34,68 L34,46 A10,10 0 0 1 44,36 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6.5"
+        android:fillColor="#00000000" />
+
+    <!-- 装订线(不顶到外框,留出左右两个小缺口,避免看起来像被切成两半) -->
+    <path
+        android:pathData="M37.5,49 L70.5,49"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <!-- 三个日期点 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M45,66 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0 M54,66 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0 M63,66 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
+</vector>

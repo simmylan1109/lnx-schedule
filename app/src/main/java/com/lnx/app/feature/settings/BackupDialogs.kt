@@ -103,6 +103,7 @@ internal fun BackupErrorDialog(
         BackupError.UNSUPPORTED_VERSION -> stringResource(R.string.backup_error_version)
         BackupError.CORRUPTED -> stringResource(R.string.backup_error_corrupted)
         BackupError.FILE_IO -> stringResource(R.string.backup_error_io)
+        BackupError.DATABASE -> stringResource(R.string.backup_error_database)
     }
     AlertDialog(
         onDismissRequest = onDismiss,

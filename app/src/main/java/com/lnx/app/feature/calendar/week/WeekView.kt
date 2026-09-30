@@ -428,6 +428,23 @@ internal fun TimeGrid(
         }
     }
 
+    // 搜索跳转进来时滚到高亮那次发生的位置(spec §3.9「定位」)。
+    // 没有这段的话,时间轴仍锚在"当前时刻"(上面那条 effect),目标块在今天 9 点、
+    // 当前是晚上时高亮就在屏幕外 —— 用户只看到日历翻了页,看不到亮的是哪一条。
+    // 与"滚到当前时刻"是互斥的:先按高亮滚,滚动完成后那条 effect 不会再跑
+    // (它只认 maxValue 变化),所以不会互相打架。
+    // **key 里必须带 maxValue**:第一帧还没测量出内容高度,maxValue == 0 会直接返回;
+    // 不带这个 key 的话它永远不会为"布局完成"再跑一次,滚动就静默失效(自己踩过)。
+    LaunchedEffect(highlight?.eventId, highlight?.start, scrollState.maxValue) {
+        val target = highlight?.start ?: return@LaunchedEffect
+        if (scrollState.maxValue <= 0) return@LaunchedEffect
+        val fraction = (target.hour + target.minute / 60f) / 24f
+        val viewportPx = 24 * hourPx - scrollState.maxValue
+        // 让目标块落在视口的上 1/3,和"滚到当前时刻"同一套构图
+        val y = (fraction * 24 * hourPx - viewportPx / 3f).toInt().coerceIn(0, scrollState.maxValue)
+        scrollState.animateScrollTo(y)
+    }
+
     val now = nowState.value
     // 注意乘法顺序:可用的是 Dp.times(Float),不是 Float.times(Dp)
     val nowY = HOUR_HEIGHT * (now.hour + now.minute / 60f)

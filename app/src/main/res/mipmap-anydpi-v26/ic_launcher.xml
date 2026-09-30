@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应启动图标(M8)。minSdk 26,自适应图标本身就是 26 引入的,
+  所以只需要 anydpi-v26 这一份,不用再补 png 兜底。
+  前景若"太大",系统裁圆角时会切掉日历的角 —— 前景内容已收在安全区内。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!-- 主题化图标(Android 13+ 壁纸取色):同一套前景,背景交给系统 -->
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

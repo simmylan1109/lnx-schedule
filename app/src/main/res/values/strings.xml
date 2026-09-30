@@ -37,7 +37,8 @@
     <string name="backup_error_not_lnx">这不是 lnx 的备份文件</string>
     <string name="backup_error_version">备份来自更新版本的 lnx,请先升级 App</string>
     <string name="backup_error_corrupted">文件已损坏或格式不符,现有数据没有改动</string>
-    <string name="backup_error_io">文件读写失败,现有数据没有改动</string>
+    <string name="backup_error_io">读不出这个文件,现有数据没有改动</string>
+    <string name="backup_error_database">写入本机数据失败,已回滚,现有数据没有改动</string>
     <string name="backup_share_title">分享 lnx 备份</string>
     <string name="backup_exported">备份已生成:%1$s</string>
     <string name="backup_imported_merge">已合并 %1$d 条,跳过 %2$d 条,更新 %3$d 条</string>

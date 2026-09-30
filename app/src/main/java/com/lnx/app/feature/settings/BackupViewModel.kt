@@ -21,7 +21,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** 导入出错的原因,界面按它挑文案(不把异常原文丢给用户看) */
-enum class BackupError { NOT_LNX_BACKUP, UNSUPPORTED_VERSION, CORRUPTED, FILE_IO }
+enum class BackupError {
+    NOT_LNX_BACKUP,
+    UNSUPPORTED_VERSION,
+
+    /** 文件损坏 / 不是合法 JSON */
+    CORRUPTED,
+
+    /** 读不出文件(打不开、没权限、不是文件) */
+    FILE_IO,
+
+    /**
+     * 写库失败。与 [FILE_IO] 分开:一个是"文件的问题",一个是"数据库的问题",
+     * 混在一起报会让排查的人往错的方向找(终审 P2)。
+     */
+    DATABASE,
+}
 
 /** 覆盖导入前的二次警告(spec §3.13:覆盖模式需二次警告) */
 data class OverwriteWarning(val currentCount: Int)
@@ -100,11 +115,12 @@ class BackupViewModel @Inject constructor(
                 is BackupParse.UnsupportedVersion ->
                     _state.update { it.copy(busy = false, error = BackupError.UNSUPPORTED_VERSION) }
                 is BackupParse.Ok -> {
+                    // 解析成功之后出错就是库的问题,不是文件的问题
                     val summary = runCatching {
                         repository.summarize(parsed.backup, ImportMode.MERGE)
                     }.getOrNull()
                     if (summary == null) {
-                        _state.update { it.copy(busy = false, error = BackupError.FILE_IO) }
+                        _state.update { it.copy(busy = false, error = BackupError.DATABASE) }
                     } else {
                         _state.update {
                             it.copy(busy = false, pending = PendingImport(parsed.backup, summary))
@@ -174,7 +190,8 @@ class BackupViewModel @Inject constructor(
                     }
                 }
                 .onFailure {
-                    _state.update { it.copy(busy = false, error = BackupError.FILE_IO) }
+                    // 走到这里说明文件已经读出来、也解析通过了,失败只可能出在写库
+                    _state.update { it.copy(busy = false, error = BackupError.DATABASE) }
                 }
         }
     }

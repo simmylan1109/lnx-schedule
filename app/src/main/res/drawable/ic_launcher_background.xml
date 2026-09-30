@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动图标背景层(M8)。自适应图标:背景铺满 108×108,前景只在中间 72×72 的安全区里画。
+  底色从 App 的默认品牌主色 #6750A4 派生一条斜向渐变(spec §5.2 主题 1 的回退色),
+  换主题不影响图标 —— 图标是系统级的,不该跟着 App 内设置变。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="#FF7F6BC8"
+                android:endColor="#FF55418F" />
+        </aapt:attr>
+    </path>
+</vector>

@@ -34,6 +34,10 @@ android {
         // 设置页底部版本号(BuildConfig.VERSION_NAME);AGP 8 起默认不生成
         buildConfig = true
     }
+    sourceSets {
+        // MigrationTestHelper 运行时要从 assets 读 schemas/*.json 建"旧版本库"(M8)
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Room schema 落盘位置:exportSchema = true 依赖它,否则 schema JSON 不会生成,
@@ -72,6 +76,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.room.runtime)
+    androidTestImplementation(libs.room.testing)
     kspAndroidTest(libs.room.compiler)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
