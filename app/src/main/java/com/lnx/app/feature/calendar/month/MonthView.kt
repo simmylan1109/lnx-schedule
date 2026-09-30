@@ -222,20 +222,17 @@ private fun MonthCell(
 ) {
     val inMonth = YearMonth.from(date) == month
     val locale = LocalLnxLocale.current
-    // 读屏要听到的是"9月30日 周三,有 2 个日程",而不是孤零零一个"30"(M9)
-    val spoken = buildString {
-        append(LnxLocale.dateWithWeekday(date, locale))
-        append(",")
-        if (date == today) append(stringResource(R.string.a11y_day_today))
-        append(",")
-        append(
-            if (eventCount == 0) {
-                stringResource(R.string.a11y_day_no_events)
-            } else {
-                pluralStringResource(R.plurals.a11y_day_events, eventCount, eventCount)
-            },
-        )
-    }
+    // 读屏要听到的是"9月30日 周三,有 2 个日程",而不是孤零零一个"30"(M9)。
+    // 用列表拼再 join,免得"不是今天"的格子里留一个空段出来(念成两个逗号)
+    val spoken = listOf(
+        LnxLocale.dateWithWeekday(date, locale),
+        if (date == today) stringResource(R.string.a11y_day_today) else null,
+        if (eventCount == 0) {
+            stringResource(R.string.a11y_day_no_events)
+        } else {
+            pluralStringResource(R.plurals.a11y_day_events, eventCount, eventCount)
+        },
+    ).filterNotNull().joinToString(",")
     // 高度由外层行(weight)分配,这里只管填满并把日期圆点垂直居中:
     // 写死 44dp 既撑不满行,也顶不到 Material 的 48dp 触达底线
     Column(
