@@ -26,13 +26,15 @@ import org.junit.runner.RunWith
  * 一个沉默的"按钮",完全不知道按下去会发生什么。走查时编辑器里 8 个颜色圆点就是
  * 这个样子(纯色块,零信息),读屏用户一个颜色都挑不了。
  *
- * **这道闸门管不了的事**(说清楚,免得以后误以为它万能):它只管"完全没标签",
- * 不管"标签信息够不够"。比如月历格子只念得出"30",它有标签、这道闸门放行,
- * 但对读屏用户毫无意义 —— 那是靠 `contentDescription` 里补全日期和日程数解决的。
- * "够不够"只能靠人读一遍。
+ * **这道闸门管不了的事**(说清楚,免得以后误以为它万能):
+ * 1. 它只管"完全没标签",不管"标签信息够不够"。比如月历格子只念得出"30",
+ *    它有标签、这道闸门放行,但对读屏用户毫无意义 —— 那是靠 `contentDescription`
+ *    里补全日期和日程数解决的。"够不够"只能靠人读一遍。
+ * 2. **手势点击它看不见**:周视图点空白新建是 `pointerInput` + `detectTapGestures`,
+ *    不产生 OnClick 语义,既绕过这道闸门、对读屏用户也不可用。这类目标只能靠走查发现。
  *
- * 遍历用 [SemanticsNode.fetchSemanticsChildren],它只给出真正暴露给无障碍层的节点,
- * 合并掉的子节点不会重复计入。
+ * 遍历用 [SemanticsNode.children]。注意 `fetchSemanticsChildren` 在本项目用的
+ * Compose 版本上不可见(试过,编不过)。
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)

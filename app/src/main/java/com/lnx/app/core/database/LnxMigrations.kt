@@ -69,7 +69,7 @@ object LnxMigrations {
      * **加新迁移的完整清单** —— 漏一步,别人手机上的库就升不上去:
      * 1. 写 `MIGRATION_N_N+1`,SQL 从 `app/schemas/` 下新版本 json 的 `createSql` 抄;
      * 2. 加进 [ALL];
-     * 3. 把 [LnxDatabase.VERSION] 涨到 N+1;
+     * 3. 把 [DbVersion.CURRENT] 涨到 N+1;
      * 4. 跑一次构建,让 Room 导出 `N+1.json`,把它提交进仓库;
      * 5. 在 `MigrationTest` 里加一条"vN 的库能升到最新"。
      *

@@ -30,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -171,7 +172,10 @@ private fun CreateTagDialog(
                 // 同 ColorPicker:8 个 48dp 触达点超过对话框正文宽度,必须允许横向滑动,
                 // 否则第 8 个色点被挤到屏幕外点不到
                 Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        // 配下面的 Role.RadioButton:读屏要能报出"这一组里选了一个"(终审 P3-6)
+                        .selectableGroup(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     EventColors.list().forEachIndexed { index, color ->

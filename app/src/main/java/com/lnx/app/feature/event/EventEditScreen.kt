@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -185,7 +186,6 @@ fun EventEditScreen(
                     checked = draft.allDay,
                     onCheckedChange = null,
                     enabled = true,
-                    modifier = Modifier.testTag("switch_allday"),
                 )
             }
 
@@ -407,7 +407,10 @@ private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
         Text(stringResource(R.string.editor_color), style = MaterialTheme.typography.bodyMedium)
         // 8 个 48dp 触达点一行放不下:允许横向滑动(固定 8 项,滑动成本很低)
         Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                // 配下面的 Role.RadioButton:读屏要能报出"这一组里选了一个"(终审 P3-6)
+                .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             EventColors.list().forEachIndexed { index, color ->

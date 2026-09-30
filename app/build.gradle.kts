@@ -14,10 +14,25 @@ plugins {
  * 发布签名凭据。文件在仓库根、且已 gitignore;密钥本体在仓库外。
  * 文件不存在时 release 退回未签名(能编出 APK,只是装不上)——
  * 这样别人克隆下来跑 `assembleRelease` 不会因为缺凭据直接炸。
+ * 文件在、但少写了某个字段时点名报错,而不是让 `rootProject.file(null)` 抛一句看不懂的
+ * 空指针 —— 手抄这个文件时漏一行是最可能发生的事(终审 P2-1)。
  */
+// 用简单名 Properties 而不是 java.util.Properties:后者里的 `java` 会被
+// Gradle Kotlin DSL 的 java 扩展抢掉,报 "Unresolved reference: util"
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun keystoreField(name: String): String = keystoreProperties.getProperty(name)
+    ?: throw GradleException(
+        "keystore.properties 里缺少 $name。" +
+            "照着仓库里的说明把 storeFile/storePassword/keyAlias/keyPassword 四项都写全;",
+    )
+if (keystoreProperties.isNotEmpty()) {
+    listOf("storeFile", "storePassword", "keyAlias", "keyPassword").forEach {
+        keystoreField(it) // 配置期就把四项验一遍,别等签名那一刻才发现
+    }
 }
 
 android {
@@ -40,15 +55,14 @@ android {
      * - **数据库版本**是 `core/database/DbVersion.kt` 里的 `CURRENT`,只在表结构变了时才涨。
      *   两者**不需要**同步涨:App 可以发 0.1.1 而库还是 v3,也可以发 0.2.0 而库才从 v3 升到 v4。
      */
-    // versionCode = 1
 
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = rootProject.file(keystoreField("storeFile"))
+                storePassword = keystoreField("storePassword")
+                keyAlias = keystoreField("keyAlias")
+                keyPassword = keystoreField("keyPassword")
             }
         }
     }

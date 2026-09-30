@@ -1,6 +1,7 @@
 package com.lnx.app
 
 import android.app.Application
+import android.util.Log
 import com.lnx.app.core.notification.ReminderNotifier
 import com.lnx.app.core.notification.ReminderPlanner
 import dagger.hilt.android.HiltAndroidApp
@@ -32,9 +33,16 @@ class LnxApplication : Application() {
      */
     override fun onCreate() {
         super.onCreate()
+        // 建渠道失败不该拦住进程启动,但也不能一声不吭 —— 那种"提醒永远不出现"
+        // 的问题最难查,至少留一行日志
         runCatching { reminderNotifier.ensureChannel() }
+            .onFailure { Log.w(TAG, "ensureChannel failed", it) }
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             runCatching { reminderPlanner.reschedule() }
         }
+    }
+
+    private companion object {
+        private const val TAG = "lnx-app"
     }
 }

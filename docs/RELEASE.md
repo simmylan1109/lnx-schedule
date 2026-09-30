@@ -25,15 +25,36 @@
 | | |
 |---|---|
 | 密钥文件 | `D:\lnx-release\lnx-release.jks`(**在仓库外面**) |
-| 口令 / 别名 | `(口令见 keystore.properties)` / `lnx`,有效期 30 年 |
-| 凭据文件 | `D:\11lnx\keystore.properties`(**已 gitignore,不会入库**) |
+| 别名 | `lnx`,有效期 30 年 |
+| 口令 | **只写在 `D:\11lnx\keystore.properties` 里**(随机生成,已 gitignore) |
+| 凭据文件 | `D:\11lnx\keystore.properties`(同上) |
 
-**把这两个文件一起备份到网盘。** 丢掉的后果不是"发不了新版"这么简单:
+**把密钥文件和 keystore.properties 一起备份到网盘。** 丢掉的后果不是"发不了新版"这么简单:
 换个密钥签名,系统会认不出新包是同一个 App,手机上的 lnx 只能卸载重装 —— **日程数据会一起消失**。
 (数据本身在设置页的「导出」里有 JSON 备份可以救,但那要用户提前导出过。)
 
+### 口令永远不要写进仓库
+
+**这是本手册自己踩过的坑,写下来免得重犯**:M9 第一版手册里把口令明码写进了这张表,
+而手册本身是入库的 —— 等于白做了"密钥放仓库外"的那套设计。凡是入库的东西,
+等于公开;口令一旦进了 git 历史,再删也还在历史里。
+
+所以现在:口令只存在于 `keystore.properties` 一个地方。要看它,打开那个文件。
+真要再写进文档,就写"见 keystore.properties",别抄值。
+
 密钥为什么放在仓库外面而不是提交进去:私钥一旦进了 git 历史,再"删掉"也还在历史里。
 放外面,即使 `.gitignore` 哪天写漏了也提交不上去。
+
+> 附:`D:\lnx-release\lnx-release-old-unusable.jks` 是第一版密钥,口令在一次命令行操作里
+> 被弄坏了(见下方"踩坑"),已换成新密钥。因为当时这个 App 还没发给任何人,
+> 换密钥的代价是零。这个文件留着不删,但**不要再用它签名**。
+
+### 踩坑:cmd 会把整行的变量先展开
+
+想在一条命令里"先算一个口令、再用它改密钥",写成
+`set P=xxx && keytool … -storepass "%P%"` 是不行的 —— cmd 会在执行前把**整行**的
+`%P%` 展开掉,keytool 收到的是空值。凡是"生成一个值、下一步要用它"的活,
+用脚本(或分行)做,别塞进一行。
 
 ---
 
@@ -45,7 +66,7 @@
 
 ```kotlin
 versionCode = 2          // 比上一个发布版大 1
-versionName = "0.1.0"   // 人看的版本号
+versionName = "0.2.0"   // 人看的版本号,也跟着往上走
 ```
 
 ### 2. 跑全量测试
@@ -125,6 +146,13 @@ gradlew :app:assembleRelease
   确实没被资源压缩裁掉。没验到的:通知真的出现在通知栏里。
   要补验:在真机上建一个 5 分钟后开始、提前 5 分钟提醒的事件,等它响。
   (模拟器上要等,不值当。)
+- **系统备份/换机迁移规则没实测过**(终审 P2)。`data_extraction_rules.xml` /
+  `backup_rules.xml` 只被 `lintVitalRelease` 验过"写得合法",**没有真的备份过、
+  也没恢复过**。规则本身是有把握的(database + file 两个域包含,和
+  `BackupFileStore` 写 cacheDir 的事实一致),但"手机丢了日程能不能回来"这件事
+  目前只是推理,不是证据。
+  要补验:`adb shell bmgr backupnow com.lnx.app` → 清数据 → `adb shell bmgr restore com.lnx.app`
+  → 看日程和设置是否都在。
 - **"Application 启动时就建通知渠道"这一句没有测试覆盖** —— 仪器测试跑的是
   `HiltTestApplication`,不会执行 `LnxApplication`。渠道本身建得出来的部分有测试。
 - **不声明 `android:localeConfig`。** 语言由设置页自己的开关管(spec §3.11)。
