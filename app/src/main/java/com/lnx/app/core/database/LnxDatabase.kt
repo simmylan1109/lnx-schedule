@@ -12,7 +12,7 @@ import com.lnx.app.core.database.entity.TagEntity
 
 @Database(
     entities = [EventEntity::class, EventExceptionEntity::class, TagEntity::class, EventTagCrossRef::class],
-    version = 3,
+    version = DbVersion.CURRENT,
     exportSchema = true,
 )
 abstract class LnxDatabase : RoomDatabase() {

@@ -21,6 +21,15 @@ android {
         testInstrumentationRunner = "com.lnx.app.HiltTestRunner"
     }
 
+    /**
+     * 两条互不相干的版本线,别混:
+     * - **这里**(`versionCode` / `versionName`)是 App 版本,每次发版都涨,系统判断
+     *   "要不要替换安装"就看它。规则见 `docs/RELEASE.md`。
+     * - **数据库版本**是 `core/database/DbVersion.kt` 里的 `CURRENT`,只在表结构变了时才涨。
+     *   两者**不需要**同步涨:App 可以发 0.1.1 而库还是 v3,也可以发 0.2.0 而库才从 v3 升到 v4。
+     */
+    // versionCode = 1
+
     buildTypes {
         release { isMinifyEnabled = false }
     }
