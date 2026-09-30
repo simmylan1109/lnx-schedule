@@ -1,0 +1,14 @@
+11 删除后无残留:库里已无任何事件。重启重排后,为提醒排的闹钟(REMINDER_FIRE)必须为 0 —— 被删事件的旧闹钟不得残留。
+采集时间: Tue Sep 29 10:23:53 GMT 2026
+待触发闹钟总数(lnx): 1
+  其中 提醒(REMINDER_FIRE): 0
+  其中 续排(REMINDER_CONTINUE): 1
+
+    RTC_WAKEUP #38: Alarm{9c225ae type 0 origWhen 1793269427420 whenElapsed 2593986112 com.lnx.app}
+      tag=*walarm*:com.lnx.app.action.REMINDER_CONTINUE
+      type=RTC_WAKEUP origWhen=2026-10-29 10:23:47.420 window=0 exactAllowReason=policy_permission repeatInterval=0 count=0 flags=0x5
+      policyWhenElapsed: requester=+29d23h59m53s970ms app_standby=-5s844ms device_idle=-- battery_saver=-5s844ms
+      whenElapsed=+29d23h59m53s970ms maxWhenElapsed=+29d23h59m53s970ms
+      operation=PendingIntent{1b93f4f: PendingIntentRecord{34436dc com.lnx.app broadcastIntent}}
+      idle-options=Bundle[{android.pendingIntent.backgroundActivityAllowed=2, android:broadcast.temporaryAppAllowlistReasonCode=302, android:broadcast.temporaryAppAllowlistDuration=10000, android:broadcast.temporaryAppAllowlistReason=, android:broadcast.temporaryAppAllowlistType=0, android:broadcast.flags=8}]
+
