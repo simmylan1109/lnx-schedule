@@ -65,4 +65,12 @@ interface EventDao {
      */
     @Query("SELECT * FROM events ORDER BY startAt, endAt, id")
     suspend fun allOnce(): List<EventEntity>
+
+    // —— M7 备份导入导出(spec §3.13)——
+
+    @Upsert
+    suspend fun upsertAll(entities: List<EventEntity>)
+
+    @Query("DELETE FROM events")
+    suspend fun clearAll()
 }

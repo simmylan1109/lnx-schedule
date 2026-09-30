@@ -14,6 +14,42 @@
     <string name="search_empty">No matching events</string>
     <string name="search_next_occurrence">Next: %1$s</string>
 
+    <!-- Import / export (spec §3.13) -->
+    <string name="settings_export_subtitle">Create a JSON backup to save or share</string>
+    <string name="settings_import_subtitle">Restore from a JSON backup</string>
+    <string name="backup_summary_title">Import this backup?</string>
+    <!-- 事件/标签两条数各自成词,单复数分开写(实机走查拍到过 "Contains 1 events") -->
+    <plurals name="backup_count_event">
+        <item quantity="one">%d event</item>
+        <item quantity="other">%d events</item>
+    </plurals>
+    <plurals name="backup_count_tag">
+        <item quantity="one">%d tag</item>
+        <item quantity="other">%d tags</item>
+    </plurals>
+    <string name="backup_summary">Contains %1$s and %2$s</string>
+    <string name="backup_merge">Merge</string>
+    <string name="backup_overwrite">Overwrite</string>
+    <string name="backup_overwrite_title">Overwrite everything?</string>
+    <plurals name="backup_overwrite_warning">
+        <item quantity="one">This will erase your current %d event and cannot be undone</item>
+        <item quantity="other">This will erase your current %d events and cannot be undone</item>
+    </plurals>
+    <string name="backup_confirm">Confirm</string>
+    <string name="backup_cancel">Cancel</string>
+    <string name="backup_error_title">Import failed</string>
+    <string name="backup_error_not_lnx">This is not an lnx backup file</string>
+    <string name="backup_error_version">This backup comes from a newer lnx. Update the app first.</string>
+    <string name="backup_error_corrupted">The file is damaged or not a valid backup. Nothing was changed.</string>
+    <string name="backup_error_io">Could not read the file. Nothing was changed.</string>
+    <string name="backup_share_title">Share lnx backup</string>
+    <string name="backup_exported">Backup created: %1$s</string>
+    <string name="backup_imported_merge">Merged %1$d, skipped %2$d, updated %3$d</string>
+    <plurals name="backup_imported_overwrite">
+        <item quantity="one">Imported %d event</item>
+        <item quantity="other">Imported %d events</item>
+    </plurals>
+
     <string name="calendar_view_day">Day</string>
     <string name="calendar_view_week">Week</string>
     <string name="calendar_view_month">Month</string>

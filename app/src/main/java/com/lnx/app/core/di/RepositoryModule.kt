@@ -1,5 +1,7 @@
 package com.lnx.app.core.di
 
+import com.lnx.app.core.backup.BackupRepository
+import com.lnx.app.core.data.BackupRepositoryImpl
 import com.lnx.app.core.data.EventRepositoryImpl
 import com.lnx.app.core.data.SearchRepositoryImpl
 import com.lnx.app.core.data.TagRepositoryImpl
@@ -28,6 +30,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupRepository(impl: BackupRepositoryImpl): BackupRepository
 
     @Binds
     @Singleton

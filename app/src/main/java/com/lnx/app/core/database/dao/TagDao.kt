@@ -64,4 +64,26 @@ interface TagDao {
     /** 删除标签时解除其全部关联(spec §3.10:删除标签不影响事件本身) */
     @Query("DELETE FROM event_tag_cross_ref WHERE tagId = :tagId")
     suspend fun clearTagRefs(tagId: String)
+
+    // —— M7 备份导入导出(spec §3.13)——
+
+    /** 全部标签,**含已删墓碑**(导出要能还原"这个标签被删过"这件事) */
+    @Query("SELECT * FROM tags ORDER BY createdAt, id")
+    suspend fun allOnce(): List<TagEntity>
+
+    /** 全部关联对(导出用) */
+    @Query("SELECT * FROM event_tag_cross_ref ORDER BY eventId, tagId")
+    suspend fun allEventTags(): List<EventTagCrossRef>
+
+    @Upsert
+    suspend fun upsertAll(entities: List<TagEntity>)
+
+    @Insert
+    suspend fun insertCrossRefs(refs: List<EventTagCrossRef>)
+
+    @Query("DELETE FROM tags")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM event_tag_cross_ref")
+    suspend fun clearAllRefs()
 }

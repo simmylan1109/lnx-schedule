@@ -14,6 +14,37 @@
     <string name="search_empty">未找到相关日程</string>
     <string name="search_next_occurrence">下次发生：%1$s</string>
 
+    <!-- 导入/导出(spec §3.13) -->
+    <string name="settings_export_subtitle">生成 JSON 备份,可存到网盘或发给别人</string>
+    <string name="settings_import_subtitle">从 JSON 备份恢复</string>
+    <string name="backup_summary_title">导入这个备份?</string>
+    <plurals name="backup_count_event">
+        <item quantity="other">%d 个事件</item>
+    </plurals>
+    <plurals name="backup_count_tag">
+        <item quantity="other">%d 个标签</item>
+    </plurals>
+    <string name="backup_summary">包含 %1$s、%2$s</string>
+    <string name="backup_merge">合并</string>
+    <string name="backup_overwrite">覆盖</string>
+    <string name="backup_overwrite_title">确定覆盖?</string>
+    <plurals name="backup_overwrite_warning">
+        <item quantity="other">将清空现有 %d 条数据,且不可恢复</item>
+    </plurals>
+    <string name="backup_confirm">确定</string>
+    <string name="backup_cancel">取消</string>
+    <string name="backup_error_title">导入失败</string>
+    <string name="backup_error_not_lnx">这不是 lnx 的备份文件</string>
+    <string name="backup_error_version">备份来自更新版本的 lnx,请先升级 App</string>
+    <string name="backup_error_corrupted">文件已损坏或格式不符,现有数据没有改动</string>
+    <string name="backup_error_io">文件读写失败,现有数据没有改动</string>
+    <string name="backup_share_title">分享 lnx 备份</string>
+    <string name="backup_exported">备份已生成:%1$s</string>
+    <string name="backup_imported_merge">已合并 %1$d 条,跳过 %2$d 条,更新 %3$d 条</string>
+    <plurals name="backup_imported_overwrite">
+        <item quantity="other">已导入 %d 条</item>
+    </plurals>
+
     <string name="calendar_view_day">日</string>
     <string name="calendar_view_week">周</string>
     <string name="calendar_view_month">月</string>

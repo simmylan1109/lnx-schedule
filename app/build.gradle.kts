@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    // M7:备份 JSON 的编解码(spec §3.13)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -59,6 +61,8 @@ dependencies {
     ksp(libs.room.compiler)
     // M6:设置唯一偏好源(spec §3.11 主题/外观/提醒/免打扰/通用)
     implementation(libs.androidx.datastore.preferences)
+    // M7:导入/导出 JSON(spec §3.13)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

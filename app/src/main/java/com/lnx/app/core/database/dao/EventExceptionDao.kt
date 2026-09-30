@@ -26,4 +26,15 @@ interface EventExceptionDao {
     /** "本次及以后"剪断:剪断日起的槽位归属新系列,旧例外一并清掉 */
     @Query("DELETE FROM event_exceptions WHERE masterEventId = :masterId AND originalDate >= :fromEpochDay")
     suspend fun deleteFrom(masterId: String, fromEpochDay: Long)
+
+    // —— M7 备份导入导出(spec §3.13)——
+
+    @Query("SELECT * FROM event_exceptions ORDER BY id")
+    suspend fun allOnce(): List<EventExceptionEntity>
+
+    @Upsert
+    suspend fun upsertAll(entities: List<EventExceptionEntity>)
+
+    @Query("DELETE FROM event_exceptions")
+    suspend fun clearAll()
 }

@@ -59,6 +59,23 @@ class TagRepositoryImplTest {
         override suspend fun clearTagRefs(tagId: String) {
             clearedTagRefs += tagId
         }
+
+        // 备份导入导出(M7)走真 Room,这里只求能编译
+        override suspend fun allOnce(): List<TagEntity> = rows.values.toList()
+
+        override suspend fun allEventTags(): List<EventTagCrossRef> = emptyList()
+
+        override suspend fun upsertAll(entities: List<TagEntity>) {
+            entities.forEach { upsert(it) }
+        }
+
+        override suspend fun insertCrossRefs(refs: List<EventTagCrossRef>) = Unit
+
+        override suspend fun clearAll() {
+            rows.clear()
+        }
+
+        override suspend fun clearAllRefs() = Unit
     }
 
     @Test

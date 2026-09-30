@@ -53,6 +53,15 @@ class EventRepositoryImplTest {
         }
 
         override suspend fun allOnce(): List<EventEntity> = stored.value
+
+        // 备份导入导出(M7)走真 Room,这里只求能编译
+        override suspend fun upsertAll(entities: List<EventEntity>) {
+            entities.forEach { upsert(it) }
+        }
+
+        override suspend fun clearAll() {
+            stored.value = emptyList()
+        }
     }
 
     private class FakeEventExceptionDao : EventExceptionDao {
@@ -76,6 +85,17 @@ class EventRepositoryImplTest {
 
         override suspend fun deleteFrom(masterId: String, fromEpochDay: Long) {
             deletedFrom += masterId to fromEpochDay
+        }
+
+        // 备份导入导出(M7)走真 Room,这里只求能编译
+        override suspend fun allOnce(): List<EventExceptionEntity> = stored.value
+
+        override suspend fun upsertAll(entities: List<EventExceptionEntity>) {
+            entities.forEach { upsert(it) }
+        }
+
+        override suspend fun clearAll() {
+            stored.value = emptyList()
         }
     }
 

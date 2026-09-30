@@ -48,5 +48,17 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- 导出备份后把 JSON 交给系统分享面板(M7,spec §3.13)。
+             分享出去必须用 content:// 授权 URI,file:// 会被 FileUriExposedException 拒掉。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/backup_paths" />
+        </provider>
     </application>
 </manifest>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider 授权范围(M7 导出备份,spec §3.13)。
+  只开 cache 下的 backup/ 一条路径:备份是一次性产物,分享完本机不必留,
+  也不需要把整个 cache 暴露给外部 App。
+-->
+<paths>
+    <cache-path
+        name="backup"
+        path="backup/" />
+</paths>
