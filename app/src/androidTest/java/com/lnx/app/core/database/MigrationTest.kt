@@ -4,6 +4,8 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.lnx.app.core.di.DatabaseModule
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -147,6 +149,43 @@ class MigrationTest {
         listOf("events", "tags", "event_tag_cross_ref", "event_exceptions").forEach { table ->
             migrated.query("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'")
                 .use { c -> assertTrue("$table 应该存在", c.moveToFirst()) }
+        }
+    }
+
+    /**
+     * 走**真实 DI 那一行**的升级路径(终审 P1-2)。
+     *
+     * 上面几条验的是 `LnxMigrations.ALL` 这个数组本身;而所有仪器测试都被
+     * `TestDatabaseModule` 顶着用的是内存库 —— 谁把 `DatabaseModule` 里的
+     * `.addMigrations(*LnxMigrations.ALL)` 删掉,或者把 destructive 兜底加回来,
+     * 371 条用例照样全绿。去掉 destructive 之后那行是整个 App 最重的一行,必须有个闸门。
+     *
+     * 做法:先用 helper 造一个真正的 v1 落盘库(就叫 lnx.db),再用
+     * `DatabaseModule.provideDatabase` 打开它 —— 第一次 DAO 调用时 Room 才真正开库跑迁移。
+     */
+    @Test
+    fun DI里的数据库能从v1升上来且不清库() = runBlocking {
+        val realName = "lnx.db"
+        helper.createDatabase(realName, 1).use { db ->
+            insertEventV1(db, "e-di", "DI 路径的老事件")
+        }
+
+        val db = DatabaseModule.provideDatabase(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+        )
+        try {
+            // Room 是懒加载的:这一句才是真正"打开库 → 跑迁移"的动作
+            val titles = db.eventDao().allOnce().map { it.title }
+            assertEquals(listOf("DI 路径的老事件"), titles)
+            // 迁移把新表建起来了(查得到,而不是库被重建)
+            assertTrue(
+                "标签表应当存在(空表),而不是整库被清掉",
+                db.tagDao().allOnce().isEmpty(),
+            )
+        } finally {
+            db.close()
+            // 别把测试库留给下一次运行
+            InstrumentationRegistry.getInstrumentation().targetContext.deleteDatabase(realName)
         }
     }
 }

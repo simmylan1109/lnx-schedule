@@ -64,7 +64,9 @@ class BackupRepositoryImpl @Inject constructor(
      */
     override suspend fun import(backup: Backup, mode: ImportMode): ImportResult = db.withTransaction {
         if (mode == ImportMode.OVERWRITE) {
-            // 关联表先清:它有外键指向 events/tags
+            // 关联表先清。**这里没有外键约束**——关联表只声明了主键,`tags`/`events` 上的
+            // 外键是"逻辑上"的(Room 实体里没写 ForeignKey),所以清空顺序靠约定而不是数据库
+            // 兜底:先关引用方(关联表),再关被引用方,否则删完主表会留下查不到的悬空关联。
             tagDao.clearAllRefs()
             exceptionDao.clearAll()
             eventDao.clearAll()

@@ -35,11 +35,16 @@ class LauncherIconRenderTest {
         val visible = 288
         val scale = visible / 72f // 108 图层里只有中间 72 是可见区
         val offset = -(108 - 72) / 2f * scale
+        // **66dp** 才是系统"一定可见"的直径(72 是方形遮罩的安全区,圆形更严)。
+        // 两张预览必须用同一个口径,否则同一份验收证据里会出现两把尺子(踩过)。
+        val guaranteedRadius = visible / 2f * (66f / 72f)
 
         val bmp = Bitmap.createBitmap(visible, visible, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         if (circular) {
-            val clip = Path().apply { addCircle(visible / 2f, visible / 2f, visible / 2f, Path.Direction.CW) }
+            val clip = Path().apply {
+                addCircle(visible / 2f, visible / 2f, guaranteedRadius, Path.Direction.CW)
+            }
             canvas.clipPath(clip)
         }
         canvas.translate(offset, offset)
@@ -50,13 +55,13 @@ class LauncherIconRenderTest {
                 draw(canvas)
             }
         }
-        // 圆形遮罩的辅助线,直观看出血区在哪
+        // 66dp 辅助圈,直观看出"一定可见"的范围在哪
         canvas.setMatrix(null)
         if (!circular) {
             canvas.drawCircle(
                 visible / 2f,
                 visible / 2f,
-                visible / 2f * 0.917f,
+                guaranteedRadius,
                 Paint().apply {
                     style = Paint.Style.STROKE
                     strokeWidth = 3f

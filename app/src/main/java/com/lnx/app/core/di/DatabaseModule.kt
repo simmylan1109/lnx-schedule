@@ -17,6 +17,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+    /**
+     * v0.1 首发后,这里任何一条迁移写错 = 用户端硬崩(去掉 destructive 兜底就是故意的:
+     * 宁可当场炸,也不能悄悄清库)。**唯一防线是 `MigrationTest`** ——
+     * 仪器测试都被 `TestDatabaseModule` 顶着用内存库,所以那条"走真实 DI 打开 v1 库"的
+     * 用例是这行接线唯一的闸门,删迁移时只有它会红(已红检验证)。
+     */
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): LnxDatabase =

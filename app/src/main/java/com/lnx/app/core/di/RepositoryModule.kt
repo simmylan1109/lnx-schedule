@@ -1,5 +1,7 @@
 package com.lnx.app.core.di
 
+import com.lnx.app.core.backup.BackupFiles
+import com.lnx.app.core.backup.BackupFileStore
 import com.lnx.app.core.backup.BackupRepository
 import com.lnx.app.core.data.BackupRepositoryImpl
 import com.lnx.app.core.data.EventRepositoryImpl
@@ -34,6 +36,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBackupRepository(impl: BackupRepositoryImpl): BackupRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupFiles(impl: BackupFileStore): BackupFiles
 
     @Binds
     @Singleton

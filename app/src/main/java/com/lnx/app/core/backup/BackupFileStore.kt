@@ -13,16 +13,29 @@ import kotlinx.coroutines.withContext
 /**
  * 备份文件的落盘与读取(spec §3.13)。
  *
- * 导出写进 `cacheDir/backup/` 再用 FileProvider 分享 —— 直接给系统分享面板一个
+ * 抽成接口只有一个理由:真实实现要 `Context`,而 [BackupViewModel] 里
+ * "读不出文件 / 写不出文件 / 本机数据有问题"这套错误分类必须在 JVM 单测里验
+ * (终审 P2-1:这个分类当时零覆盖)。给 ViewModel 依赖接口,单测里就能塞假实现。
+ */
+interface BackupFiles {
+    /** 写一个备份文件,返回可分享的 content:// URI */
+    suspend fun write(fileName: String, text: String): Uri
+
+    /** 读用户选的文件;打不开就抛 */
+    suspend fun read(uri: Uri): String
+}
+
+/**
+ * 真实实现:写进 `cacheDir/backup/` 再用 FileProvider 分享 —— 直接给系统分享面板一个
  * `file://` 路径会被 `FileUriExposedException` 拒掉,必须换成 content:// 授权 URI。
  * 放 cacheDir 而不是 filesDir:备份是一次性产物,用户存到网盘后本机留着没意义。
  */
 @Singleton
 class BackupFileStore @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : BackupFiles {
 
-    suspend fun write(fileName: String, text: String): Uri = withContext(Dispatchers.IO) {
+    override suspend fun write(fileName: String, text: String): Uri = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, DIR).apply { mkdirs() }
         val file = File(dir, fileName)
         file.writeText(text)
@@ -33,7 +46,7 @@ class BackupFileStore @Inject constructor(
      * 读用户选的文件。用 `contentResolver.openInputStream` 而不是 File 路径 ——
      * 选文件器给的是 content:// URI,不一定有对应的真实文件(云盘/文档提供器)。
      */
-    suspend fun read(uri: Uri): String = withContext(Dispatchers.IO) {
+    override suspend fun read(uri: Uri): String = withContext(Dispatchers.IO) {
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             ?: throw IllegalStateException("打不开所选文件")
     }

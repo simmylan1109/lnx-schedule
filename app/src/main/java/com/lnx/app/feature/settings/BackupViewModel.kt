@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lnx.app.core.backup.Backup
 import com.lnx.app.core.backup.BackupCodec
-import com.lnx.app.core.backup.BackupFileStore
+import com.lnx.app.core.backup.BackupFiles
 import com.lnx.app.core.backup.BackupParse
 import com.lnx.app.core.backup.BackupRepository
 import com.lnx.app.core.backup.ImportMode
@@ -71,27 +71,36 @@ data class BackupUiState(
 class BackupViewModel @Inject constructor(
     private val repository: BackupRepository,
     private val codec: BackupCodec,
-    private val files: BackupFileStore,
+    private val files: BackupFiles,
     private val reminderPlanner: ReminderPlanner,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BackupUiState())
     val state: StateFlow<BackupUiState> = _state.asStateFlow()
 
-    /** 导出:拍快照 → 写文件。UI 拿到 URI 后弹系统分享面板。 */
+    /**
+     * 导出:拍快照 → 写文件。UI 拿到 URI 后弹系统分享面板。
+     *
+     * **读库与写文件分开兜底**:库坏了(文件损坏/磁盘满)和写不出文件是两回事,
+     * 合成一个 runCatching 就会把前者报成"读不出这个文件" —— 恰好是这个 P2 要消灭的误导。
+     */
     fun export(onReady: (Uri, String) -> Unit) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
-            runCatching {
-                val name = codec.fileName(LocalDate.now())
-                val uri = files.write(name, codec.encode(repository.snapshot(System.currentTimeMillis())))
-                name to uri
-            }.onSuccess { (name, uri) ->
-                _state.update { it.copy(busy = false, message = BackupMessage.Exported(name)) }
-                onReady(uri, name)
-            }.onFailure {
-                _state.update { it.copy(busy = false, error = BackupError.FILE_IO) }
-            }
+            val name = codec.fileName(LocalDate.now())
+            val snapshot = runCatching { repository.snapshot(System.currentTimeMillis()) }
+                .getOrElse {
+                    _state.update { s -> s.copy(busy = false, error = BackupError.DATABASE) }
+                    return@launch
+                }
+            runCatching { files.write(name, codec.encode(snapshot)) }
+                .onSuccess { uri ->
+                    _state.update { it.copy(busy = false, message = BackupMessage.Exported(name)) }
+                    onReady(uri, name)
+                }
+                .onFailure {
+                    _state.update { it.copy(busy = false, error = BackupError.FILE_IO) }
+                }
         }
     }
 
