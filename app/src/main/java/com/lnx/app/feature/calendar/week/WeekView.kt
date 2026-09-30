@@ -544,7 +544,12 @@ internal fun TimeGrid(
                         )
                     }
                 }
-                blocks.forEach { day ->
+                // **必须用 forEachIndexed**:横向位置 = 第几列 × 列宽 + 当天内的车道偏移。
+                // 曾经写成 `forEach { day -> ... offset(x = w * b.lane) }`,把外层那个"第几天"
+                // 彻底丢了 —— 于是**所有天的日程都画在第一列**,只是彼此按车道并排。
+                // 单日事件的截图完全看不出来(9 个里程碑的走查截图恰好都是单日事件),
+                // 一旦一周里有两天的日程就露馅。M9 补测试时才发现。
+                blocks.forEachIndexed { dayIndex, day ->
                     day.forEach { b ->
                         val w = colWidth / b.lanes
                         val occ = b.occurrence
@@ -570,7 +575,10 @@ internal fun TimeGrid(
                         }
                         Box(
                             modifier = Modifier
-                                .offset(x = w * b.lane, y = (b.topMinutes / 60f * HOUR_HEIGHT.value).dp)
+                                .offset(
+                                    x = colWidth * dayIndex + w * b.lane,
+                                    y = (b.topMinutes / 60f * HOUR_HEIGHT.value).dp,
+                                )
                                 .width((w - 1.dp).coerceAtLeast(1.dp))
                                 .height((b.heightMinutes / 60f * HOUR_HEIGHT.value).dp),
                         ) {

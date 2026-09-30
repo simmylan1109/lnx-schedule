@@ -18,6 +18,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -151,6 +152,80 @@ class WeekEventBlockTest {
         // 全天块由 AllDayStrip 承载(M3 渲染),时间轴里不应出现
         rule.onAllNodesWithTag("event_block_e-allday").onFirst().assertDoesNotExist()
         assertEquals(1, runBlocking { dao.getById("e-allday") }?.let { 1 } ?: 0)
+    }
+
+    @Test
+    fun `不同天的事件块画在各自的列里`() {
+        // 回归(M9 抓到的真 bug):渲染循环写成 `blocks.forEach { day -> … }`,
+        // 外层那个"第几天"被丢掉,横向位置只由**当天内的车道**决定 ——
+        // 于是整周的日程全叠在第一列里,彼此按车道并排。
+        // 单日事件的截图看不出来,九个里程碑的走查截图恰好都是单日事件。
+        //
+        // 判据取"两块不许横向重叠":出 bug 时两者位置完全相同,必然重叠;
+        // 修好后中间隔着整整一列。比硬编码像素值稳。
+        val monday = LocalDate.now().with(java.time.DayOfWeek.MONDAY)
+        seedOn(monday, "跨列校验·周一", 9, 0, 60)
+        seedOn(monday.plusDays(2), "跨列校验·周三", 10, 0, 60)
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("event_block_e-col-wed").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val mon = rule.onAllNodesWithTag("event_block_e-col-mon").onFirst()
+            .getUnclippedBoundsInRoot()
+        val wed = rule.onAllNodesWithTag("event_block_e-col-wed").onFirst()
+            .getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "周三的块(${wed.left})应当在周一的块(${mon.left})右侧,而不是叠在同一列",
+            wed.left.value > mon.left.value,
+        )
+        assertTrue(
+            "两块不该横向重叠:周一 [${mon.left}, ${mon.right}] 周三 [${wed.left}, ${wed.right}]",
+            wed.left.value >= mon.right.value - 1f,
+        )
+    }
+
+    private fun seedOn(
+        date: LocalDate,
+        title: String,
+        startHour: Int,
+        startMinute: Int,
+        durationMinutes: Long,
+    ) = runBlocking {
+        val id = when {
+            title.endsWith("周一") -> "e-col-mon"
+            title.endsWith("周三") -> "e-col-wed"
+            else -> "e-${date}"
+        }
+        val start = date.atStartOfDay().plusHours(startHour.toLong()).plusMinutes(startMinute.toLong())
+        dao.upsert(
+            EventEntity(
+                id = id,
+                title = title,
+                allDay = false,
+                startAt = start.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                endAt = start.plusMinutes(durationMinutes)
+                    .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                location = null,
+                notes = null,
+                colorSlot = 0,
+                priority = "P2",
+                reminderLeadMinutes = null,
+                ruleType = "NONE",
+                ruleInterval = 1,
+                ruleWeekdays = null,
+                ruleMonthlyMode = null,
+                ruleMonthlyDay = null,
+                ruleMonthlyNth = null,
+                ruleMonthlyWeekday = null,
+                ruleEndType = null,
+                ruleEndDate = null,
+                ruleCount = null,
+                createdAt = 0L,
+                updatedAt = 0L,
+                isDeleted = false,
+            ),
+        )
     }
 
     private fun seededAllDay(
