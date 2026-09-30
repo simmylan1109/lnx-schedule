@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalNavigationDrawer
@@ -33,6 +33,7 @@ import com.lnx.app.core.common.LocalLnxLocale
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.recurrence.EditScope
+import com.lnx.app.core.designsystem.SereneHeaderBackground
 import com.lnx.app.feature.calendar.components.CalendarTopBar
 import com.lnx.app.feature.calendar.components.ViewModeTabs
 import com.lnx.app.feature.calendar.day.DayView
@@ -156,16 +157,23 @@ fun CalendarScreen(
             },
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                CalendarTopBar(
-                    title = formatTitle(state.selectedDate, locale),
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onTodayClick = viewModel::backToToday,
-                    onSearchClick = viewModel::openSearch,
-                )
-            ViewModeTabs(
-                current = state.viewMode,
-                onSelect = viewModel::selectViewMode,
-            )
+                // 头部区(spec §5.2 主题 4:顶栏 + Tab 走天空蓝→紫渐变;其余主题原样)
+                // 注意 SereneHeaderBackground 是 Box 作用域,两个子项会叠在一起,
+                // 必须自己包一层 Column 才是"顶栏在上、Tab 在下"。
+                SereneHeaderBackground {
+                    Column {
+                        CalendarTopBar(
+                            title = formatTitle(state.selectedDate, locale),
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                            onTodayClick = viewModel::backToToday,
+                            onSearchClick = viewModel::openSearch,
+                        )
+                        ViewModeTabs(
+                            current = state.viewMode,
+                            onSelect = viewModel::selectViewMode,
+                        )
+                    }
+                }
             when (state.viewMode) {
                 // M3:日视图(日期条 + 单列时间轴)
                 ViewMode.DAY -> DayView(
@@ -213,7 +221,7 @@ fun CalendarScreen(
                 .padding(16.dp)
                 .testTag("fab_create"),
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_new_event))
+            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.calendar_new_event))
         }
 
         // 时间重叠提示(spec §3.5:提示不阻止保存)

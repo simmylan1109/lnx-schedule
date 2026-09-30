@@ -1,7 +1,9 @@
 package com.lnx.app.core.designsystem
 
 import android.os.Build
-import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -26,13 +28,27 @@ object LnxMotion {
     const val SLOW_MILLIS = 500
     const val THEME_CROSSFADE_MILLIS = 250 // spec §5.3 主题切换约 250ms
 
-    val normal: AnimationSpec<Float> get() = tween(NORMAL_MILLIS)
-    val slow: AnimationSpec<Float> get() = tween(SLOW_MILLIS)
+    val normal: FiniteAnimationSpec<Float> get() = tween(NORMAL_MILLIS)
+    val slow: FiniteAnimationSpec<Float> get() = tween(SLOW_MILLIS)
+
+    /** 主题 3 暖橙活力(spec §5.2「动效弹簧曲线」):轻快、到位时有一点回弹 */
+    val springy: FiniteAnimationSpec<Float> get() = spring(
+        dampingRatio = 0.55f,
+        stiffness = Spring.StiffnessMediumLow,
+    )
 }
 
-/** 该主题下的常规动效:宁静冷色走慢速,其余走常规 */
-val LnxThemeSpec.motion: AnimationSpec<Float>
-    get() = if (slot == ThemeSlot.SERENE) LnxMotion.slow else LnxMotion.normal
+/**
+ * 该主题下的动效基线(spec §5.2 / §5.3):
+ * 宁静冷色 400–600ms 的"呼吸感",暖橙活力走弹簧,其余走常规 300ms。
+ * 组件里不要各写各的 `tween(...)`,统一从这里取,换主题的手感才是全局一致的。
+ */
+val LnxThemeSpec.motion: FiniteAnimationSpec<Float>
+    get() = when (slot) {
+        ThemeSlot.SERENE -> LnxMotion.slow
+        ThemeSlot.WARM -> LnxMotion.springy
+        else -> LnxMotion.normal
+    }
 
 @Composable
 fun LnxTheme(
@@ -47,7 +63,12 @@ fun LnxTheme(
     }
     val scheme = schemeFor(slot, dark)
     CompositionLocalProvider(LocalLnxTheme provides LnxThemeSpec(slot, dark)) {
-        MaterialTheme(colorScheme = scheme, typography = LnxTypography, content = content)
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = typographyFor(slot),
+            shapes = shapesFor(slot),
+            content = content,
+        )
     }
 }
 

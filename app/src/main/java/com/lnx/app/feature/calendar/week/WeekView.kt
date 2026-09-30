@@ -1,5 +1,6 @@
 package com.lnx.app.feature.calendar.week
 
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,8 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,12 @@ import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.dateToPage
 import com.lnx.app.core.common.pageToDate
 import com.lnx.app.core.designsystem.EventColors
+import com.lnx.app.core.designsystem.LocalLnxTheme
+import com.lnx.app.core.designsystem.SereneHeaderBackground
+import com.lnx.app.core.designsystem.ThemeSlot
+import com.lnx.app.core.designsystem.headerContentColor
+import com.lnx.app.core.designsystem.headerSecondaryContentColor
+import com.lnx.app.core.designsystem.motion
 import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.search.HighlightTarget
@@ -165,56 +174,64 @@ private fun WeekHeader(
     today: LocalDate,
     locale: Locale,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-    ) {
-        // 前导占位 = TimeGrid 的刻度列宽(TimeGrid 把宽度扣掉 GUTTER_WIDTH 后再 7 等分),
-        // 不留这个占位,星期头会整体左移半个刻度列,首列漂移最大
-        Spacer(Modifier.width(GUTTER_WIDTH))
-        (0..6).forEach { offset ->
-            val date = weekStart.plusDays(offset.toLong())
-            val isToday = date == today
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = dayOfWeekCnShort(date.dayOfWeek, locale),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Box(
-                    modifier = Modifier
-                        .padding(top = 2.dp)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(
-                            // 非选中日用透明:Material You 下 surface 与 background 有细微差异,
-                            // 填色会让 7 个非今天格都显出浅色圆圈
-                            if (date == selectedDate) MaterialTheme.colorScheme.primaryContainer
-                            else Color.Transparent
-                        )
-                        // 边框必须条件性挂载:border(0.dp) 在本 Compose 版本仍会画出 1px 发丝圆环
-                        .then(
-                            if (isToday) {
-                                Modifier.border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape,
-                                )
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    contentAlignment = Alignment.Center,
+    // 星期头属于 spec §5.2 主题 4 的"头部区"(顶栏 + Tab + 星期头),与顶栏同一条渐变。
+    // 非 SERENE 主题下 SereneHeaderBackground 就是普通 Box,行为不变。
+    // 头部内的文字/圆圈色全部取 header*Color:SERENE 落在渐变上,得用它自己的前景色。
+    val serene = LocalLnxTheme.current.slot == ThemeSlot.SERENE
+    val primaryColor = if (serene) headerContentColor() else MaterialTheme.colorScheme.primary
+    val selectedBg = if (serene) Color.White.copy(alpha = 0.28f)
+    else MaterialTheme.colorScheme.primaryContainer
+    SereneHeaderBackground {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        ) {
+            // 前导占位 = TimeGrid 的刻度列宽(TimeGrid 把宽度扣掉 GUTTER_WIDTH 后再 7 等分),
+            // 不留这个占位,星期头会整体左移半个刻度列,首列漂移最大
+            Spacer(Modifier.width(GUTTER_WIDTH))
+            (0..6).forEach { offset ->
+                val date = weekStart.plusDays(offset.toLong())
+                val isToday = date == today
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = date.dayOfMonth.toString(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = dayOfWeekCnShort(date.dayOfWeek, locale),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = headerSecondaryContentColor(),
                     )
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(
+                                // 非选中日用透明:Material You 下 surface 与 background 有细微差异,
+                                // 填色会让 7 个非今天格都显出浅色圆圈
+                                if (date == selectedDate) selectedBg else Color.Transparent
+                            )
+                            // 边框必须条件性挂载:border(0.dp) 在本 Compose 版本仍会画出 1px 发丝圆环
+                            .then(
+                                if (isToday) {
+                                    Modifier.border(
+                                        width = 2.dp,
+                                        color = primaryColor,
+                                        shape = CircleShape,
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = headerContentColor(),
+                        )
+                    }
                 }
             }
         }
@@ -591,17 +608,28 @@ internal fun TimeGrid(
         // 空状态(spec §3.14):仅当这一周确实没有事件时才显示,
         // 否则会盖在事件块上面(M1 时网格恒空,这个遮罩是无害的)
         if (emptyCheck.isEmpty()) {
+            // 入场动画按主题走(spec §5.2/§5.3 动效基线):
+            // 宁静冷色慢慢淡入(呼吸感)、暖橙活力弹簧、其余 300ms。
+            // 这是主题动效唯一对外可见的落点 —— 只定义不用的 motion 只是死代码。
+            val enter = LocalLnxTheme.current.motion
+            var visible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { visible = true }
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                // 装饰用矢量图标(spec §5.3:不拿 emoji 当图标)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SunGlyph(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(
-                            if (selectedDate == today) R.string.empty_today else R.string.empty_day
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = visible,
+                    enter = fadeIn(animationSpec = enter),
+                ) {
+                    // 装饰用矢量图标(spec §5.3:不拿 emoji 当图标)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SunGlyph(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(
+                                if (selectedDate == today) R.string.empty_today else R.string.empty_day
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
