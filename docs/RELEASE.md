@@ -72,7 +72,7 @@
 `app/build.gradle.kts`:
 
 ```kotlin
-versionCode = 2          // 比上一个发布版大 1
+versionCode = 3          // 比上一个发布版大 1(v0.1.0 = 1,v0.1.1 = 2)
 versionName = "0.2.0"   // 人看的版本号,也跟着往上走
 ```
 
@@ -120,6 +120,20 @@ gradlew :app:assembleRelease
 ### 5. 装机给用户
 
 把 `app-release.apk` 传到手机上点击安装。第一次装会提示"来自未知来源",同意即可。
+
+### 6. 把 APK 挂到 GitHub Release 上(别漏)
+
+打标签、推代码,**不等于**别人下载得到 APK —— Release 页面上的附件是另一件事,要单独传。
+
+```
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin main --tags
+```
+
+然后去仓库的 Releases 页面新建一个 release,选对标签,**把 `app-release.apk` 拖进去**。
+
+> v0.1.0 就漏在这一步:标签推上去了、说明也写了,但附件栏是空的,GitHub 上没人下载得到。
+> 发完记得回去看一眼附件是不是真的在(API 一查 `assets` 是不是空数组就知道)。
 
 ---
 
