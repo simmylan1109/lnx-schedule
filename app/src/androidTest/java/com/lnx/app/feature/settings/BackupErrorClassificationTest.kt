@@ -16,11 +16,16 @@ import com.lnx.app.core.domain.model.Occurrence
 import com.lnx.app.core.notification.ReminderAlarmSink
 import com.lnx.app.core.notification.ReminderPlanner
 import com.lnx.app.core.notification.ScheduledReminder
+import com.lnx.app.core.settings.LnxSettings
+import com.lnx.app.core.settings.SettingsRepository
+import com.lnx.app.core.designsystem.DarkMode
+import com.lnx.app.core.designsystem.ThemeSlot
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -98,13 +103,54 @@ class BackupErrorClassificationTest {
         }
     }
 
-    private fun vm(files: BackupFiles, repo: BackupRepository) = BackupViewModel(
-        repository = repo,
-        codec = BackupCodec(),
-        files = files,
-        // 提醒排期与本测试的断言无关,但导入路径上确实会被调一次
-        reminderPlanner = ReminderPlanner(NoEventsRepository(), NoOpAlarmSink),
-    )
+    /** 只为记录 setLastExportAt 被调没调:导出成功必须记账,失败不许记 */
+    private class RecordingSettings : SettingsRepository {
+        var lastExportAt = 0L
+
+        private val snapshot = LnxSettings(
+            themeSlot = ThemeSlot.MATERIAL_YOU,
+            darkMode = DarkMode.FOLLOW_SYSTEM,
+            reminderLeadMinutes = 15,
+            dndEnabled = false,
+            dndStartMinute = 22 * 60,
+            dndEndMinute = 8 * 60,
+            weekStartMonday = true,
+            language = "zh",
+            onboardingDone = true,
+            lastExportAt = 0L,
+        )
+
+        override val settings: Flow<LnxSettings> = MutableStateFlow(snapshot)
+
+        override suspend fun current(): LnxSettings = snapshot
+
+        override suspend fun setThemeSlot(slot: ThemeSlot) = Unit
+        override suspend fun setDarkMode(mode: DarkMode) = Unit
+        override suspend fun setReminderLead(minutes: Int?) = Unit
+        override suspend fun setDnd(enabled: Boolean, startMinute: Int, endMinute: Int) = Unit
+        override suspend fun setWeekStartMonday(monday: Boolean) = Unit
+        override suspend fun setLanguage(language: String) = Unit
+        override suspend fun setOnboardingDone() = Unit
+
+        override suspend fun setLastExportAt(millis: Long) {
+            lastExportAt = millis
+        }
+    }
+
+    private var recordedSettings: RecordingSettings? = null
+
+    private fun vm(files: BackupFiles, repo: BackupRepository): BackupViewModel {
+        val settings = RecordingSettings()
+        recordedSettings = settings
+        return BackupViewModel(
+            repository = repo,
+            codec = BackupCodec(),
+            files = files,
+            // 提醒排期与本测试的断言无关,但导入路径上确实会被调一次
+            reminderPlanner = ReminderPlanner(NoEventsRepository(), NoOpAlarmSink),
+            settingsRepository = settings,
+        )
+    }
 
     // —— 导出侧 ——
 
@@ -124,6 +170,8 @@ class BackupErrorClassificationTest {
         vm.export { _, _ -> }
 
         assertEquals(BackupError.FILE_IO, vm.state.value.error)
+        // 没落盘就不算备份过 —— "上次备份"不能虚报
+        assertEquals("写文件失败不得记账 lastExportAt", 0L, recordedSettings!!.lastExportAt)
     }
 
     @Test
@@ -135,9 +183,16 @@ class BackupErrorClassificationTest {
         vm.export { _, n -> name = n }
 
         assertNull(vm.state.value.error)
-        assertEquals("lnx-backup-20260930.json", name)
+        // 期望名按"今天"现算,别写死日期 —— 这条以前写死了 20260930,过了那天起天天红
+        // (残余风险:恰好在午夜前后跑,VM 里的 now 和这里的 now 差一天,概率可忽略)
+        assertEquals(
+            "lnx-backup-" + LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + ".json",
+            name,
+        )
         // 内容确实落到了文件里,而且带着自我标识字段
         assertTrue(files.written?.contains("\"format\"") == true)
+        // 导出成功必须记下"上次备份"时刻 —— 设置页那行"上次备份:…"靠它
+        assertTrue("导出成功应记账 lastExportAt", recordedSettings!!.lastExportAt > 0)
     }
 
     // —— 导入侧 ——
