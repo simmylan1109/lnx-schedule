@@ -11,7 +11,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.domain.EventRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -42,6 +44,9 @@ class RuleEditorFlowTest {
 
     @Inject
     lateinit var repository: EventRepository
+
+    /** 规则描述由资源拼出(补欠账③):断言用同一批资源现取,不写死中文 */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -74,7 +79,8 @@ class RuleEditorFlowTest {
 
         // 折叠行是 clickable(会合并后代),其子节点的 testTag 只在未合并树里找得到
         val summary = rule.onNodeWithTag("rule_summary", useUnmergedTree = true).textOf()
-        check(summary.contains("每周") && summary.contains("重复")) { "描述异常:$summary" }
+        check(summary.contains(strings.getString(R.string.rule_type_weekly)) &&
+            summary.contains(strings.getString(R.string.rule_repeat))) { "描述异常:$summary" }
 
         rule.onNodeWithTag("save_button").performClick()
         rule.waitUntil(timeoutMillis = 5_000) {
@@ -101,7 +107,8 @@ class RuleEditorFlowTest {
         rule.onNodeWithTag("event_block_${first.event.id}").performClick()
         rule.waitForIdle()
         // 详情卡"重复"行显示完整描述(spec §3.6,例:每周二重复,永不结束)
-        rule.onAllNodesWithText("永不结束", substring = true).onFirst().assertExists()
+        rule.onAllNodesWithText(strings.getString(R.string.rule_never), substring = true)
+            .onFirst().assertExists()
     }
 
     @Test

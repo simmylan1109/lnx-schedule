@@ -9,7 +9,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.database.dao.EventDao
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -37,6 +39,9 @@ class EventEditFlowTest {
 
     @Inject
     lateinit var dao: EventDao
+
+    /** 框架文案从资源现取(补欠账③) */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -77,6 +82,6 @@ class EventEditFlowTest {
         rule.waitForIdle()
         assertTrue(runBlocking { dao.allOnce() }.isEmpty())
         // 编辑页仍在,给出校验提示(提示可能位于滚动区下方,故断言存在即可)
-        rule.onAllNodesWithText("请填写标题").onFirst().assertExists()
+        rule.onAllNodesWithText(strings.getString(R.string.editor_error_title)).onFirst().assertExists()
     }
 }

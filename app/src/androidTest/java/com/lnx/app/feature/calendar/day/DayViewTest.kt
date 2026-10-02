@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.formatTitle
 import com.lnx.app.core.database.dao.EventDao
@@ -47,6 +49,9 @@ class DayViewTest {
 
     @Inject
     lateinit var dao: EventDao
+
+    /** 框架文案从资源现取(补欠账③):别写死中文,不然测试命脉握在语言钉子上 */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -106,11 +111,11 @@ class DayViewTest {
         rule.waitForIdle()
         rule.onNodeWithTag("day_cell_$tomorrow").performClick()
         // 数据窗口按所选日重查是异步的,轮询等文案出现(裸 waitForIdle 会抢跑)
+        val empty = strings.getString(R.string.empty_day)
         rule.waitUntil(timeoutMillis = 5_000) {
-            rule.onAllNodesWithText("这天没有日程,享受自由时光", substring = true)
-                .fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText(empty, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onAllNodesWithText("这天没有日程,享受自由时光", substring = true).onFirst().assertExists()
+        rule.onAllNodesWithText(empty, substring = true).onFirst().assertExists()
     }
 
     @Test
@@ -157,7 +162,7 @@ class DayViewTest {
         rule.waitForIdle()
 
         rule.waitUntil(timeoutMillis = 5_000) {
-            rule.onAllNodesWithText("今天没有日程,享受自由时光", substring = true)
+            rule.onAllNodesWithText(strings.getString(R.string.empty_today), substring = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
     }

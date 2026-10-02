@@ -9,7 +9,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Event
@@ -48,6 +51,10 @@ class MonthViewTest {
 
     @Inject
     lateinit var dao: EventDao
+
+    /** 框架文案与日期格式从生产侧现取(补欠账③),测试只表达意图不抄文案 */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
+    private val locale = LnxLocale.resolve(LnxLocale.SYSTEM)
 
     @Before
     fun setUp() {
@@ -100,7 +107,7 @@ class MonthViewTest {
         rule.onAllNodesWithTag("agenda_item_e-month").onFirst().performClick()
         rule.waitForIdle()
         rule.onAllNodesWithText("月列表事件").onFirst().assertExists()
-        rule.onAllNodesWithText("时间").onFirst().assertExists()
+        rule.onAllNodesWithText(strings.getString(R.string.detail_time)).onFirst().assertExists()
     }
 
     @Test
@@ -111,7 +118,7 @@ class MonthViewTest {
         rule.onAllNodesWithTag("month_cell_$emptyDay").onFirst().performClick()
 
         rule.waitUntil(timeoutMillis = 5_000) {
-            rule.onAllNodesWithText("${emptyDay.monthValue}月${emptyDay.dayOfMonth}日 · 无日程")
+            rule.onAllNodesWithText(strings.getString(R.string.month_empty, LnxLocale.monthDay(emptyDay, locale)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithTag("month_empty_create").performClick()
@@ -121,9 +128,9 @@ class MonthViewTest {
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithTag("field_title").fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onNodeWithText("新建事件").assertExists()
+        rule.onNodeWithText(strings.getString(R.string.editor_new)).assertExists()
         // 月历 pager 会把相邻页一起组合进来,同一个日期在多处出现,取第一份即可
-        rule.onAllNodesWithText("${emptyDay.monthValue}月${emptyDay.dayOfMonth}日", substring = true)
+        rule.onAllNodesWithText(LnxLocale.monthDay(emptyDay, locale), substring = true)
             .onFirst().assertExists()
         rule.onAllNodesWithText("09:00", substring = true).onFirst().assertExists()
 

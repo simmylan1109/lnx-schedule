@@ -9,7 +9,9 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.database.entity.EventEntity
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -43,6 +45,9 @@ class WeekEventBlockTest {
 
     @Inject
     lateinit var dao: EventDao
+
+    /** 框架文案从资源现取(补欠账③) */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -124,7 +129,10 @@ class WeekEventBlockTest {
     fun `有事件时不再显示空状态文案`() {
         seed("e-standup", "每日站会", 9, 0, 60)
         rule.waitForIdle()
-        rule.onAllNodesWithText("没有日程", substring = true).onFirst().assertDoesNotExist()
+        rule.onAllNodesWithText(
+            strings.getString(R.string.empty_today),
+            substring = true,
+        ).onFirst().assertDoesNotExist()
     }
 
     @Test

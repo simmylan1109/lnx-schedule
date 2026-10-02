@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
 import com.lnx.app.R
 import com.lnx.app.core.database.dao.EventDao
@@ -51,6 +52,9 @@ class EventDetailFlowTest {
 
     @Inject
     lateinit var dao: EventDao
+
+    /** 框架文案从资源现取(补欠账③);数据字段("会议室"等)是本测试自己种的,不属于此类 */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -108,7 +112,7 @@ class EventDetailFlowTest {
         rule.onAllNodesWithText("会议室").onFirst().assertExists()
         rule.onAllNodesWithText("备注内容").onFirst().assertExists()
         rule.onAllNodesWithText("P1").onFirst().assertExists()
-        rule.onAllNodesWithText("不重复").onFirst().assertExists()
+        rule.onAllNodesWithText(strings.getString(R.string.rule_type_none)).onFirst().assertExists()
 
         // 删除 → 确认弹窗 → 周视图即时消失(Flow 自动)
         rule.onNodeWithTag("detail_delete").performClick()
@@ -117,8 +121,9 @@ class EventDetailFlowTest {
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithTag("event_block_e-detail").fetchSemanticsNodes().isEmpty()
         }
-        // 当周已无事件:空态回归(文案尾部有 emoji,用子串匹配);库里只剩墓碑(软删除,spec §4.5)
-        rule.onAllNodesWithText("今天没有日程", substring = true).onFirst().assertExists()
+        // 当周已无事件:空态回归(文案尾部有装饰图标,用子串匹配);库里只剩墓碑(软删除,spec §4.5)
+        rule.onAllNodesWithText(strings.getString(R.string.empty_today), substring = true)
+            .onFirst().assertExists()
         assertEquals(1, runBlocking { dao.allOnce().count { it.isDeleted } })
     }
 

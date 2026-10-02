@@ -9,7 +9,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Before
@@ -26,6 +28,12 @@ class WeekGridTest {
 
     @get:Rule(order = 1)
     val rule = createAndroidComposeRule<MainActivity>()
+
+    /**
+     * 框架文案一律从资源现取,别写死中文 —— v0.2 补欠账③:写死的中方文案靠
+     * HiltTestRunner 钉死进程语言才成立,钉钉子的那一行要是坏了,这些断言会一起静默失效。
+     */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun inject() {
@@ -52,7 +60,7 @@ class WeekGridTest {
     @Test
     fun `空状态文案显示`() {
         // 末尾的装饰图标已从 emoji 换成 Canvas 画的小太阳(spec §5.3),文案本身不再带符号
-        rule.onNodeWithText("今天没有日程,享受自由时光", substring = true).assertExists()
+        rule.onNodeWithText(strings.getString(R.string.empty_today), substring = true).assertExists()
     }
 
     // 滚动可滚性:把远离当前时刻的底部刻度(23:00)滚进可视区。

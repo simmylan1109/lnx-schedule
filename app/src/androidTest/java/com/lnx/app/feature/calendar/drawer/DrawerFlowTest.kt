@@ -7,7 +7,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
+import com.lnx.app.R
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.TagRepository
 import com.lnx.app.core.domain.model.Event
@@ -44,6 +46,9 @@ class DrawerFlowTest {
 
     @Inject
     lateinit var tagRepository: TagRepository
+
+    /** 框架文案从资源现取(补欠账③);"工作"是本测试自己 seed 的数据,不属于此类 */
+    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun setUp() {
@@ -83,7 +88,7 @@ class DrawerFlowTest {
         rule.onNodeWithTag("menu_button").performClick()
         rule.waitForIdle()
         rule.onNodeWithText("工作").assertExists()
-        rule.onNodeWithText("未分类").assertExists()
+        rule.onNodeWithText(strings.getString(R.string.drawer_untagged)).assertExists()
 
         // 勾掉"未分类"
         rule.onNodeWithTag("drawer_untagged").performClick()
