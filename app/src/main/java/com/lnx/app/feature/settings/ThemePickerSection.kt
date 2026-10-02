@@ -3,6 +3,7 @@ package com.lnx.app.feature.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.ThemeSlot
 import com.lnx.app.core.designsystem.schemeFor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * 外观组的 4 张主题卡(spec §3.11 ①):点一下即换,没有保存按钮,自动记住。
@@ -54,6 +56,15 @@ internal fun ThemePickerSection(
 }
 
 /**
+ * 引导页自动演示的总闸。**仪器测试里要关掉**(`OnboardingTest` 在 @BeforeClass 置 false):
+ * 演示动画与测试注入的滑动手势在同一帧上竞争,会让"滑动后第 4 张卡可达"那条测试
+ * 出现"靠演示通过"的虚绿或偶发超时 —— 终审 P2。
+ */
+object PeekDemoHint {
+    var enabled: Boolean = true
+}
+
+/**
  * 横向一排 4 张主题卡;设置页和首启引导第 2 页(spec §3.12 ②)共用。
  *
  * **4 张卡(4×112dp + 间距 + 边距 ≈ 524dp)在手机屏(约 392dp)上放不下,第 4 张
@@ -62,7 +73,9 @@ internal fun ThemePickerSection(
  *
  * 1. 底部一排位置圆点,滑到哪儿亮到哪儿;**放得下时不画**(平板上不凭空多一行);
  * 2. [autoPeek] = true(引导页)时,出现后自动滑到底再弹回来一次 —— 亲手演示比
- *    文字提示有效,只动一次,不跟用户抢滚动。
+ *    文字提示有效,只动一次。**用户任何时候自己动过,演示整体退出**
+ *    (监听 interactionSource 的拖拽起手),包括动画进行中插手的 —— 否则会把
+ *    用户正在看的位置硬拽回开头,正是这层保险要防的事。
  */
 @Composable
 internal fun ThemeCardRow(
@@ -89,17 +102,20 @@ internal fun ThemeCardRow(
                 )
             }
         }
-        if (autoPeek) {
-            LaunchedEffect(Unit) {
+        if (autoPeek && PeekDemoHint.enabled) {
+            LaunchedEffect(listState) {
+                var touched = false
+                launch {
+                    listState.interactionSource.interactions.collect { interaction ->
+                        if (interaction is DragInteraction.Start) touched = true
+                    }
+                }
                 // 等首帧画完、用户看清第一屏,再动
                 delay(700)
-                // 用户已经自己滑过了就别演示 —— 否则会把用户正在看的位置硬拽回开头
-                val untouched = listState.firstVisibleItemIndex == 0 &&
-                    listState.firstVisibleItemScrollOffset == 0
-                if (!untouched || listState.isScrollInProgress) return@LaunchedEffect
+                if (touched || listState.isScrollInProgress) return@LaunchedEffect
                 listState.animateScrollToItem(ThemeSlot.entries.lastIndex)
                 delay(350)
-                if (listState.isScrollInProgress) return@LaunchedEffect
+                if (touched || listState.isScrollInProgress) return@LaunchedEffect
                 listState.animateScrollToItem(0)
             }
         }

@@ -14,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
 import com.lnx.app.R
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.database.dao.EventDao
 import com.lnx.app.core.domain.EventRepository
 import com.lnx.app.core.domain.model.Event
@@ -21,6 +22,7 @@ import com.lnx.app.core.domain.model.EventRule
 import com.lnx.app.core.domain.model.Priority
 import com.lnx.app.core.domain.model.RuleEnd
 import com.lnx.app.core.domain.model.RuleType
+import com.lnx.app.core.domain.recurrence.RuleDescription
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.LocalDate
@@ -55,6 +57,7 @@ class EventDetailFlowTest {
 
     /** 框架文案从资源现取(补欠账③);数据字段("会议室"等)是本测试自己种的,不属于此类 */
     private val strings = InstrumentationRegistry.getInstrumentation().targetContext
+    private val locale = LnxLocale.resolve(LnxLocale.SYSTEM)
 
     @Before
     fun setUp() {
@@ -112,7 +115,11 @@ class EventDetailFlowTest {
         rule.onAllNodesWithText("会议室").onFirst().assertExists()
         rule.onAllNodesWithText("备注内容").onFirst().assertExists()
         rule.onAllNodesWithText("P1").onFirst().assertExists()
-        rule.onAllNodesWithText(strings.getString(R.string.rule_type_none)).onFirst().assertExists()
+        // 详情卡的重复行来自 RuleDescription(中英文两套都写死在 domain 层,故意不进资源):
+        // 断言必须调同一个函数,而不是去 strings.xml 里碰巧相等(终审 P3-3)
+        rule.onAllNodesWithText(
+            RuleDescription.of(EventRule(RuleType.NONE, end = RuleEnd.Never), locale),
+        ).onFirst().assertExists()
 
         // 删除 → 确认弹窗 → 周视图即时消失(Flow 自动)
         rule.onNodeWithTag("detail_delete").performClick()

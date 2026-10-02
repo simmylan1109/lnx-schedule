@@ -54,6 +54,9 @@ class OnboardingTest {
         @JvmStatic
         fun showOnboarding() {
             TestSettingsModule.seedOnboardingDone = false
+            // 演示动画与本测试注入的滑动在同一帧上竞争:关掉闸门,测的是用户自己的滑动
+            // (与 TestSettingsModule.seedOnboardingDone 同一套测试闸门套路)
+            com.lnx.app.feature.settings.PeekDemoHint.enabled = false
         }
 
         @AfterClass
@@ -61,6 +64,7 @@ class OnboardingTest {
         fun restoreSeed() {
             // 漏掉这步,后面跑的测试类都会被引导页挡住
             TestSettingsModule.seedOnboardingDone = true
+            com.lnx.app.feature.settings.PeekDemoHint.enabled = true
         }
     }
 

@@ -14,7 +14,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lnx.app.MainActivity
 import com.lnx.app.R
+import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.domain.EventRepository
+import com.lnx.app.core.domain.model.EventRule
+import com.lnx.app.core.domain.model.RuleType
+import com.lnx.app.core.domain.recurrence.RuleDescription
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.DayOfWeek
@@ -45,8 +49,8 @@ class RuleEditorFlowTest {
     @Inject
     lateinit var repository: EventRepository
 
-    /** 规则描述由资源拼出(补欠账③):断言用同一批资源现取,不写死中文 */
-    private val strings = InstrumentationRegistry.getInstrumentation().targetContext
+    /** 规则描述由 RuleDescription 生成(domain 层,故意不进资源):断言调同一个函数(终审 P3-3) */
+    private val locale = LnxLocale.resolve(LnxLocale.SYSTEM)
 
     @Before
     fun setUp() {
@@ -77,10 +81,15 @@ class RuleEditorFlowTest {
         rule.onNodeWithTag("rule_type_WEEKLY").performClick()
         rule.waitForIdle()
 
-        // 折叠行是 clickable(会合并后代),其子节点的 testTag 只在未合并树里找得到
+        // 折叠行是 clickable(会合并后代),其子节点的 testTag 只在未合并树里找得到。
+        // 描述文案由 RuleDescription 生成(domain 层,故意不进资源)—— 断言调同一个函数,
+        // 与生产逐字相等,而不是去 strings.xml 碰巧相等(终审 P3-3)
         val summary = rule.onNodeWithTag("rule_summary", useUnmergedTree = true).textOf()
-        check(summary.contains(strings.getString(R.string.rule_type_weekly)) &&
-            summary.contains(strings.getString(R.string.rule_repeat))) { "描述异常:$summary" }
+        val expectedSummary = RuleDescription.of(
+            EventRule(type = RuleType.WEEKLY, weekdays = setOf(LocalDate.now().dayOfWeek)),
+            locale,
+        )
+        check(summary == expectedSummary) { "描述异常:期望 $expectedSummary,实际 $summary" }
 
         rule.onNodeWithTag("save_button").performClick()
         rule.waitUntil(timeoutMillis = 5_000) {
@@ -106,9 +115,8 @@ class RuleEditorFlowTest {
         rule.onAllNodesWithTag("event_block_${first.event.id}").onFirst().assertIsDisplayed()
         rule.onNodeWithTag("event_block_${first.event.id}").performClick()
         rule.waitForIdle()
-        // 详情卡"重复"行显示完整描述(spec §3.6,例:每周二重复,永不结束)
-        rule.onAllNodesWithText(strings.getString(R.string.rule_never), substring = true)
-            .onFirst().assertExists()
+        // 详情卡"重复"行显示完整描述(spec §3.6,例:每周二重复,永不结束)—— 同上,调生产函数
+        rule.onAllNodesWithText(expectedSummary, substring = false).onFirst().assertExists()
     }
 
     @Test

@@ -129,10 +129,11 @@ class WeekEventBlockTest {
     fun `有事件时不再显示空状态文案`() {
         seed("e-standup", "每日站会", 9, 0, 60)
         rule.waitForIdle()
-        rule.onAllNodesWithText(
-            strings.getString(R.string.empty_today),
-            substring = true,
-        ).onFirst().assertDoesNotExist()
+        // 两种空态文案(today/day)都不该在 —— 终审 P3-4:别把断言收窄到只剩一种
+        listOf(R.string.empty_today, R.string.empty_day).forEach { key ->
+            rule.onAllNodesWithText(strings.getString(key), substring = true)
+                .onFirst().assertDoesNotExist()
+        }
     }
 
     @Test

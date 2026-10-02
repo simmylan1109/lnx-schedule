@@ -98,8 +98,10 @@ class BackupViewModel @Inject constructor(
             runCatching { files.write(name, codec.encode(snapshot)) }
                 .onSuccess { uri ->
                     _state.update { it.copy(busy = false, message = BackupMessage.Exported(name)) }
-                    // 只在真的落盘成功后才记"上次备份";失败不算(v0.2 补欠账 ②)
-                    settingsRepository.setLastExportAt(System.currentTimeMillis())
+                    // 只在真的落盘成功后才记"上次备份";失败不算(v0.2 补欠账 ②)。
+                    // runCatching:文件已经写出去了,这一步记账若因 DataStore 故障炸掉,
+                    // 会把一次成功的导出变成 App 闪退 —— 不值得(终审 P3-5)
+                    runCatching { settingsRepository.setLastExportAt(System.currentTimeMillis()) }
                     onReady(uri, name)
                 }
                 .onFailure {
