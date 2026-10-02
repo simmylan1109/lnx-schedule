@@ -64,6 +64,10 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[SettingKeys.ONBOARDING_DONE] = true.toString() }
     }
 
+    override suspend fun setLastExportAt(millis: Long) {
+        dataStore.edit { it[SettingKeys.LAST_EXPORT_AT] = millis.toString() }
+    }
+
     private fun toSettings(prefs: Preferences): LnxSettings = LnxSettings(
         themeSlot = prefs[SettingKeys.THEME_SLOT]
             ?.let { name -> ThemeSlot.entries.firstOrNull { it.name == name } }
@@ -89,6 +93,9 @@ class SettingsRepositoryImpl @Inject constructor(
         language = prefs[SettingKeys.LANGUAGE]?.takeIf { it in VALID_LANGUAGES } ?: SettingsDefaults.LANGUAGE,
         onboardingDone = prefs[SettingKeys.ONBOARDING_DONE]?.toBooleanStrictOrNull()
             ?: SettingsDefaults.ONBOARDING_DONE,
+        // 非法值(负数/非数字)一律当"从未备份",别让一条脏数据卡住整个设置流
+        lastExportAt = prefs[SettingKeys.LAST_EXPORT_AT]?.toLongOrNull()
+            ?.takeIf { it > 0 } ?: SettingsDefaults.LAST_EXPORT_AT,
     )
 
     private companion object {

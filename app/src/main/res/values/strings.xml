@@ -15,8 +15,9 @@
     <string name="search_next_occurrence">下次发生：%1$s</string>
 
     <!-- 导入/导出(spec §3.13) -->
-    <string name="settings_export_subtitle">生成 JSON 备份,可存到网盘或发给别人</string>
     <string name="settings_import_subtitle">从 JSON 备份恢复</string>
+    <string name="settings_backup_never">从未备份过</string>
+    <string name="settings_backup_last_at">上次备份：%1$s</string>
     <string name="backup_summary_title">导入这个备份?</string>
     <plurals name="backup_count_event">
         <item quantity="other">%d 个事件</item>

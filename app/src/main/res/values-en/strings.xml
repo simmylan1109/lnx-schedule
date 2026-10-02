@@ -15,8 +15,9 @@
     <string name="search_next_occurrence">Next: %1$s</string>
 
     <!-- Import / export (spec §3.13) -->
-    <string name="settings_export_subtitle">Create a JSON backup to save or share</string>
     <string name="settings_import_subtitle">Restore from a JSON backup</string>
+    <string name="settings_backup_never">Never backed up</string>
+    <string name="settings_backup_last_at">Last backup: %1$s</string>
     <string name="backup_summary_title">Import this backup?</string>
     <!-- 事件/标签两条数各自成词,单复数分开写(实机走查拍到过 "Contains 1 events") -->
     <plurals name="backup_count_event">

@@ -63,6 +63,7 @@ class SettingsRepositoryTest {
         assertEquals(true, s.weekStartMonday)
         assertEquals("system", s.language)
         assertEquals(false, s.onboardingDone)
+        assertEquals(0L, s.lastExportAt)
     }
 
     @Test
@@ -74,6 +75,7 @@ class SettingsRepositoryTest {
         repo.setWeekStartMonday(false)
         repo.setLanguage("en")
         repo.setOnboardingDone()
+        repo.setLastExportAt(1_760_000_000_000)
 
         val s = repo.settings.first()
         assertEquals(ThemeSlot.SERENE, s.themeSlot)
@@ -85,6 +87,7 @@ class SettingsRepositoryTest {
         assertEquals(false, s.weekStartMonday)
         assertEquals("en", s.language)
         assertTrue(s.onboardingDone)
+        assertEquals(1_760_000_000_000L, s.lastExportAt)
     }
 
     @Test
@@ -114,5 +117,18 @@ class SettingsRepositoryTest {
     fun `负数或越界的提前量按出厂值处理`() = runTest {
         repo.setReminderLead(-5)
         assertEquals(15, repo.settings.first().reminderLeadMinutes)
+    }
+
+    @Test
+    fun `备份时间戳的脏数据一律当从未备份`() = runTest {
+        dataStore.updateData { it.toMutablePreferences().apply {
+            set(SettingKeys.LAST_EXPORT_AT, "不是数字")
+        } }
+        assertEquals(0L, repo.settings.first().lastExportAt)
+
+        dataStore.updateData { it.toMutablePreferences().apply {
+            set(SettingKeys.LAST_EXPORT_AT, "-5")
+        } }
+        assertEquals("负数也当从未备份", 0L, repo.settings.first().lastExportAt)
     }
 }

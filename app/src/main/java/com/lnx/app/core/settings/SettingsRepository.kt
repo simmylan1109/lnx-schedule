@@ -19,6 +19,12 @@ data class LnxSettings(
     /** "system" | "zh" | "en" */
     val language: String,
     val onboardingDone: Boolean,
+    /**
+     * 上次成功导出备份的时刻(epoch millis);**0 = 从未导出**(v0.2 补欠账 ②)。
+     * 放在设置里而不是库表里:它描述的是"这台机器的备份习惯",不是日程数据 ——
+     * 进备份 JSON 反而会把"换机前导出过"的假历史带过去。
+     */
+    val lastExportAt: Long,
 )
 
 /**
@@ -38,6 +44,7 @@ object SettingKeys {
     val WEEK_START_MONDAY = stringPreferencesKey("week_start_monday")
     val LANGUAGE = stringPreferencesKey("language")
     val ONBOARDING_DONE = stringPreferencesKey("onboarding_done")
+    val LAST_EXPORT_AT = stringPreferencesKey("last_export_at")
 }
 
 /** 设置的唯一读写入口(spec §3.11) */
@@ -54,4 +61,7 @@ interface SettingsRepository {
     suspend fun setWeekStartMonday(monday: Boolean)
     suspend fun setLanguage(language: String)
     suspend fun setOnboardingDone()
+
+    /** 记下"上次成功导出备份"的时刻;只在导出**成功落盘**后调,失败不算备份过 */
+    suspend fun setLastExportAt(millis: Long)
 }

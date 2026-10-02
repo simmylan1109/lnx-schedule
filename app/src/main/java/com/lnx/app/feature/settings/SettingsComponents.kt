@@ -1,11 +1,13 @@
 package com.lnx.app.feature.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +32,7 @@ internal fun SectionTitle(title: String, tag: String, modifier: Modifier = Modif
     )
 }
 
-/** 一行设置:标题 + 可选副标题 + 右侧内容 */
+/** 一行设置:标题 + 可选副标题 + 右侧内容;[highlight] 时铺一层主题色底,用于"该点它"的那一行 */
 @Composable
 internal fun SettingRow(
     title: String,
@@ -38,21 +40,47 @@ internal fun SettingRow(
     subtitle: String? = null,
     trailing: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    highlight: Boolean = false,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                // 高亮 = 主动铺底 + 自带外边距 + 内边距收紧:从"列表里的一行"变成"一张卡片"
+                if (highlight) {
+                    Modifier
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(12.dp),
+                        )
+                } else {
+                    Modifier
+                },
+            )
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = if (highlight) 16.dp else 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (highlight) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (highlight) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
             }
         }

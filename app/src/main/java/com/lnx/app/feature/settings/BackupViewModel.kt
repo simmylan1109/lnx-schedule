@@ -11,6 +11,7 @@ import com.lnx.app.core.backup.BackupRepository
 import com.lnx.app.core.backup.ImportMode
 import com.lnx.app.core.backup.ImportSummary
 import com.lnx.app.core.notification.ReminderPlanner
+import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -73,6 +74,7 @@ class BackupViewModel @Inject constructor(
     private val codec: BackupCodec,
     private val files: BackupFiles,
     private val reminderPlanner: ReminderPlanner,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BackupUiState())
@@ -96,6 +98,8 @@ class BackupViewModel @Inject constructor(
             runCatching { files.write(name, codec.encode(snapshot)) }
                 .onSuccess { uri ->
                     _state.update { it.copy(busy = false, message = BackupMessage.Exported(name)) }
+                    // 只在真的落盘成功后才记"上次备份";失败不算(v0.2 补欠账 ②)
+                    settingsRepository.setLastExportAt(System.currentTimeMillis())
                     onReady(uri, name)
                 }
                 .onFailure {

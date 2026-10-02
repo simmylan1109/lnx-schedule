@@ -165,6 +165,7 @@ fun SettingsScreen(
                 )
 
                 DataSettingsSection(
+                    lastExportAt = settings.lastExportAt,
                     onExport = {
                         backupViewModel.export { uri, name ->
                             shareLauncher.launch(shareIntent(context, uri, name))

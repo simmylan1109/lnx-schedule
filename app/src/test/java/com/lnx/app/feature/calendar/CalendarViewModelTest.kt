@@ -391,6 +391,7 @@ private class FakeSettingsRepository(
 
     override suspend fun setLanguage(language: String) = Unit
     override suspend fun setOnboardingDone() = Unit
+    override suspend fun setLastExportAt(millis: Long) = Unit
 }
 
 /**

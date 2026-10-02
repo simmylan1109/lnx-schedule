@@ -1,7 +1,11 @@
 package com.lnx.app.core.common
 
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
@@ -15,6 +19,15 @@ import java.util.Locale
 fun dayOfWeekCn(date: LocalDate): String = LnxLocale.weekday(date, Locale.SIMPLIFIED_CHINESE)
 
 fun formatTitle(date: LocalDate, locale: Locale): String = LnxLocale.title(date, locale)
+
+/**
+ * 备份时刻的文案(v0.2 补欠账 ②):「2026/10/2 15:30」。
+ * 用系统自带的本地化日期+时间格式,不自己拼 —— 自己拼出来的英文版是用户挑不出错也看不惯的那种。
+ */
+fun formatBackupTime(millis: Long, locale: Locale): String =
+    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(locale)
+        .format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()))
 
 /**
  * 该日期所在周的**周起始日**(spec §3.11 ①:周一(默认)或周日,可在设置里改)。

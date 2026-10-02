@@ -28,6 +28,9 @@ object SettingsDefaults {
 
     const val ONBOARDING_DONE = false
 
+    /** 上次导出备份的时刻;0 = 从未导出 */
+    const val LAST_EXPORT_AT = 0L
+
     /** 提醒可选项(spec §3.11):不提醒 / 5 / 15 / 30 / 60 */
     val REMINDER_CHOICES: List<Int?> = listOf(null, 5, 15, 30, 60)
 
@@ -42,5 +45,6 @@ object SettingsDefaults {
         weekStartMonday = WEEK_START_MONDAY,
         language = LANGUAGE,
         onboardingDone = ONBOARDING_DONE,
+        lastExportAt = LAST_EXPORT_AT,
     )
 }
