@@ -80,6 +80,8 @@ fun OnboardingScreen(
                     currentSlot = settings.themeSlot,
                     darkMode = settings.darkMode,
                     onPick = viewModel::pickTheme,
+                    // 引导页是用户第一次见到这排卡:自动演示一次"右边还有"
+                    autoPeek = true,
                 )
                 else -> PermissionPage()
             }
@@ -129,7 +131,12 @@ private fun WelcomePage() {
 }
 
 @Composable
-private fun ThemePage(currentSlot: ThemeSlot, darkMode: DarkMode, onPick: (ThemeSlot) -> Unit) {
+private fun ThemePage(
+    currentSlot: ThemeSlot,
+    darkMode: DarkMode,
+    onPick: (ThemeSlot) -> Unit,
+    autoPeek: Boolean,
+) {
     Text(
         text = stringResource(R.string.onboarding_pick_theme),
         style = MaterialTheme.typography.titleLarge,
@@ -144,7 +151,7 @@ private fun ThemePage(currentSlot: ThemeSlot, darkMode: DarkMode, onPick: (Theme
         textAlign = TextAlign.Center,
     )
     Spacer(modifier = Modifier.height(24.dp))
-    ThemeCardRow(current = currentSlot, darkMode = darkMode, onPick = onPick)
+    ThemeCardRow(current = currentSlot, darkMode = darkMode, onPick = onPick, autoPeek = autoPeek)
 }
 
 @Composable

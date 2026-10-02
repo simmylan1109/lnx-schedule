@@ -13,22 +13,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
 import com.lnx.app.R
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.ThemeSlot
 import com.lnx.app.core.designsystem.schemeFor
+import kotlinx.coroutines.delay
 
 /**
  * 外观组的 4 张主题卡(spec §3.11 ①):点一下即换,没有保存按钮,自动记住。
@@ -45,28 +53,103 @@ internal fun ThemePickerSection(
     ThemeCardRow(current = current, darkMode = darkMode, onPick = onPick)
 }
 
-/** 横向一排 4 张主题卡;设置页和首启引导第 2 页(spec §3.12 ②)共用 */
+/**
+ * 横向一排 4 张主题卡;设置页和首启引导第 2 页(spec §3.12 ②)共用。
+ *
+ * **4 张卡(4×112dp + 间距 + 边距 ≈ 524dp)在手机屏(约 392dp)上放不下,第 4 张
+ * 「宁静冷色」完整地藏在屏幕外 —— 连一条边都不露**,用户不知道右边还有东西
+ * (v0.2 补欠账 ①)。两件事告诉用户"能滑":
+ *
+ * 1. 底部一排位置圆点,滑到哪儿亮到哪儿;**放得下时不画**(平板上不凭空多一行);
+ * 2. [autoPeek] = true(引导页)时,出现后自动滑到底再弹回来一次 —— 亲手演示比
+ *    文字提示有效,只动一次,不跟用户抢滚动。
+ */
 @Composable
 internal fun ThemeCardRow(
     current: ThemeSlot,
     darkMode: DarkMode,
     onPick: (ThemeSlot) -> Unit,
     modifier: Modifier = Modifier,
+    autoPeek: Boolean = false,
 ) {
-    LazyRow(
-        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    val listState = rememberLazyListState()
+    Column(modifier = modifier) {
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxWidth().testTag("theme_card_row").padding(vertical = 8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(ThemeSlot.entries.toList()) { slot ->
+                ThemeCard(
+                    slot = slot,
+                    darkMode = darkMode,
+                    selected = slot == current,
+                    onClick = { onPick(slot) },
+                )
+            }
+        }
+        if (autoPeek) {
+            LaunchedEffect(Unit) {
+                // 等首帧画完、用户看清第一屏,再动
+                delay(700)
+                // 用户已经自己滑过了就别演示 —— 否则会把用户正在看的位置硬拽回开头
+                val untouched = listState.firstVisibleItemIndex == 0 &&
+                    listState.firstVisibleItemScrollOffset == 0
+                if (!untouched || listState.isScrollInProgress) return@LaunchedEffect
+                listState.animateScrollToItem(ThemeSlot.entries.lastIndex)
+                delay(350)
+                if (listState.isScrollInProgress) return@LaunchedEffect
+                listState.animateScrollToItem(0)
+            }
+        }
+        ThemeRowDots(listState)
+    }
+}
+
+/** 位置圆点:能滚动才画;当前亮到哪一颗由滚动比例算出(见 [activeDot]) */
+@Composable
+private fun ThemeRowDots(listState: LazyListState) {
+    val count = ThemeSlot.entries.size
+    // canScroll* 在首次布局后才可信,期间两边都是 false → 不画,布局稳定后自然出现
+    val overflow by remember {
+        derivedStateOf { listState.canScrollForward || listState.canScrollBackward }
+    }
+    if (!overflow) return
+    val active by remember { derivedStateOf { activeDot(listState, count) } }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("theme_row_dots")
+            // 圆点是纯装饰,朗读用户靠卡片自己的文字走,不要让它出现在无障碍树里
+            .clearAndSetSemantics {},
+        horizontalArrangement = Arrangement.Center,
     ) {
-        items(ThemeSlot.entries.toList()) { slot ->
-            ThemeCard(
-                slot = slot,
-                darkMode = darkMode,
-                selected = slot == current,
-                onClick = { onPick(slot) },
+        repeat(count) { index ->
+            val color = if (index == active) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            }
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(8.dp)
+                    .background(color, RoundedCornerShape(4.dp)),
             )
         }
     }
+}
+
+/** 滚动比例 → 亮第几颗:开头亮 0,滑到底亮最后一颗,中间按比例取整 */
+private fun activeDot(listState: LazyListState, count: Int): Int {
+    if (!listState.canScrollForward) return count - 1
+    val info = listState.layoutInfo
+    val first = info.visibleItemsInfo.firstOrNull() ?: return 0
+    val scrolledItems = first.index - first.offset.toFloat() / first.size.coerceAtLeast(1)
+    val scrollableItems = (info.totalItemsCount - info.visibleItemsInfo.size).coerceAtLeast(1)
+    val fraction = (scrolledItems / scrollableItems).coerceIn(0f, 1f)
+    return (fraction * (count - 1) + 0.5f).toInt()
 }
 
 @Composable

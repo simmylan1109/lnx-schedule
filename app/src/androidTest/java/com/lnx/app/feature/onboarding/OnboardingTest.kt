@@ -4,6 +4,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lnx.app.MainActivity
 import com.lnx.app.core.designsystem.ThemeSlot
@@ -125,5 +127,30 @@ class OnboardingTest {
             com.lnx.app.core.designsystem.ThemeSlot.MATERIAL_YOU,
             runBlocking { settings.current().themeSlot },
         )
+    }
+
+    /**
+     * v0.2 补欠账 ①:第 4 张主题卡(宁静冷色)完整地藏在屏幕右边缘之外 ——
+     * 4 张卡加边距约 524dp,手机屏约 392dp,连"露一条边"都没有,用户不知道右边还有。
+     * 修复 = 底部位置圆点 + 引导页自动演示一次。这里锁两件事:
+     * 圆点必须出现;向左滑之后第 4 张卡必须真的能进语义树(LazyRow 不组装屏幕外的项,
+     * 所以"存在"本身就是"看得到"的证据)。
+     */
+    @Test
+    fun 第4张主题卡藏在屏幕外_有圆点提示_向左滑之后可达() {
+        awaitPage(OnboardingViewModel.PAGE_WELCOME)
+        rule.onNodeWithTag("onboarding_start").performClick()
+        awaitPage(OnboardingViewModel.PAGE_THEME)
+
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag("theme_row_dots").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        rule.onNodeWithTag("theme_card_row").performTouchInput { swipeLeft() }
+        rule.waitUntil(timeoutMillis = 5_000) {
+            rule.onAllNodesWithTag("theme_card_SERENE")
+                .fetchSemanticsNodes()
+                .any { it.size.width > 0 }
+        }
     }
 }
