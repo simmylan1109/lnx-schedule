@@ -14,8 +14,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  *    不是手写的。
  *    (注:这条注释里别写通配路径的 json 文件名 —— Kotlin 的块注释是可嵌套的,
  *    `斜杠星号` 会被当成嵌套注释开头,把外层注释吃掉。踩过一次。)
- * 2. **只加不改**:1→2 加两张表、2→3 加一张表、3→4 加四张表(课表),都是新表,没有列变更 ——
- *    于是不需要"建新表 + 拷数据 + 删旧表"那套,风险最低。将来真出现列变更,别在这里偷懒。
+ * 2. **只加不改**:1→2 加两张表、2→3 加一张表,都是新表,没有列变更 —— 于是不需要
+ *    "建新表 + 拷数据 + 删旧表"那套,风险最低。将来真出现列变更,别在这里偷懒。
  * 3. **不写 `fallbackToDestructiveMigration`**:宁可让升级失败抛异常,也不能悄悄清库。
  *
  * 另外:日后若删掉某个历史版本号,用 `fallbackToDestructiveMigrationFrom(那些版本)` 显式
@@ -64,51 +64,6 @@ object LnxMigrations {
     }
 
     /**
-     * v3 → v4:课表的四张新表(v0.2 T1)。
-     *
-     * 学期 → 节次 → 课程 → 排课,层级从外到内建。与前两次一样是**纯建表、不搬数据**,
-     * 所以老用户升级后日程一条不少,只是多了四张空表。
-     *
-     * SQL 逐字抄自 `app/schemas/…/4.json` 的 `createSql`(反引号去掉,和上面两条一致 ——
-     * Room 校验的是**迁移后的实际 schema**,不是 SQL 文本本身)。
-     */
-    val MIGRATION_3_4 = object : Migration(3, 4) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS terms (id TEXT NOT NULL, name TEXT NOT NULL, " +
-                    "startDate INTEGER NOT NULL, weekCount INTEGER NOT NULL, " +
-                    "createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, " +
-                    "isDeleted INTEGER NOT NULL, PRIMARY KEY(id))",
-            )
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_terms_startDate ON terms (startDate)")
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS periods (id TEXT NOT NULL, termId TEXT NOT NULL, " +
-                    "periodIndex INTEGER NOT NULL, startMinute INTEGER NOT NULL, " +
-                    "endMinute INTEGER NOT NULL, createdAt INTEGER NOT NULL, " +
-                    "updatedAt INTEGER NOT NULL, isDeleted INTEGER NOT NULL, PRIMARY KEY(id))",
-            )
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_periods_termId ON periods (termId)")
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS courses (id TEXT NOT NULL, termId TEXT NOT NULL, " +
-                    "name TEXT NOT NULL, teacher TEXT, location TEXT, colorSlot INTEGER NOT NULL, " +
-                    "notes TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, " +
-                    "isDeleted INTEGER NOT NULL, PRIMARY KEY(id))",
-            )
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_courses_termId ON courses (termId)")
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS course_sessions (id TEXT NOT NULL, courseId TEXT NOT NULL, " +
-                    "dayOfWeek INTEGER NOT NULL, periodId TEXT NOT NULL, weekFrom INTEGER NOT NULL, " +
-                    "weekTo INTEGER NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, " +
-                    "isDeleted INTEGER NOT NULL, PRIMARY KEY(id))",
-            )
-            db.execSQL(
-                "CREATE INDEX IF NOT EXISTS index_course_sessions_courseId " +
-                    "ON course_sessions (courseId)",
-            )
-        }
-    }
-
-    /**
      * 按序登记,`DatabaseModule` 直接 addMigrations(*ALL)。
      *
      * **加新迁移的完整清单** —— 漏一步,别人手机上的库就升不上去:
@@ -122,5 +77,5 @@ object LnxMigrations {
      * `MigrationTestHelper` 会红。这两道闸门是 M9 加的 —— 之前没有任何东西挡着
      * "涨了版本忘写迁移"这件事。
      */
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 }

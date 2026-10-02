@@ -128,77 +128,25 @@ class MigrationTest {
     }
 
     @Test
-    fun v3到v4_加课表四张表且原有数据不丢() {
-        helper.createDatabase(dbName, 3).use { db ->
-            insertEventV1(db, "e1", "升级前的会")
-            db.execSQL(
-                "INSERT INTO tags (id, name, colorSlot, createdAt, updatedAt, isDeleted) " +
-                    "VALUES ('t1', '工作', 1, 0, 0, 0)",
-            )
-        }
-
-        val migrated = helper.runMigrationsAndValidate(dbName, 4, true, LnxMigrations.MIGRATION_3_4)
-
-        // 老数据必须还在 —— 课表是"加表",不是"重建库"
-        migrated.query("SELECT title FROM events WHERE id = 'e1'").use { c ->
-            assertTrue("事件表的数据必须还在", c.moveToFirst())
-            assertEquals("升级前的会", c.getString(0))
-        }
-        migrated.query("SELECT name FROM tags WHERE id = 't1'").use { c ->
-            assertTrue(c.moveToFirst())
-            assertEquals("工作", c.getString(0))
-        }
-        // 四张新表都建出来了,而且能真的写进去(能建不能写等于没建)
-        listOf("terms", "periods", "courses", "course_sessions").forEach { table ->
-            migrated.query("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'")
-                .use { c -> assertTrue("$table 应该存在", c.moveToFirst()) }
-        }
-        migrated.execSQL(
-            "INSERT INTO terms (id, name, startDate, weekCount, createdAt, updatedAt, isDeleted) " +
-                "VALUES ('term1', '2026 秋', 20592, 20, 0, 0, 0)",
-        )
-        migrated.execSQL(
-            "INSERT INTO periods (id, termId, periodIndex, startMinute, endMinute, " +
-                "createdAt, updatedAt, isDeleted) VALUES ('p1', 'term1', 1, 480, 525, 0, 0, 0)",
-        )
-        migrated.execSQL(
-            "INSERT INTO courses (id, termId, name, teacher, location, colorSlot, notes, " +
-                "createdAt, updatedAt, isDeleted) " +
-                "VALUES ('c1', 'term1', '高等数学', '王老师', '教三 401', 2, NULL, 0, 0, 0)",
-        )
-        migrated.execSQL(
-            "INSERT INTO course_sessions (id, courseId, dayOfWeek, periodId, weekFrom, weekTo, " +
-                "createdAt, updatedAt, isDeleted) VALUES ('s1', 'c1', 3, 'p1', 1, 16, 0, 0, 0)",
-        )
-        migrated.query("SELECT name FROM courses WHERE id = 'c1'").use { c ->
-            assertTrue(c.moveToFirst())
-            assertEquals("高等数学", c.getString(0))
-        }
-    }
-
-    @Test
-    fun v1一路迁到v4_全链路不丢数据() {
-        // 真实用户可能从很老的版本升上来,一次要跨三步
+    fun v1一路迁到v3_全链路不丢数据() {
+        // 真实用户可能从很老的版本升上来,一次要跨两步
         helper.createDatabase(dbName, 1).use { db ->
             insertEventV1(db, "e1", "老用户的事件")
         }
 
         val migrated = helper.runMigrationsAndValidate(
             dbName,
-            4,
+            3,
             true,
             *LnxMigrations.ALL,
         )
 
         migrated.query("SELECT title FROM events WHERE id = 'e1'").use { c ->
-            assertTrue("跨三步迁移后事件还得在", c.moveToFirst())
+            assertTrue("跨两步迁移后事件还得在", c.moveToFirst())
             assertEquals("老用户的事件", c.getString(0))
         }
-        // 七张表都在
-        listOf(
-            "events", "tags", "event_tag_cross_ref", "event_exceptions",
-            "terms", "periods", "courses", "course_sessions",
-        ).forEach { table ->
+        // 三张表都在
+        listOf("events", "tags", "event_tag_cross_ref", "event_exceptions").forEach { table ->
             migrated.query("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'")
                 .use { c -> assertTrue("$table 应该存在", c.moveToFirst()) }
         }
@@ -234,16 +182,6 @@ class MigrationTest {
                 "标签表应当存在(空表),而不是整库被清掉",
                 db.tagDao().allOnce().isEmpty(),
             )
-            // 课表的四张表也必须经由 DI 这一行走完迁移建出来 —— v3→v4 是唯一能证明
-            // "这条路线真的把 MIGRATION_3_4 登记进去了"的地方(其余仪器测试都跑在
-            // TestDatabaseModule 顶掉的内存库上,压根不碰迁移)
-            val names = mutableListOf<String>()
-            db.query("SELECT name FROM sqlite_master WHERE type='table'", emptyArray()).use { c ->
-                while (c.moveToNext()) names += c.getString(0)
-            }
-            listOf("terms", "periods", "courses", "course_sessions").forEach { table ->
-                assertTrue("DI 路径迁移后 $table 应当存在", table in names)
-            }
         } finally {
             db.close()
             // 别把测试库留给下一次运行
