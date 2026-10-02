@@ -1,0 +1,134 @@
+{
+  "format": "lnx-backup",
+  "version": 1,
+  "exportedAt": 0,
+  "events": [
+    {
+      "id": "demo-standup",
+      "title": "每日站会",
+      "allDay": false,
+      "startAt": 1790557200000,
+      "endAt": 1790559000000,
+      "colorSlot": 0,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "1,2,3,4,5",
+      "reminderLeadMinutes": 5
+    },
+    {
+      "id": "demo-review",
+      "title": "需求评审",
+      "allDay": false,
+      "startAt": 1790733600000,
+      "endAt": 1790739000000,
+      "colorSlot": 3,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "3",
+      "location": "教三 401",
+      "notes": "带笔记本"
+    },
+    {
+      "id": "demo-sync",
+      "title": "项目同步",
+      "allDay": false,
+      "startAt": 1790733600000,
+      "endAt": 1790737200000,
+      "colorSlot": 4,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "3"
+    },
+    {
+      "id": "demo-report",
+      "title": "周报时间",
+      "allDay": false,
+      "startAt": 1790920800000,
+      "endAt": 1790924400000,
+      "colorSlot": 1,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "5"
+    },
+    {
+      "id": "demo-badminton",
+      "title": "周末羽毛球",
+      "allDay": false,
+      "startAt": 1791014400000,
+      "endAt": 1791018000000,
+      "colorSlot": 6,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "6",
+      "location": "体育馆"
+    },
+    {
+      "id": "demo-rest",
+      "title": "休息日",
+      "allDay": true,
+      "startAt": 1791043200000,
+      "endAt": 1791129600000,
+      "colorSlot": 5,
+      "priority": "P2",
+      "ruleType": "WEEKLY",
+      "ruleInterval": 1,
+      "createdAt": 0,
+      "updatedAt": 0,
+      "ruleWeekdays": "7"
+    }
+  ],
+  "exceptions": [],
+  "tags": [
+    {
+      "id": "demo-tag-work",
+      "name": "工作",
+      "colorSlot": 1,
+      "createdAt": 0,
+      "updatedAt": 0
+    },
+    {
+      "id": "demo-tag-life",
+      "name": "生活",
+      "colorSlot": 6,
+      "createdAt": 0,
+      "updatedAt": 0
+    }
+  ],
+  "eventTags": [
+    {
+      "eventId": "demo-standup",
+      "tagId": "demo-tag-work"
+    },
+    {
+      "eventId": "demo-review",
+      "tagId": "demo-tag-work"
+    },
+    {
+      "eventId": "demo-sync",
+      "tagId": "demo-tag-work"
+    },
+    {
+      "eventId": "demo-report",
+      "tagId": "demo-tag-work"
+    },
+    {
+      "eventId": "demo-badminton",
+      "tagId": "demo-tag-life"
+    }
+  ]
+}
