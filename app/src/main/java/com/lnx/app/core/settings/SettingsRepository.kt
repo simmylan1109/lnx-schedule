@@ -20,6 +20,12 @@ data class LnxSettings(
     val language: String,
     val onboardingDone: Boolean,
     /**
+     * 首启隐私披露页是否已读过(v0.3 A1)。出厂 false = 第一次启动还没给用户看过,
+     * 看过之后才不再弹。**和 [onboardingDone] 分开记**:不同意联网的用户同样要
+     * 走完三页引导,所以这两个标记不是一回事,不能合成一个。
+     */
+    val privacyDisclosureDone: Boolean,
+    /**
      * 上次成功导出备份的时刻(epoch millis);**0 = 从未导出**(v0.2 补欠账 ②)。
      * 放在设置里而不是库表里:它描述的是"这台机器的备份习惯",不是日程数据 ——
      * 进备份 JSON 反而会把"换机前导出过"的假历史带过去。
@@ -44,6 +50,7 @@ object SettingKeys {
     val WEEK_START_MONDAY = stringPreferencesKey("week_start_monday")
     val LANGUAGE = stringPreferencesKey("language")
     val ONBOARDING_DONE = stringPreferencesKey("onboarding_done")
+    val PRIVACY_DISCLOSURE_DONE = stringPreferencesKey("privacy_disclosure_done")
     val LAST_EXPORT_AT = stringPreferencesKey("last_export_at")
 }
 
@@ -61,6 +68,9 @@ interface SettingsRepository {
     suspend fun setWeekStartMonday(monday: Boolean)
     suspend fun setLanguage(language: String)
     suspend fun setOnboardingDone()
+
+    /** 记下"隐私披露页已读过"(v0.3 A1)。两个按钮都调它:读过就够了,不记"同不同意" */
+    suspend fun setPrivacyDisclosureDone()
 
     /** 记下"上次成功导出备份"的时刻;只在导出**成功落盘**后调,失败不算备份过 */
     suspend fun setLastExportAt(millis: Long)

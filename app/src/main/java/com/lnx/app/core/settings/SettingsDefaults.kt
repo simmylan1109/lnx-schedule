@@ -28,6 +28,9 @@ object SettingsDefaults {
 
     const val ONBOARDING_DONE = false
 
+    /** v0.3 A1:出厂"没读过",所以第一次启动一定会给用户看隐私披露页 */
+    const val PRIVACY_DISCLOSURE_DONE = false
+
     /** 上次导出备份的时刻;0 = 从未导出 */
     const val LAST_EXPORT_AT = 0L
 
@@ -45,6 +48,7 @@ object SettingsDefaults {
         weekStartMonday = WEEK_START_MONDAY,
         language = LANGUAGE,
         onboardingDone = ONBOARDING_DONE,
+        privacyDisclosureDone = PRIVACY_DISCLOSURE_DONE,
         lastExportAt = LAST_EXPORT_AT,
     )
 }

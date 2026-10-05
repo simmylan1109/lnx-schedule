@@ -207,6 +207,30 @@
     <string name="onboarding_allow">Enable reminders</string>
     <string name="onboarding_later">Maybe later</string>
 
+    <!-- First-run privacy disclosure (v0.3 A1). Wording confirmed word by word by the
+         user on 2026-10-05. Deliberately avoids "we collect no data" (lnx does handle
+         event data — that claim would be false), "decentralized" (marketing word, and
+         the server is a single machine), and calling certificate pinning end-to-end
+         encryption. -->
+    <string name="privacy_title">Before you start — how lnx handles your schedule</string>
+    <string name="privacy_now_heading">1. Right now</string>
+    <string name="privacy_now_body">By default lnx uses no network at all. Your events live only on this device.</string>
+    <string name="privacy_sync_heading">2. When you turn on sync</string>
+    <string name="privacy_sync_item_content">Sent: event titles, start and end times, location, notes, repeat rules and tags</string>
+    <string name="privacy_sync_item_purpose">Purpose: to keep your own devices consistent</string>
+    <string name="privacy_sync_item_how">How: encrypted in transit with TLS, and the server certificate is pinned</string>
+    <string name="privacy_sync_item_retention">How long it is kept: on the server until you delete your account; the daily backup keeps 30 days</string>
+    <string name="privacy_no_do_heading">3. What we never do</string>
+    <string name="privacy_no_do_body">We never analyse your schedule, ship third-party analytics or ads, or sell, rent out or share your data.</string>
+    <string name="privacy_no_do_address">The app has no server address hard-coded — the server is always one you configured yourself.</string>
+    <string name="privacy_rights_heading">4. Your rights</string>
+    <string name="privacy_rights_body">Turn sync off whenever you want and sign out whenever you want (signing out deletes your data from the server). Uninstalling the app does not delete the data on your server — do that from Settings.</string>
+    <string name="privacy_rights_contact">Questions are welcome — open an issue on lnx\'s GitHub repository.</string>
+    <string name="privacy_self_hosted_heading">5. If you run the server yourself</string>
+    <string name="privacy_self_hosted_body">What happens on a server you host is your own responsibility; lnx is only the client.</string>
+    <string name="privacy_agree">Agree and continue</string>
+    <string name="privacy_local_only">Local only for now</string>
+
     <!-- Theme names (spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">Paper</string>

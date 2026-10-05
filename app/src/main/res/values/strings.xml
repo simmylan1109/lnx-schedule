@@ -202,6 +202,31 @@
     <string name="onboarding_allow">开启提醒</string>
     <string name="onboarding_later">以后再说</string>
 
+    <!-- 首启隐私披露(v0.3 A1)。文案由用户在 2026-10-05 逐字确认:
+         不写"我们不收集任何数据"(客观上确实处理日程数据,那句话是虚假陈述),
+         不写"去中心化"(营销词且名不副实),不把证书固定说成端到端加密。
+         标点跟仓库既有的 onboarding_* 一致(半角逗号 + 全角句号)。
+         "默认不联网"而不是"完全不联网":App 已装上 INTERNET 权限,
+         绝对说法比 docs/PRIVACY.md 强一档,两处说法必须一致。 -->
+    <string name="privacy_title">开始之前,请了解 lnx 怎么对待你的日程</string>
+    <string name="privacy_now_heading">一、现在</string>
+    <string name="privacy_now_body">默认不联网,日程只存在你的手机里。</string>
+    <string name="privacy_sync_heading">二、开启同步后</string>
+    <string name="privacy_sync_item_content">传输内容:日程标题、起止时间、地点、备注、重复规则、标签</string>
+    <string name="privacy_sync_item_purpose">目的:让你自己的多台设备保持一致</string>
+    <string name="privacy_sync_item_how">方式:TLS 加密传输,并校验服务器证书(证书固定)</string>
+    <string name="privacy_sync_item_retention">保存期限:服务器保留到你删除账号;每日备份保留 30 天</string>
+    <string name="privacy_no_do_heading">三、我们不做的事</string>
+    <string name="privacy_no_do_body">不收集你的日历用于分析、不接入第三方统计或广告、不出售、出租或共享你的数据。</string>
+    <string name="privacy_no_do_address">App 里不写死任何服务器地址,服务器永远是你自己配置的。</string>
+    <string name="privacy_rights_heading">四、你的权利</string>
+    <string name="privacy_rights_body">随时关闭同步、随时登出(登出即删除服务器上属于你的数据)。卸载 App 不会自动删除服务器数据,需要你在设置里删除账号。</string>
+    <string name="privacy_rights_contact">有问题或想追问,可以在 lnx 的 GitHub 仓库提 issue。</string>
+    <string name="privacy_self_hosted_heading">五、自己部署服务器</string>
+    <string name="privacy_self_hosted_body">你自己部署的服务器上发生的一切由你自己负责,lnx 只是客户端。</string>
+    <string name="privacy_agree">同意并继续</string>
+    <string name="privacy_local_only">我先只用本地</string>
+
     <!-- 主题名(spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">极致留白</string>

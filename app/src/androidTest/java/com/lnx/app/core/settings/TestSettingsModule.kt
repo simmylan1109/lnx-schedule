@@ -54,6 +54,17 @@ object TestSettingsModule {
     var seedOnboardingDone = true
 
     /**
+     * 预置"隐私披露页已读"(v0.3 A1);[PrivacyDisclosureTest] 在 @BeforeClass 里置 false。
+     *
+     * **和 seedOnboardingDone 是同一类闸门,漏了就是整类测试全灭**:披露页排在引导页
+     * **前面**,出厂值是"没读过",所以不预置的话一启动就被它盖住 —— 80 多条找日历
+     * 首页节点的测试会集体报"找不到 fab_create"。
+     */
+    @Volatile
+    @JvmStatic
+    var seedPrivacyDisclosureDone = true
+
+    /**
      * 预置语言(默认不写 = 出厂"跟随系统")。
      * `LanguagePersistenceTest` 用它模拟"上次设成 English 的用户再次冷启动"。
      */
@@ -78,6 +89,9 @@ object TestSettingsModule {
             runBlocking {
                 store.edit { prefs ->
                     if (seedOnboardingDone) prefs[SettingKeys.ONBOARDING_DONE] = "true"
+                    if (seedPrivacyDisclosureDone) {
+                        prefs[SettingKeys.PRIVACY_DISCLOSURE_DONE] = "true"
+                    }
                     seedLanguage?.let { prefs[SettingKeys.LANGUAGE] = it }
                 }
             }

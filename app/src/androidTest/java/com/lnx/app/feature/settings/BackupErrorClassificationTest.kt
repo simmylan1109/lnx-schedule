@@ -117,6 +117,7 @@ class BackupErrorClassificationTest {
             weekStartMonday = true,
             language = "zh",
             onboardingDone = true,
+            privacyDisclosureDone = true,
             lastExportAt = 0L,
         )
 
@@ -131,6 +132,7 @@ class BackupErrorClassificationTest {
         override suspend fun setWeekStartMonday(monday: Boolean) = Unit
         override suspend fun setLanguage(language: String) = Unit
         override suspend fun setOnboardingDone() = Unit
+        override suspend fun setPrivacyDisclosureDone() = Unit
 
         override suspend fun setLastExportAt(millis: Long) {
             lastExportAt = millis

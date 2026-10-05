@@ -63,6 +63,7 @@ class SettingsRepositoryTest {
         assertEquals(true, s.weekStartMonday)
         assertEquals("system", s.language)
         assertEquals(false, s.onboardingDone)
+        assertEquals(false, s.privacyDisclosureDone)
         assertEquals(0L, s.lastExportAt)
     }
 
@@ -75,6 +76,7 @@ class SettingsRepositoryTest {
         repo.setWeekStartMonday(false)
         repo.setLanguage("en")
         repo.setOnboardingDone()
+        repo.setPrivacyDisclosureDone()
         repo.setLastExportAt(1_760_000_000_000)
 
         val s = repo.settings.first()
@@ -87,6 +89,7 @@ class SettingsRepositoryTest {
         assertEquals(false, s.weekStartMonday)
         assertEquals("en", s.language)
         assertTrue(s.onboardingDone)
+        assertTrue(s.privacyDisclosureDone)
         assertEquals(1_760_000_000_000L, s.lastExportAt)
     }
 

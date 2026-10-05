@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 联网(v0.3 A1):**只用于同步到用户自己配置的服务器**。
+         之前 v0.1/v0.2 是"零联网"承诺,所以一直没有 INTERNET 权限(缺它任何网络调用
+         都会直接失败——那是承诺的强制力,不是遗漏)。v0.3 起联网是可选项,
+         不开同步的路径仍然一个网络包都不发。
+         它是 normal 权限:装即授予、系统不弹框,首次启动的隐私说明由 A1 的
+         披露页承担(见 feature/onboarding/PrivacyDisclosureScreen.kt)。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- 提醒通知(M5,spec §3.8) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

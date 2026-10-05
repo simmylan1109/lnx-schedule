@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.lnx.app.core.common.LocaleContext
 import com.lnx.app.core.common.LnxLocale
 import com.lnx.app.core.common.LocalLnxLocale
@@ -30,9 +31,11 @@ import com.lnx.app.core.settings.SettingsRepository
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
 import com.lnx.app.feature.onboarding.OnboardingScreen
+import com.lnx.app.feature.onboarding.PrivacyDisclosureScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -80,7 +83,22 @@ class MainActivity : ComponentActivity() {
                         LocalLnxLocale provides LnxLocale.resolve(settings.language),
                     ) {
                         Surface(modifier = Modifier.fillMaxSize().testTag("app_root")) {
-                            if (loaded != null && !settings.onboardingDone) {
+                            // 顺序:隐私披露 → 引导三页 → 日历(v0.3 A1)。
+                            // 披露页必须在最前:INTERNET 是安装时授予、不弹框的权限,
+                            // 系统不会替我们问"要不要联网",只能 App 自己挡在前面。
+                            // 三个分支都判 loaded != null —— 设置没吐出来时一律进日历
+                            // (见上面那段注释,判引导会让每次冷启动都闪一下引导页)。
+                            if (loaded != null && !settings.privacyDisclosureDone) {
+                                PrivacyDisclosureScreen(
+                                    // 只记"已读过"。两个按钮都走这一条:
+                                    // 不同意联网的人照样用完整功能(合规硬要求)。
+                                    onAcknowledge = {
+                                        lifecycleScope.launch {
+                                            settingsRepository.setPrivacyDisclosureDone()
+                                        }
+                                    },
+                                )
+                            } else if (loaded != null && !settings.onboardingDone) {
                                 OnboardingScreen()
                             } else {
                                 CalendarScreen(

@@ -53,6 +53,9 @@ class OnboardingTest {
         @BeforeClass
         @JvmStatic
         fun showOnboarding() {
+            // 披露页排在引导页**前面**(v0.3 A1)。这个类只测引导,得先把披露也预置掉,
+            // 否则测试启动时看到的是披露页,一个 onboarding_* 节点都找不到。
+            TestSettingsModule.seedPrivacyDisclosureDone = true
             TestSettingsModule.seedOnboardingDone = false
             // 演示动画与本测试注入的滑动在同一帧上竞争:关掉闸门,测的是用户自己的滑动
             // (与 TestSettingsModule.seedOnboardingDone 同一套测试闸门套路)
@@ -64,6 +67,7 @@ class OnboardingTest {
         fun restoreSeed() {
             // 漏掉这步,后面跑的测试类都会被引导页挡住
             TestSettingsModule.seedOnboardingDone = true
+            TestSettingsModule.seedPrivacyDisclosureDone = true
             com.lnx.app.feature.settings.PeekDemoHint.enabled = true
         }
     }
