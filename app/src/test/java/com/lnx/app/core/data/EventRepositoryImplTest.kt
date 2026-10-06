@@ -41,6 +41,8 @@ class EventRepositoryImplTest {
 
         override suspend fun getById(id: String): EventEntity? = stored.value.firstOrNull { it.id == id }
 
+        override suspend fun getByIdAny(id: String): EventEntity? = stored.value.firstOrNull { it.id == id }
+
         // 搜索(spec §3.9)归 SearchRepositoryImpl 用,这里只求能编译
         override fun observeMatching(pattern: String): Flow<List<EventEntity>> = stored
 
@@ -74,6 +76,10 @@ class EventRepositoryImplTest {
 
         override suspend fun getFor(masterId: String, epochDay: Long): EventExceptionEntity? =
             stored.value.firstOrNull { it.masterEventId == masterId && it.originalDate == epochDay }
+
+        override suspend fun deleteById(id: String) {
+            stored.value = stored.value.filterNot { it.id == id }
+        }
 
         override suspend fun upsert(entity: EventExceptionEntity) {
             upserted += entity

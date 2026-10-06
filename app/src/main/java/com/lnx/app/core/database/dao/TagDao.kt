@@ -21,6 +21,10 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE id = :id AND isDeleted = 0")
     suspend fun getById(id: String): TagEntity?
 
+    /** 同步用(A4):不过滤软删除,墓碑行自身也要能查到 */
+    @Query("SELECT * FROM tags WHERE id = :id")
+    suspend fun getByIdAny(id: String): TagEntity?
+
     /**
      * 按名字查(**含软删行**)。name 上有唯一索引且软删不删行,
      * 所以建重名标签时唯一索引照样会撞——必须先查这一条,否则 @Upsert 会吞掉约束异常、

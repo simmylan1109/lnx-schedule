@@ -15,6 +15,10 @@ interface EventExceptionDao {
     @Query("SELECT * FROM event_exceptions WHERE masterEventId = :masterId AND originalDate = :epochDay")
     suspend fun getFor(masterId: String, epochDay: Long): EventExceptionEntity?
 
+    /** 同步用(A4):按 id 删单条 —— 远端例外墓碑(硬删除的删除通知)落到本地就是这一句 */
+    @Query("DELETE FROM event_exceptions WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     /** 例外 id 是确定性的(母事件 + 原本发生日),重复写同一例外 = 覆盖 */
     @Upsert
     suspend fun upsert(entity: EventExceptionEntity)

@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -46,7 +47,7 @@ fun apiExceptionFrom(e: Throwable, parsedError: ApiErrorBody?): LnxApiException 
 @Singleton
 class LnxApiClient @Inject constructor(
     val http: HttpClient,
-) {
+) : SyncApi {
 
     /**
      * 健康检查。**https 是硬要求**:内置的固定证书只对 TLS 有效,
@@ -93,6 +94,26 @@ class LnxApiClient @Inject constructor(
         }
     }
 
+    /** 拉取 since 之后变过的行(A4)。since 传 0 = 从头拉 */
+    override suspend fun pull(baseUrl: String, token: String, since: Long, limit: Int): PullResponse =
+        withApiError {
+            http.get("${baseUrl.trimEnd('/')}/v1/sync/pull") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                parameter("since", since)
+                parameter("limit", limit)
+            }.body()
+        }
+
+    /** 推送本地行(A4),服务端逐行 LWW 并给结果;分批是引擎的事,这里只管一发 */
+    override suspend fun push(baseUrl: String, token: String, rows: List<SyncRowDto>): PushResponse =
+        withApiError {
+            http.post("${baseUrl.trimEnd('/')}/v1/sync/push") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(PushRequest(rows))
+            }.body()
+        }
+
     /**
      * 把 Ktor 的异常统一翻译成 [LnxApiException]:
      * - 4xx/5xx → 解响应体里的 `{error:{code,message}}`;解析不出就退回 HTTP 状态码
@@ -103,6 +124,8 @@ class LnxApiClient @Inject constructor(
     private suspend fun <T> withApiError(block: suspend () -> T): T =
         try {
             block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // 协程要退出就退出,别翻译成网络错误
         } catch (e: LnxApiException) {
             throw e
         } catch (e: ResponseException) {
@@ -112,4 +135,12 @@ class LnxApiClient @Inject constructor(
         } catch (e: Throwable) {
             throw apiExceptionFrom(e, null)
         }
+}
+
+/**
+ * 同步引擎只依赖这个窄口(A4):引擎测试用假件,不必碰真网络/证书。
+ */
+interface SyncApi {
+    suspend fun pull(baseUrl: String, token: String, since: Long, limit: Int = 500): PullResponse
+    suspend fun push(baseUrl: String, token: String, rows: List<SyncRowDto>): PushResponse
 }

@@ -29,6 +29,19 @@
     *** Companion;
 }
 
+# ── 2b. 同步 payload 的序列化器(v0.3 A4,同备份的道理)──────────────────
+# payload 由 kotlinx.serialization 编解码,服务端不解释;序列化器被 R8 裁掉
+# 的症状是"同步上行全是空对象"——同样在开发机上永远暴露不出来,规则同上照抄。
+-keepclasseswithmembers,includedescriptorclasses class com.lnx.app.core.sync.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.lnx.app.core.sync.** {
+    *** Companion;
+}
+-keepclassmembers class com.lnx.app.core.sync.** {
+    *** Companion;
+}
+
 # ── 3. 崩溃栈可读性 ──────────────────────────────────────────────────────
 # 用户报"一打开就闪退"时,我们要看的是类名和方法名,不是 a.b.c。留一行源码/行号,
 # 代价是包大一点点,值。

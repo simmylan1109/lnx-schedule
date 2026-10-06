@@ -137,6 +137,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     // A3:MockEngine 假装服务器,认证流程的协议层测试全靠它
     testImplementation(libs.ktor.client.mock)
+    // A4:SyncPayloadsTest 用反射比对实体列与 payload 字段(漂移时先红在测试上)
+    testImplementation(kotlin("reflect"))
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)

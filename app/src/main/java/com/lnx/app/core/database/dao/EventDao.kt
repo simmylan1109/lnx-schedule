@@ -35,6 +35,10 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE id = :id AND isDeleted = 0")
     suspend fun getById(id: String): EventEntity?
 
+    /** 同步用(A4):**不过滤软删除** —— 比对墓碑的新旧需要看到已删行本身 */
+    @Query("SELECT * FROM events WHERE id = :id")
+    suspend fun getByIdAny(id: String): EventEntity?
+
     /**
      * 搜索命中(spec §3.9):标题 / 备注 / 地点任一命中即返回,**不限日期**。
      * `ESCAPE '\'` 与 [SearchEngine.likePattern] 配对 —— 通配符必须当普通字符搜,

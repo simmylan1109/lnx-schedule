@@ -11,8 +11,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -25,9 +28,11 @@ import com.lnx.app.core.designsystem.LnxMotion
 import com.lnx.app.core.designsystem.LnxTheme
 import com.lnx.app.core.notification.ReminderNotifier
 import com.lnx.app.core.notification.fromEpochMillis
+import com.lnx.app.core.network.TokenStorage
 import com.lnx.app.core.settings.LnxSettings
 import com.lnx.app.core.settings.SettingsDefaults
 import com.lnx.app.core.settings.SettingsRepository
+import com.lnx.app.core.sync.SyncEngine
 import com.lnx.app.feature.calendar.CalendarScreen
 import com.lnx.app.feature.calendar.OpenEventRequest
 import com.lnx.app.feature.onboarding.OnboardingScreen
@@ -42,6 +47,13 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
+
+    // A4:进日历后顺手同步一次(引擎是幂等的,多跑一遍顶多多拉几页)
+    @Inject
+    lateinit var syncEngine: SyncEngine
+
+    @Inject
+    lateinit var tokenStorage: TokenStorage
 
     /** 点提醒通知带过来的打开请求(spec §3.8);Activity 是 singleTask,已在前台时走 onNewIntent */
     private var openRequest by mutableStateOf<OpenEventRequest?>(null)
@@ -71,6 +83,20 @@ class MainActivity : ComponentActivity() {
                 .map { it: LnxSettings? -> it }
                 .collectAsStateWithLifecycle(initialValue = null)
             val settings = loaded ?: SettingsDefaults.snapshot()
+            // A4 的同步触发:配置过服务器 + 存有令牌 + 已走完引导,才真正联网同步。
+            // 每次冷启动最多一次;失败只进同步账本(状态指示是 A5 的事),不打扰用户。
+            // rememberSaveable 而不是 remember:旋转/重建不重置,注释里的"一次"才成立
+            var syncStarted by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(loaded != null, settings.onboardingDone, settings.serverBaseUrl) {
+                if (!syncStarted && loaded != null && settings.onboardingDone &&
+                    settings.serverBaseUrl.isNotEmpty()
+                ) {
+                    syncStarted = true
+                    tokenStorage.read()?.let { token ->
+                        syncEngine.syncNow(settings.serverBaseUrl, token)
+                    }
+                }
+            }
             Crossfade(
                 targetState = settings.themeSlot,
                 animationSpec = tween(LnxMotion.THEME_CROSSFADE_MILLIS),

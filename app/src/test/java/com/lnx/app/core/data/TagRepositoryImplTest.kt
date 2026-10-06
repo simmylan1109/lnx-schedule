@@ -38,6 +38,8 @@ class TagRepositoryImplTest {
 
         override suspend fun getById(id: String): TagEntity? = rows[id]?.takeIf { !it.isDeleted }
 
+        override suspend fun getByIdAny(id: String): TagEntity? = rows[id]
+
         override suspend fun findByName(name: String): TagEntity? = rows.values.firstOrNull { it.name == name }
 
         override suspend fun softDelete(id: String, updatedAtMillis: Long) {
