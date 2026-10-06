@@ -126,6 +126,12 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     // M7:导入/导出 JSON(spec §3.13)
     implementation(libs.kotlinx.serialization.json)
+    // v0.3 A2 网络层:Ktor Client + okhttp 引擎 + JSON 序列化。
+    // 证书固定在 core/network/CertificatePinner.kt,版本锁 3.0.3 的原因见 libs.versions.toml。
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

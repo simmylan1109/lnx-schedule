@@ -15,7 +15,7 @@
 | **S4** 部署 | ✅ **2026-10-05 在真机执行完毕**:清理(日志 3.1G→50M)/装 Java17+nginx+sqlite3/装服务/自签证书+nginx/每日备份定时器全部跑通,`curl -k https://<ip>:8443/health` 端到端验通。**踩坑**:①一键免密登录是控制台故障,只能用密码登录 ②旧应用遗留的 `pkg.cloudflare.com` apt 源会让 `apt-get update` 失败(连自动安全更新都会静默失效)③Windows 上 `packageDist` 打的 tar 丢可执行位,`11-deploy.sh` 的 `-x` 检查会误报(已修为 `-f`) |
 | S5 服务端集成测试 | 未开始 |
 | A1 联网权限 + 隐私文案(**需用户确认文案**) | ✅ 2026-10-06 完成:INTERNET 权限 + 首启披露页(候选 B 文案,用户逐字确认)+ README 隐私章节 + `docs/PRIVACY.md`;245 单测全绿,3 个新仪器测试待模拟器;终审 P0/P1/P2 已整改;提交前隐私扫描 14 项敏感模式 0 命中 |
-| A2 网络层(Ktor Client + 证书固定 + token Keystore) | 🟡 进行中(2026-10-06 起) |
+| A2 网络层(Ktor Client + 证书固定 + token Keystore) | ✅ 2026-10-06 完成:Ktor 3.0.3(锁版本原因见 libs.versions.toml)+ 整证书固定 + 主机名有意关闭 + token AndroidKeyStore 加密存储;**257 单测全绿**(新增 12:固定规则 7 + JSON 3 + 真服务器端到端 2);终审无 P0/P1;**过程中重签了服务器证书**(空 DN 被 Java 拒收,改为 CN=lnx,隐私设计不变) |
 | A3–A6 登录 / 同步引擎 / 设置页 / 端到端 | 未开始 |
 
 服务端仓库在 `D:\lnx-server`(**独立 git 仓库,不入本仓库**),细节见那里的 README。
