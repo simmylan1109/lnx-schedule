@@ -26,6 +26,12 @@ data class LnxSettings(
      */
     val privacyDisclosureDone: Boolean,
     /**
+     * 用户自己的同步服务器地址(v0.3 A3),如 `https://1.2.3.4:8443`。
+     * **空串 = 还没配置过**。它只在用户自己的机器/服务器之间有意义,不入任何
+     * 备份 JSON 之外的东西;**公网地址绝不进仓库**(2026-10-02 事故红线)。
+     */
+    val serverBaseUrl: String,
+    /**
      * 上次成功导出备份的时刻(epoch millis);**0 = 从未导出**(v0.2 补欠账 ②)。
      * 放在设置里而不是库表里:它描述的是"这台机器的备份习惯",不是日程数据 ——
      * 进备份 JSON 反而会把"换机前导出过"的假历史带过去。
@@ -51,6 +57,7 @@ object SettingKeys {
     val LANGUAGE = stringPreferencesKey("language")
     val ONBOARDING_DONE = stringPreferencesKey("onboarding_done")
     val PRIVACY_DISCLOSURE_DONE = stringPreferencesKey("privacy_disclosure_done")
+    val SERVER_BASE_URL = stringPreferencesKey("server_base_url")
     val LAST_EXPORT_AT = stringPreferencesKey("last_export_at")
 }
 
@@ -71,6 +78,12 @@ interface SettingsRepository {
 
     /** 记下"隐私披露页已读过"(v0.3 A1)。两个按钮都调它:读过就够了,不记"同不同意" */
     suspend fun setPrivacyDisclosureDone()
+
+    /**
+     * 存同步服务器地址(v0.3 A3)。**存之前归一化**:trim、去尾斜杠;
+     * 非空值必须以 https:// 开头(固定证书只对 TLS 有效),不合法的传空串当"未配置"。
+     */
+    suspend fun setServerBaseUrl(url: String)
 
     /** 记下"上次成功导出备份"的时刻;只在导出**成功落盘**后调,失败不算备份过 */
     suspend fun setLastExportAt(millis: Long)

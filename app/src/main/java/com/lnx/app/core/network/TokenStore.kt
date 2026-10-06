@@ -16,6 +16,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * 令牌存储的抽象(v0.3 A3):AuthViewModel 依赖这个接口,JVM 测试用假件替身 ——
+ * AndroidKeyStore 在 JVM 上不存在,不抽象的话整个认证流程的测试都得上模拟器。
+ */
+interface TokenStorage {
+    fun save(token: String)
+    fun read(): String?
+    fun clear()
+}
+
+/**
  * 登录令牌的加密存储(v0.3 A2)。
  *
  * **为什么不用 EncryptedSharedPreferences**:androidx.security-crypto 已停止活跃维护,
@@ -32,19 +42,19 @@ import javax.inject.Singleton
 @Singleton
 class TokenStore @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : TokenStorage {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
 
-    fun save(token: String) {
+    override fun save(token: String) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val blob = byteArrayOf(*cipher.iv, *cipher.doFinal(token.toByteArray(Charsets.UTF_8)))
         prefs.edit { putString(KEY_TOKEN, Base64.encodeToString(blob, Base64.NO_WRAP)) }
     }
 
-    fun read(): String? {
+    override fun read(): String? {
         val raw = prefs.getString(KEY_TOKEN, null) ?: return null
         return try {
             val blob = Base64.decode(raw, Base64.NO_WRAP)
@@ -60,7 +70,7 @@ class TokenStore @Inject constructor(
         }
     }
 
-    fun clear() {
+    override fun clear() {
         prefs.edit { remove(KEY_TOKEN) }
     }
 

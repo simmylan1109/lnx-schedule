@@ -231,6 +231,34 @@
     <string name="privacy_agree">Agree and continue</string>
     <string name="privacy_local_only">Local only for now</string>
 
+    <!-- Account & sign-in (v0.3 A3). Error texts are mapped from the server's stable
+         codes (see LnxApi.kt); the server message is only a fallback. Password rules
+         mirror the server (min 8 chars, no complexity rules). -->
+    <string name="auth_title">Sign in / Register</string>
+    <string name="auth_back">Back to settings</string>
+    <string name="auth_server_address">Server address</string>
+    <string name="auth_server_address_hint">https://… (your own server)</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_invite_code">Invite code</string>
+    <string name="auth_invite_hint">Ask whoever runs your server</string>
+    <string name="auth_submit_login">Sign in</string>
+    <string name="auth_submit_register">Register and sign in</string>
+    <string name="auth_switch_to_register">No account yet? Register</string>
+    <string name="auth_switch_to_login">Already have one? Sign in</string>
+    <string name="auth_error_bad_url">The server address must start with https://</string>
+    <string name="auth_error_username">2–32 characters, no spaces</string>
+    <string name="auth_error_password">At least 8 characters</string>
+    <string name="auth_error_invite">The invite code cannot be empty</string>
+    <string name="auth_error_taken">That name is already taken</string>
+    <string name="auth_error_locked">Too many wrong attempts — wait a moment</string>
+    <string name="auth_error_unauthorized">Wrong username or password</string>
+    <string name="auth_error_closed">Registration is closed on this server</string>
+    <string name="auth_error_unreachable">Cannot reach the server — check the address and network</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_open_auth">Sign in / Register</string>
+    <string name="settings_open_auth_subtitle">Your schedule lives on this device only. Sign in to sync it.</string>
+
     <!-- Theme names (spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">Paper</string>

@@ -118,6 +118,7 @@ class BackupErrorClassificationTest {
             language = "zh",
             onboardingDone = true,
             privacyDisclosureDone = true,
+            serverBaseUrl = "",
             lastExportAt = 0L,
         )
 
@@ -133,6 +134,7 @@ class BackupErrorClassificationTest {
         override suspend fun setLanguage(language: String) = Unit
         override suspend fun setOnboardingDone() = Unit
         override suspend fun setPrivacyDisclosureDone() = Unit
+        override suspend fun setServerBaseUrl(url: String) = Unit
 
         override suspend fun setLastExportAt(millis: Long) {
             lastExportAt = millis

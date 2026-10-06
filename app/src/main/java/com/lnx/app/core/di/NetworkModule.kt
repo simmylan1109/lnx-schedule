@@ -3,7 +3,10 @@ package com.lnx.app.core.di
 import android.content.Context
 import com.lnx.app.R
 import com.lnx.app.core.network.CertificatePinner
+import com.lnx.app.core.network.TokenStore
+import com.lnx.app.core.network.TokenStorage
 import com.lnx.app.core.network.pinnedHttpClient
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,8 +17,9 @@ import java.security.cert.X509Certificate
 import javax.inject.Singleton
 
 /**
- * 网络层的装配(v0.3 A2):从 `res/raw/server_cert.pem` 读出内置的固定证书,
- * 交给 [pinnedHttpClient] 建出**只认这一张证书**的单例 HttpClient。
+ * 网络层的装配(v0.3 A2/A3):从 `res/raw/server_cert.pem` 读出内置的固定证书,
+ * 交给 [pinnedHttpClient] 建出**只认这一张证书**的单例 HttpClient;
+ * 令牌存储走 [TokenStore] 实现的 [TokenStorage] 接口(VM 只认接口,JVM 测试换假件)。
  *
  * 证书走资源而不是硬编码字符串:资源会被 aapt 校验、被 shrinker 当成普通资源管理,
  * 而且换证书 = 换一个资源文件,不用动代码。
@@ -34,4 +38,13 @@ object NetworkModule {
     @Singleton
     fun providePinnedHttpClient(pinned: X509Certificate): HttpClient =
         pinnedHttpClient(pinned)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class TokenStorageModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindTokenStorage(impl: TokenStore): TokenStorage
 }

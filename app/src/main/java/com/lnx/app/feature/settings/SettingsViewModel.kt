@@ -10,8 +10,10 @@ import com.lnx.app.core.settings.LnxSettings
 import com.lnx.app.core.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -55,5 +57,21 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(language: String) = viewModelScope.launch {
         LocaleContext.setLanguage(language)
         repository.setLanguage(language)
+    }
+
+    /**
+     * 登录/注册页的开关(v0.3 A3)。**放 ViewModel 不放 remember**:设置页会随
+     * 主题切换整体重建(MainActivity 的 Crossfade),remember 的开关会被弹回日历 ——
+     * 和引导页页号放 ViewModel 是同一个坑。
+     */
+    private val _showAuth = MutableStateFlow(false)
+    val showAuth: StateFlow<Boolean> = _showAuth.asStateFlow()
+
+    fun openAuth() {
+        _showAuth.value = true
+    }
+
+    fun closeAuth() {
+        _showAuth.value = false
     }
 }

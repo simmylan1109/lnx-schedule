@@ -31,6 +31,9 @@ object SettingsDefaults {
     /** v0.3 A1:出厂"没读过",所以第一次启动一定会给用户看隐私披露页 */
     const val PRIVACY_DISCLOSURE_DONE = false
 
+    /** v0.3 A3:出厂"未配置服务器";归一化规则见 SettingsRepository.setServerBaseUrl */
+    const val SERVER_BASE_URL = ""
+
     /** 上次导出备份的时刻;0 = 从未导出 */
     const val LAST_EXPORT_AT = 0L
 
@@ -49,6 +52,7 @@ object SettingsDefaults {
         language = LANGUAGE,
         onboardingDone = ONBOARDING_DONE,
         privacyDisclosureDone = PRIVACY_DISCLOSURE_DONE,
+        serverBaseUrl = SERVER_BASE_URL,
         lastExportAt = LAST_EXPORT_AT,
     )
 }

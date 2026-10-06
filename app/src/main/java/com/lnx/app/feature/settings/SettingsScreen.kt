@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,6 +40,7 @@ import com.lnx.app.core.backup.ImportMode
 import com.lnx.app.core.common.LocaleContext
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.notification.findActivity
+import com.lnx.app.feature.auth.AuthScreen
 
 /**
  * 设置页(spec §3.11):四组 —— 外观(4 主题卡 + 深浅色)、提醒(默认提前/免打扰/权限)、
@@ -55,6 +57,7 @@ fun SettingsScreen(
     backupViewModel: BackupViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val showAuth by viewModel.showAuth.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // 换语言后重建一次界面:语言只在 attachBaseContext 里生效,那是同步方法,只能靠重建。
@@ -173,6 +176,18 @@ fun SettingsScreen(
                     },
                     onImport = { pickLauncher.launch(arrayOf("*/*")) },
                 )
+
+                // 账号(v0.3 A3):A3 只放"登录/注册"入口;登录状态、同步开关、登出是 A5 的事
+                SectionTitle(
+                    title = stringResource(R.string.settings_section_account),
+                    tag = "settings_section_account",
+                )
+                SettingRow(
+                    title = stringResource(R.string.settings_open_auth),
+                    subtitle = stringResource(R.string.settings_open_auth_subtitle),
+                    onClick = viewModel::openAuth,
+                    modifier = Modifier.testTag("settings_open_auth"),
+                )
             }
         }
 
@@ -197,6 +212,11 @@ fun SettingsScreen(
             )
         }
         SnackbarHost(hostState = snackbar, modifier = Modifier.testTag("settings_snackbar"))
+
+        // 账号登录/注册的全屏页(v0.3 A3):盖住整个设置页(顺序即层级,同上面的对话框)
+        if (showAuth) {
+            AuthScreen(onClose = viewModel::closeAuth)
+        }
     }
 }
 

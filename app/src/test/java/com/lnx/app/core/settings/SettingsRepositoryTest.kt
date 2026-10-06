@@ -64,6 +64,7 @@ class SettingsRepositoryTest {
         assertEquals("system", s.language)
         assertEquals(false, s.onboardingDone)
         assertEquals(false, s.privacyDisclosureDone)
+        assertEquals("", s.serverBaseUrl)
         assertEquals(0L, s.lastExportAt)
     }
 
@@ -77,6 +78,7 @@ class SettingsRepositoryTest {
         repo.setLanguage("en")
         repo.setOnboardingDone()
         repo.setPrivacyDisclosureDone()
+        repo.setServerBaseUrl("https://s.example:8443")
         repo.setLastExportAt(1_760_000_000_000)
 
         val s = repo.settings.first()
@@ -90,6 +92,7 @@ class SettingsRepositoryTest {
         assertEquals("en", s.language)
         assertTrue(s.onboardingDone)
         assertTrue(s.privacyDisclosureDone)
+        assertEquals("https://s.example:8443", s.serverBaseUrl)
         assertEquals(1_760_000_000_000L, s.lastExportAt)
     }
 
@@ -120,6 +123,17 @@ class SettingsRepositoryTest {
     fun `负数或越界的提前量按出厂值处理`() = runTest {
         repo.setReminderLead(-5)
         assertEquals(15, repo.settings.first().reminderLeadMinutes)
+    }
+
+    @Test
+    fun `服务器地址的脏数据一律当未配置`() = runTest {
+        dataStore.updateData { it.toMutablePreferences().apply {
+            set(SettingKeys.SERVER_BASE_URL, "http://s.example")
+        } }
+        assertEquals("http 不是 https,当未配置", "", repo.settings.first().serverBaseUrl)
+
+        repo.setServerBaseUrl("https://s.example///")
+        assertEquals("尾斜杠要清掉", "https://s.example", repo.settings.first().serverBaseUrl)
     }
 
     @Test

@@ -135,6 +135,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // A3:MockEngine 假装服务器,认证流程的协议层测试全靠它
+    testImplementation(libs.ktor.client.mock)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)

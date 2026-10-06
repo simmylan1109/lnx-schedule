@@ -227,6 +227,33 @@
     <string name="privacy_agree">同意并继续</string>
     <string name="privacy_local_only">我先只用本地</string>
 
+    <!-- 账号与登录(v0.3 A3)。错误文案按服务端稳定 code 映射(code 见 LnxApi.kt),
+         服务端的 message 只做兜底;密码规则镜像服务端(最少 8 位,不设复杂度)。 -->
+    <string name="auth_title">登录 / 注册</string>
+    <string name="auth_back">返回设置</string>
+    <string name="auth_server_address">服务器地址</string>
+    <string name="auth_server_address_hint">https://…(你自己的服务器)</string>
+    <string name="auth_username">用户名</string>
+    <string name="auth_password">密码</string>
+    <string name="auth_invite_code">邀请码</string>
+    <string name="auth_invite_hint">向服务器的主人索取</string>
+    <string name="auth_submit_login">登录</string>
+    <string name="auth_submit_register">注册并登录</string>
+    <string name="auth_switch_to_register">还没有账号?注册一个</string>
+    <string name="auth_switch_to_login">已有账号?去登录</string>
+    <string name="auth_error_bad_url">服务器地址要以 https:// 开头</string>
+    <string name="auth_error_username">名字 2 到 32 个字符,不能有空格</string>
+    <string name="auth_error_password">密码至少 8 位</string>
+    <string name="auth_error_invite">邀请码不能为空</string>
+    <string name="auth_error_taken">这个名字已经有人用了</string>
+    <string name="auth_error_locked">密码错的次数太多,等一会儿再试</string>
+    <string name="auth_error_unauthorized">用户名或密码不对</string>
+    <string name="auth_error_closed">这台服务器暂不开放注册</string>
+    <string name="auth_error_unreachable">连不上服务器,检查地址和网络</string>
+    <string name="settings_section_account">账号</string>
+    <string name="settings_open_auth">登录 / 注册</string>
+    <string name="settings_open_auth_subtitle">日程只存在你的手机上;想跨设备同步,先登录</string>
+
     <!-- 主题名(spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">极致留白</string>

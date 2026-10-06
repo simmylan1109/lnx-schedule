@@ -68,6 +68,14 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[SettingKeys.PRIVACY_DISCLOSURE_DONE] = true.toString() }
     }
 
+    override suspend fun setServerBaseUrl(url: String) {
+        val normalized = url.trim().trimEnd('/')
+        // https 是硬要求:固定证书只对 TLS 有意义。别的都当"未配置"存空串,
+        // 让"地址没配好"在调用侧变成一个可提示的状态,而不是半坏状态
+        val valid = normalized.startsWith("https://")
+        dataStore.edit { it[SettingKeys.SERVER_BASE_URL] = if (valid) normalized else "" }
+    }
+
     override suspend fun setLastExportAt(millis: Long) {
         dataStore.edit { it[SettingKeys.LAST_EXPORT_AT] = millis.toString() }
     }
@@ -99,6 +107,9 @@ class SettingsRepositoryImpl @Inject constructor(
             ?: SettingsDefaults.ONBOARDING_DONE,
         privacyDisclosureDone = prefs[SettingKeys.PRIVACY_DISCLOSURE_DONE]?.toBooleanStrictOrNull()
             ?: SettingsDefaults.PRIVACY_DISCLOSURE_DONE,
+        serverBaseUrl = prefs[SettingKeys.SERVER_BASE_URL]
+            ?.takeIf { it.startsWith("https://") }
+            ?: SettingsDefaults.SERVER_BASE_URL,
         // 非法值(负数/非数字)一律当"从未备份",别让一条脏数据卡住整个设置流
         lastExportAt = prefs[SettingKeys.LAST_EXPORT_AT]?.toLongOrNull()
             ?.takeIf { it > 0 } ?: SettingsDefaults.LAST_EXPORT_AT,

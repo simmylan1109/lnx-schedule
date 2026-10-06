@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /** 所有编解码共用的 Json 配置(服务端字段以后只会多不会少,缺的别让客户端崩) */
-internal fun lnxJson(): Json = Json {
+fun lnxJson(): Json = Json {
     ignoreUnknownKeys = true
 }
 
@@ -43,6 +43,9 @@ data class HealthResponse(
  * 不能让用户对着转圈的界面干等 —— 断网时本地日历照常可用。
  */
 fun pinnedHttpClient(pinned: X509Certificate): HttpClient = HttpClient(OkHttp) {
+    // 4xx/5xx 必须抛异常而不是把错误体当成功应答去解析 ——
+    // Ktor 2 起这个开关默认是关的,不开的话错误映射(withApiError)永远接不到 ResponseException
+    expectSuccess = true
     install(ContentNegotiation) { json(lnxJson()) }
     install(HttpTimeout) {
         requestTimeoutMillis = 15_000
