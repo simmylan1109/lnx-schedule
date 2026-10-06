@@ -87,9 +87,9 @@ class MainActivity : ComponentActivity() {
             // 每次冷启动最多一次;失败只进同步账本(状态指示是 A5 的事),不打扰用户。
             // rememberSaveable 而不是 remember:旋转/重建不重置,注释里的"一次"才成立
             var syncStarted by rememberSaveable { mutableStateOf(false) }
-            LaunchedEffect(loaded != null, settings.onboardingDone, settings.serverBaseUrl) {
+            LaunchedEffect(loaded != null, settings.onboardingDone, settings.serverBaseUrl, settings.autoSync) {
                 if (!syncStarted && loaded != null && settings.onboardingDone &&
-                    settings.serverBaseUrl.isNotEmpty()
+                    settings.serverBaseUrl.isNotEmpty() && settings.autoSync
                 ) {
                     syncStarted = true
                     tokenStorage.read()?.let { token ->

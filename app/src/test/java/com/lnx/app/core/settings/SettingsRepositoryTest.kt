@@ -65,6 +65,7 @@ class SettingsRepositoryTest {
         assertEquals(false, s.onboardingDone)
         assertEquals(false, s.privacyDisclosureDone)
         assertEquals("", s.serverBaseUrl)
+        assertEquals(true, s.autoSync)
         assertEquals(0L, s.lastExportAt)
     }
 
@@ -78,7 +79,8 @@ class SettingsRepositoryTest {
         repo.setLanguage("en")
         repo.setOnboardingDone()
         repo.setPrivacyDisclosureDone()
-        repo.setServerBaseUrl("https://s.example:8443")
+repo.setServerBaseUrl("https://s.example:8443")
+        repo.setAutoSync(false)
         repo.setLastExportAt(1_760_000_000_000)
 
         val s = repo.settings.first()
@@ -93,6 +95,7 @@ class SettingsRepositoryTest {
         assertTrue(s.onboardingDone)
         assertTrue(s.privacyDisclosureDone)
         assertEquals("https://s.example:8443", s.serverBaseUrl)
+        assertEquals(false, s.autoSync)
         assertEquals(1_760_000_000_000L, s.lastExportAt)
     }
 

@@ -119,6 +119,7 @@ class BackupErrorClassificationTest {
             onboardingDone = true,
             privacyDisclosureDone = true,
             serverBaseUrl = "",
+            autoSync = true,
             lastExportAt = 0L,
         )
 
@@ -135,6 +136,7 @@ class BackupErrorClassificationTest {
         override suspend fun setOnboardingDone() = Unit
         override suspend fun setPrivacyDisclosureDone() = Unit
         override suspend fun setServerBaseUrl(url: String) = Unit
+        override suspend fun setAutoSync(enabled: Boolean) = Unit
 
         override suspend fun setLastExportAt(millis: Long) {
             lastExportAt = millis

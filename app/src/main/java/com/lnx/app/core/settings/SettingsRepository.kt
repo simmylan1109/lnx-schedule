@@ -32,6 +32,11 @@ data class LnxSettings(
      */
     val serverBaseUrl: String,
     /**
+     * 自动同步(v0.3 A5):进日历时顺手拉推一轮。默认开;关掉后只在设置里
+     * 手动点「立即同步」——**关掉的只是自动,不撤已同步的数据**(协议本来就只进不出)。
+     */
+    val autoSync: Boolean,
+    /**
      * 上次成功导出备份的时刻(epoch millis);**0 = 从未导出**(v0.2 补欠账 ②)。
      * 放在设置里而不是库表里:它描述的是"这台机器的备份习惯",不是日程数据 ——
      * 进备份 JSON 反而会把"换机前导出过"的假历史带过去。
@@ -58,6 +63,7 @@ object SettingKeys {
     val ONBOARDING_DONE = stringPreferencesKey("onboarding_done")
     val PRIVACY_DISCLOSURE_DONE = stringPreferencesKey("privacy_disclosure_done")
     val SERVER_BASE_URL = stringPreferencesKey("server_base_url")
+    val AUTO_SYNC = stringPreferencesKey("auto_sync")
     val LAST_EXPORT_AT = stringPreferencesKey("last_export_at")
 }
 
@@ -84,6 +90,9 @@ interface SettingsRepository {
      * 非空值必须以 https:// 开头(固定证书只对 TLS 有效),不合法的传空串当"未配置"。
      */
     suspend fun setServerBaseUrl(url: String)
+
+    /** 自动同步开关(v0.3 A5) */
+    suspend fun setAutoSync(enabled: Boolean)
 
     /** 记下"上次成功导出备份"的时刻;只在导出**成功落盘**后调,失败不算备份过 */
     suspend fun setLastExportAt(millis: Long)

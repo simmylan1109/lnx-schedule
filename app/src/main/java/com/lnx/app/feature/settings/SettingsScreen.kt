@@ -55,9 +55,13 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
     backupViewModel: BackupViewModel = hiltViewModel(),
+    shareViewModel: ShareViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val showAuth by viewModel.showAuth.collectAsStateWithLifecycle()
+    val shareAccount by shareViewModel.account.collectAsStateWithLifecycle()
+    val shareSyncing by shareViewModel.syncing.collectAsStateWithLifecycle()
+    val shareSyncState by shareViewModel.syncState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // 换语言后重建一次界面:语言只在 attachBaseContext 里生效,那是同步方法,只能靠重建。
@@ -187,6 +191,20 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_open_auth_subtitle),
                     onClick = viewModel::openAuth,
                     modifier = Modifier.testTag("settings_open_auth"),
+                )
+
+                // 共享(v0.3 A5):登录状态 / 自动同步 / 立即同步(上次同步时间) / 登出
+                ShareSettingsSection(
+                    account = shareAccount,
+                    autoSync = settings.autoSync,
+                    syncing = shareSyncing,
+                    lastSyncAt = shareSyncState.lastSyncAt,
+                    lastError = shareSyncState.lastError,
+                    serverUrl = settings.serverBaseUrl,
+                    onRefreshAccount = shareViewModel::refreshAccount,
+                    onToggleAutoSync = shareViewModel::setAutoSync,
+                    onSyncNow = shareViewModel::syncNow,
+                    onSignOut = shareViewModel::signOut,
                 )
             }
         }

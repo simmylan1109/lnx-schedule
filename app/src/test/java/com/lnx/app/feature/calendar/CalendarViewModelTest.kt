@@ -393,6 +393,7 @@ private class FakeSettingsRepository(
     override suspend fun setOnboardingDone() = Unit
     override suspend fun setPrivacyDisclosureDone() = Unit
     override suspend fun setServerBaseUrl(url: String) = Unit
+    override suspend fun setAutoSync(enabled: Boolean) = Unit
     override suspend fun setLastExportAt(millis: Long) = Unit
 }
 

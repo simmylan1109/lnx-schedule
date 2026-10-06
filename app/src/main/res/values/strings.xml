@@ -254,6 +254,23 @@
     <string name="settings_open_auth">登录 / 注册</string>
     <string name="settings_open_auth_subtitle">日程只存在你的手机上;想跨设备同步,先登录</string>
 
+    <!-- 共享组(v0.3 A5):登录状态 / 自动同步 / 立即同步 / 登出 -->
+    <string name="settings_section_share">共享</string>
+    <string name="share_status_checking">正在确认登录状态…</string>
+    <string name="share_status_signed_out">未登录</string>
+    <string name="share_status_signed_in">已登录：%1$s</string>
+    <string name="share_status_unknown">已登录(离线,无法确认)</string>
+    <string name="share_server_addr">服务器：%1$s</string>
+    <string name="share_server_unset">还没配置服务器地址</string>
+    <string name="share_auto_sync">自动同步</string>
+    <string name="share_auto_sync_subtitle">打开 App 时自动拉取和推送</string>
+    <string name="share_sync_now">立即同步</string>
+    <string name="share_syncing">同步中…</string>
+    <string name="share_sync_never">从未同步</string>
+    <string name="share_sync_last_at">上次同步：%1$s</string>
+    <string name="share_sync_failed">上次同步失败,点这里重试</string>
+    <string name="share_sign_out">退出登录</string>
+
     <!-- 主题名(spec §5.1) -->
     <string name="theme_material_you">Material You</string>
     <string name="theme_paper">极致留白</string>

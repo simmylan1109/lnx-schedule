@@ -76,6 +76,10 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[SettingKeys.SERVER_BASE_URL] = if (valid) normalized else "" }
     }
 
+    override suspend fun setAutoSync(enabled: Boolean) {
+        dataStore.edit { it[SettingKeys.AUTO_SYNC] = enabled.toString() }
+    }
+
     override suspend fun setLastExportAt(millis: Long) {
         dataStore.edit { it[SettingKeys.LAST_EXPORT_AT] = millis.toString() }
     }
@@ -110,6 +114,8 @@ class SettingsRepositoryImpl @Inject constructor(
         serverBaseUrl = prefs[SettingKeys.SERVER_BASE_URL]
             ?.takeIf { it.startsWith("https://") }
             ?: SettingsDefaults.SERVER_BASE_URL,
+        autoSync = prefs[SettingKeys.AUTO_SYNC]?.toBooleanStrictOrNull()
+            ?: SettingsDefaults.AUTO_SYNC,
         // 非法值(负数/非数字)一律当"从未备份",别让一条脏数据卡住整个设置流
         lastExportAt = prefs[SettingKeys.LAST_EXPORT_AT]?.toLongOrNull()
             ?.takeIf { it > 0 } ?: SettingsDefaults.LAST_EXPORT_AT,

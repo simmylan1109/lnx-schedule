@@ -34,6 +34,9 @@ object SettingsDefaults {
     /** v0.3 A3:出厂"未配置服务器";归一化规则见 SettingsRepository.setServerBaseUrl */
     const val SERVER_BASE_URL = ""
 
+    /** v0.3 A5:默认开自动同步(没配服务器/没登录时它自然什么都不做) */
+    const val AUTO_SYNC = true
+
     /** 上次导出备份的时刻;0 = 从未导出 */
     const val LAST_EXPORT_AT = 0L
 
@@ -53,6 +56,7 @@ object SettingsDefaults {
         onboardingDone = ONBOARDING_DONE,
         privacyDisclosureDone = PRIVACY_DISCLOSURE_DONE,
         serverBaseUrl = SERVER_BASE_URL,
+        autoSync = AUTO_SYNC,
         lastExportAt = LAST_EXPORT_AT,
     )
 }

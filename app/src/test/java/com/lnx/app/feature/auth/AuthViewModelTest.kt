@@ -75,6 +75,10 @@ class AuthViewModelTest {
             state.value = state.value.copy(serverBaseUrl = url)
         }
 
+        override suspend fun setAutoSync(enabled: Boolean) {
+            state.value = state.value.copy(autoSync = enabled)
+        }
+
         override suspend fun setLastExportAt(millis: Long) = Unit
     }
 
