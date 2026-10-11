@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.lnx.app.core.common.LocaleContext
+import com.lnx.app.core.di.SettingsStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -74,6 +75,7 @@ object TestSettingsModule {
 
     @Provides
     @Singleton
+    @SettingsStore
     fun provideTestSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         // 换了一份存储 = 换了一个"安装":进程级语言缓存要跟着失效,
         // 否则同一进程里跑的后一个用例会沿用前一个用例读到的语言(终审 P1 回归测试因此假绿/假红)

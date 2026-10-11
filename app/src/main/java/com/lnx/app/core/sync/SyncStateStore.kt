@@ -1,14 +1,11 @@
 package com.lnx.app.core.sync
 
-import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStoreFile
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.lnx.app.core.di.SyncStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -34,17 +31,9 @@ import kotlinx.serialization.json.Json
  * - `lastSyncAt` / `lastError`:给状态指示(A5)用的。
  */
 @Singleton
-class SyncStateStore internal constructor(
-    private val dataStore: DataStore<Preferences>,
+class SyncStateStore @Inject constructor(
+    @SyncStore private val dataStore: DataStore<Preferences>,
 ) {
-
-    /** Hilt 走这个构造;JVM 测试用私有构造 + 临时目录的 DataStore */
-    @Inject
-    constructor(@ApplicationContext context: Context) : this(
-        PreferenceDataStoreFactory.create {
-            context.preferencesDataStoreFile(FILE_NAME)
-        },
-    )
 
     @Serializable
     data class SyncState(
@@ -89,7 +78,6 @@ class SyncStateStore internal constructor(
     }
 
     private companion object {
-        const val FILE_NAME = "lnx_sync_state"
         val KEY_CURSOR = longPreferencesKey("cursor")
         val KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")
         val KEY_LAST_ERROR = stringPreferencesKey("last_error")

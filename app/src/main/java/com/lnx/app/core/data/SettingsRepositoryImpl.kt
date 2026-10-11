@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.lnx.app.core.designsystem.DarkMode
 import com.lnx.app.core.designsystem.ThemeSlot
+import com.lnx.app.core.di.SettingsStore
 import com.lnx.app.core.settings.LnxSettings
 import com.lnx.app.core.settings.SettingKeys
 import com.lnx.app.core.settings.SettingsDefaults
@@ -24,7 +25,7 @@ import kotlinx.coroutines.flow.map
  */
 @Singleton
 class SettingsRepositoryImpl @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
+    @SettingsStore private val dataStore: DataStore<Preferences>,
 ) : SettingsRepository {
 
     override val settings: Flow<LnxSettings> = dataStore.data.map(::toSettings)
