@@ -100,6 +100,28 @@ class SyncPayloadsTest {
     }
 
     @Test
+    fun `例外往返_含墓碑`() {
+        val tombstoned = exception.copy(isDeleted = true)
+        val payload = SyncPayloads.decodeException(SyncPayloads.exception(tombstoned))
+        assertEquals("e-1", payload.masterEventId)
+        assertEquals(true, payload.isDeleted)
+        assertEquals(1_759_900_000_000, payload.updatedAt)
+    }
+
+    @Test
+    fun `老客户端的例外payload没有墓碑字段_解出来是活着`() {
+        // v0.3 之前的客户端不推 isDeleted:解码默认 false —— 它们本来也从不产生删除,语义一致
+        val legacy = kotlinx.serialization.json.Json.parseToJsonElement(
+            """
+            {"masterEventId":"e-1","originalDate":20000,"isCancelled":true,"createdAt":1,"updatedAt":2}
+            """.trimIndent(),
+        )
+        val payload = SyncPayloads.decodeException(legacy)
+        assertEquals(true, payload.isCancelled)
+        assertEquals(false, payload.isDeleted)
+    }
+
+    @Test
     fun `实体的每一列都在payload里_加列漏改payload时这条先红`() {
         // 形状对比用构造参数名:id 不进 payload(行 id 权威),其余一列都不能少
         val entityColumns = EventEntity::class.primaryConstructor!!.parameters

@@ -14,6 +14,7 @@ import java.time.LocalDateTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -68,29 +69,26 @@ class EventRepositoryImplTest {
 
     private class FakeEventExceptionDao : EventExceptionDao {
         val upserted = mutableListOf<EventExceptionEntity>()
-        val deletedForMaster = mutableListOf<String>()
-        val deletedFrom = mutableListOf<Pair<String, Long>>()
+        val tombstonedForMaster = mutableListOf<String>()
+        val tombstonedFrom = mutableListOf<Pair<String, Long>>()
         var stored: MutableStateFlow<List<EventExceptionEntity>> = MutableStateFlow(emptyList())
 
-        override fun observeAll(): Flow<List<EventExceptionEntity>> = stored
+        override fun observeAll(): Flow<List<EventExceptionEntity>> =
+            stored.map { list -> list.filterNot { it.isDeleted } }
 
         override suspend fun getFor(masterId: String, epochDay: Long): EventExceptionEntity? =
             stored.value.firstOrNull { it.masterEventId == masterId && it.originalDate == epochDay }
-
-        override suspend fun deleteById(id: String) {
-            stored.value = stored.value.filterNot { it.id == id }
-        }
 
         override suspend fun upsert(entity: EventExceptionEntity) {
             upserted += entity
         }
 
-        override suspend fun deleteForMaster(masterId: String) {
-            deletedForMaster += masterId
+        override suspend fun tombstoneForMaster(masterId: String, now: Long) {
+            tombstonedForMaster += masterId
         }
 
-        override suspend fun deleteFrom(masterId: String, fromEpochDay: Long) {
-            deletedFrom += masterId to fromEpochDay
+        override suspend fun tombstoneFrom(masterId: String, fromEpochDay: Long, now: Long) {
+            tombstonedFrom += masterId to fromEpochDay
         }
 
         // 备份导入导出(M7)走真 Room,这里只求能编译
@@ -244,11 +242,11 @@ class EventRepositoryImplTest {
     }
 
     @Test
-    fun `清理例外走对应DAO`() = runTest {
+    fun `清理例外走墓碑DAO_删除也要能同步出去`() = runTest {
         repo.deleteExceptionsFor("m1")
         repo.deleteExceptionsFrom("m1", LocalDate.parse("2026-10-14"))
-        assertEquals("m1", exceptionDao.deletedForMaster.single())
-        assertEquals("m1" to LocalDate.parse("2026-10-14").toEpochDay(), exceptionDao.deletedFrom.single())
+        assertEquals("m1", exceptionDao.tombstonedForMaster.single())
+        assertEquals("m1" to LocalDate.parse("2026-10-14").toEpochDay(), exceptionDao.tombstonedFrom.single())
     }
 }
 

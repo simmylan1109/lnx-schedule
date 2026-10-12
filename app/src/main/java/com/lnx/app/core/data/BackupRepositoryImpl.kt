@@ -265,6 +265,7 @@ private fun EventExceptionEntity.toBackup() = BackupException(
     overrideReminderLeadMinutes = overrideReminderLeadMinutes,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isDeleted = isDeleted,
 )
 
 private fun BackupException.toEntity() = EventExceptionEntity(
@@ -283,6 +284,7 @@ private fun BackupException.toEntity() = EventExceptionEntity(
     overrideReminderLeadMinutes = overrideReminderLeadMinutes,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isDeleted = isDeleted,
 )
 
 private fun TagEntity.toBackup() = BackupTag(

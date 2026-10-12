@@ -64,6 +64,21 @@ object LnxMigrations {
     }
 
     /**
+     * v3 → v4:例外表加墓碑列(v0.3 例外墓碑补做)。
+     *
+     * 这是**第一次列变更**(铁律 2 的"别在这里偷懒"兑现了):加列 + SQL 默认值 0,
+     * 实体侧 `@ColumnInfo(defaultValue = "0")` 与之逐字对应 —— Room 校验 schema 时
+     * 默认值也要对得上。老库升级后所有存量例外都是"未删",语义正确。
+     */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE event_exceptions ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0",
+            )
+        }
+    }
+
+    /**
      * 按序登记,`DatabaseModule` 直接 addMigrations(*ALL)。
      *
      * **加新迁移的完整清单** —— 漏一步,别人手机上的库就升不上去:
@@ -77,5 +92,5 @@ object LnxMigrations {
      * `MigrationTestHelper` 会红。这两道闸门是 M9 加的 —— 之前没有任何东西挡着
      * "涨了版本忘写迁移"这件事。
      */
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 }

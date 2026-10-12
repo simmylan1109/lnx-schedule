@@ -74,10 +74,10 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteExceptionsFor(masterId: String) {
-        exceptionDao.deleteForMaster(masterId)
+        exceptionDao.tombstoneForMaster(masterId, System.currentTimeMillis())
     }
 
     override suspend fun deleteExceptionsFrom(masterId: String, from: LocalDate) {
-        exceptionDao.deleteFrom(masterId, from.toEpochDay())
+        exceptionDao.tombstoneFrom(masterId, from.toEpochDay(), System.currentTimeMillis())
     }
 }

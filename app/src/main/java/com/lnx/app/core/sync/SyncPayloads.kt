@@ -76,6 +76,11 @@ data class ExceptionPayload(
     val overrideReminderLeadMinutes: Int? = null,
     val createdAt: Long,
     val updatedAt: Long,
+    /**
+     * 墓碑(v0.3 例外墓碑补做)。默认 false:老客户端推来的 payload 没有这个字段,
+     * 解出来就是"活着" —— 它们本来也从不产生删除,语义一致。
+     */
+    val isDeleted: Boolean = false,
 )
 
 /** 实体种类常量(与服务端 SyncEntity 的取值约定对齐) */
@@ -146,6 +151,7 @@ object SyncPayloads {
                 overrideReminderLeadMinutes = entity.overrideReminderLeadMinutes,
                 createdAt = entity.createdAt,
                 updatedAt = entity.updatedAt,
+                isDeleted = entity.isDeleted,
             ),
         )
 

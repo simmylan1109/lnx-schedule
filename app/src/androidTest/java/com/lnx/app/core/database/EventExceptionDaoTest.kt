@@ -8,13 +8,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 例外表(spec §4.3):确定性 id 幂等覆盖;按母事件清理;按日期剪断 */
+/** 例外表(spec §4.3):确定性 id 幂等覆盖;按母事件/按日期**打墓碑**(v0.3 例外墓碑补做) */
 @RunWith(AndroidJUnit4::class)
 class EventExceptionDaoTest {
     private lateinit var db: LnxDatabase
@@ -60,25 +58,49 @@ class EventExceptionDaoTest {
     }
 
     @Test
-    fun `按母事件清理`() = runBlocking {
+    fun `按母事件清理是打墓碑_行还在只是不再显示`() = runBlocking {
         val dao = db.eventExceptionDao()
         dao.upsert(row("m1", 10))
         dao.upsert(row("m1", 17))
         dao.upsert(row("m2", 10))
-        dao.deleteForMaster("m1")
+        dao.tombstoneForMaster("m1", now = 999L)
+
+        // 显示侧(展开/搜索)只看活着的:只剩 m2 那条
         assertEquals(1, dao.observeAll().first().size)
         assertEquals("m2", dao.observeAll().first().single().masterEventId)
+        // 行没有消失:全量里能看到墓碑,且时间戳已推进(同步靠它把删除传出去)
+        val all = dao.allOnce()
+        assertEquals(3, all.size)
+        val tombstoned = all.filter { it.isDeleted }
+        assertEquals(2, tombstoned.size)
+        assertEquals(setOf("m1:10", "m1:17"), tombstoned.map { it.id }.toSet())
+        assertEquals(setOf(999L), tombstoned.map { it.updatedAt }.toSet())
     }
 
     @Test
-    fun `按日期剪断_只删该日及以后`() = runBlocking {
+    fun `按日期剪断_只给该日及以后的打墓碑`() = runBlocking {
         val dao = db.eventExceptionDao()
         dao.upsert(row("m1", 10))
         dao.upsert(row("m1", 14))
         dao.upsert(row("m1", 21))
-        dao.deleteFrom("m1", fromEpochDay = 14)
-        assertNull(dao.getFor("m1", 14))
-        assertNull(dao.getFor("m1", 21))
-        assertNotNull(dao.getFor("m1", 10))
+        dao.tombstoneFrom("m1", fromEpochDay = 14, now = 500L)
+
+        // 显示侧:剪断日前的还在,剪断日起的消失
+        assertEquals(listOf(10L), dao.observeAll().first().map { it.originalDate })
+        // 行仍在库中,以墓碑形态存在 —— getFor(同步的 LWW 比较用)仍能找到
+        assertEquals(true, dao.getFor("m1", 14)!!.isDeleted)
+        assertEquals(true, dao.getFor("m1", 21)!!.isDeleted)
+        assertEquals(false, dao.getFor("m1", 10)!!.isDeleted)
+        assertEquals(500L, dao.getFor("m1", 14)!!.updatedAt)
+    }
+
+    @Test
+    fun `墓碑行可以被更新的写覆盖回来_与事件同一套LWW`() = runBlocking {
+        val dao = db.eventExceptionDao()
+        dao.upsert(row("m1", 10))
+        dao.tombstoneForMaster("m1", now = 999L)
+        dao.upsert(row("m1", 10).copy(updatedAt = 1_000L, isDeleted = false))
+        assertEquals(1, dao.observeAll().first().size)
+        assertEquals(false, dao.getFor("m1", 10)!!.isDeleted)
     }
 }

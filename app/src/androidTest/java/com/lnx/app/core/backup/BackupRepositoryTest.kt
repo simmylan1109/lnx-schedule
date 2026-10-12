@@ -310,6 +310,41 @@ class BackupRepositoryTest {
     }
 
     @Test
+    fun 导出带走例外墓碑() = runBlocking {
+        eventDao.upsert(event("m1"))
+        exceptionDao.upsert(exception("m1", 20_000).copy(isDeleted = true, updatedAt = 300))
+
+        val snap = repository.snapshot(0L)
+
+        // "已删除"是个事实,备份要带走 —— 否则换机恢复后被剪断的例外会复活
+        assertEquals(true, snap.exceptions.single().isDeleted)
+    }
+
+    @Test
+    fun 合并_例外墓碑盖过库里较旧的活跃例外() = runBlocking {
+        exceptionDao.upsert(exception("m1", 20_000, updatedAt = 100))
+        val backup = Backup(
+            events = listOf(event("m1").toBackup()),
+            exceptions = listOf(
+                BackupException(
+                    id = com.lnx.app.core.database.entity.eventExceptionId(
+                        "m1", java.time.LocalDate.ofEpochDay(20_000),
+                    ),
+                    masterEventId = "m1",
+                    originalDate = 20_000,
+                    isCancelled = true,
+                    updatedAt = 200,
+                    isDeleted = true,
+                ),
+            ),
+        )
+
+        repository.import(backup, ImportMode.MERGE)
+
+        assertEquals(true, exceptionDao.getFor("m1", 20_000)?.isDeleted)
+    }
+
+    @Test
     fun 合并_同名不同id的标签沿用库里的那条() = runBlocking {
         // 终审 P1-2:两台设备各自建了"工作",id 不同。直接 upsert 撞 name 唯一索引,
         // @Upsert 吞异常后按新 id UPDATE 影响 0 行 —— 标签消失但关联插进去了(幽灵关联)

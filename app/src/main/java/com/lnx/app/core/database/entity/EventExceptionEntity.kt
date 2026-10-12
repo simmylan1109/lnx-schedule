@@ -1,5 +1,6 @@
 package com.lnx.app.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -17,6 +18,11 @@ import java.time.LocalDate
  * override 用**可空列**而非 JSON(kotlinx.serialization 排在 M7 备份才引入;
  * 可空列与 spec §4.3"override 字段组,未改字段沿用母事件"措辞一致,也可直接被 SQL 查询)。
  * 单次编辑("仅本次")总是写全字段;取消那次时 override 列全为 null。
+ *
+ * 删除是**软删除 + 墓碑**(v0.3 例外墓碑补做,与事件/标签同一套):剪断或删全部时
+ * 行不消失,置 [isDeleted] 并推进 [updatedAt] —— 删除本身也是一次修改,要靠同步流
+ * 告诉另一台设备。硬删除的行永远传不出去,对面会一直显示过期的例外。
+ * 展开/搜索一律不看墓碑(`EventExceptionDao.observeAll` 过滤);同步/备份一律带上。
  */
 @Entity(
     tableName = "event_exceptions",
@@ -45,6 +51,8 @@ data class EventExceptionEntity(
     val overrideReminderLeadMinutes: Int?,
     val createdAt: Long,
     val updatedAt: Long,
+    @ColumnInfo(defaultValue = "0")
+    val isDeleted: Boolean = false,
 )
 
 /** 例外 id 确定性生成:同一母事件 + 同一原本发生日 = 同一行,重复写即覆盖(幂等) */

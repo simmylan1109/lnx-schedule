@@ -128,6 +128,32 @@ class MigrationTest {
     }
 
     @Test
+    fun v3到v4_例外表加墓碑列且数据不丢() {
+        helper.createDatabase(dbName, 3).use { db ->
+            insertEventV1(db, "e1", "重复事件的母事件")
+            db.execSQL(
+                "INSERT INTO event_exceptions (id, masterEventId, originalDate, isCancelled, " +
+                    "createdAt, updatedAt) VALUES ('x1', 'e1', 20000, 1, 0, 0)",
+            )
+        }
+
+        val migrated = helper.runMigrationsAndValidate(dbName, 4, true, LnxMigrations.MIGRATION_3_4)
+
+        // 存量例外必须还在,且新列默认"未删" —— 老用户的例外不能一升级就全部消失
+        migrated.query("SELECT isCancelled, isDeleted FROM event_exceptions WHERE id = 'x1'").use { c ->
+            assertTrue("存量例外必须还在", c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+            assertEquals("新列的默认值必须是 0(未删)", 0, c.getInt(1))
+        }
+        // 新列真的能写(墓碑写得进去)
+        migrated.execSQL("UPDATE event_exceptions SET isDeleted = 1 WHERE id = 'x1'")
+        migrated.query("SELECT isDeleted FROM event_exceptions WHERE id = 'x1'").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+        }
+    }
+
+    @Test
     fun v1一路迁到v3_全链路不丢数据() {
         // 真实用户可能从很老的版本升上来,一次要跨两步
         helper.createDatabase(dbName, 1).use { db ->

@@ -89,6 +89,13 @@ data class BackupException(
     val overrideReminderLeadMinutes: Int? = null,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
+    /**
+     * 墓碑(v0.3 例外墓碑补做)。**不升 FORMAT_VERSION**:编解码器刻意向前兼容
+     * ("认不出的字段一律忽略"有测试锁着),老文件没有此字段按未删读,语义正确;
+     * 代价是老版本读新文件会把墓碑例外复活 —— 只发生在"用旧版本恢复新备份"这一种
+     * 边角组合,接受。
+     */
+    val isDeleted: Boolean = false,
 )
 
 @Serializable

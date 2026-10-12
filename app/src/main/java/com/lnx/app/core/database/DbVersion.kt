@@ -9,5 +9,5 @@ package com.lnx.app.core.database
  * 涨它的完整清单写在 [LnxMigrations.ALL] 的注释里。
  */
 object DbVersion {
-    const val CURRENT: Int = 3
+    const val CURRENT: Int = 4
 }

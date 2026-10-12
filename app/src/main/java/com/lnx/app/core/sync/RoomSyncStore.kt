@@ -24,8 +24,9 @@ data class AppliedResult(
  * - 拉到的墓碑按删除应用;本地不存在且非墓碑 → 插入;本地更新 → 跳过,等推送去比;
  * - 事件行赢的时候,payload 里的 tagIds 覆盖本地关联(**只保留本地真实存在的标签**:
  *   远端引用的标签还没拉到时先丢着,那些行到了自然补齐);
- * - 拉到事件的墓碑 → 级联清掉本地的例外与关联(母事件没了,它们没有存在的意义);
- * - 例外行的墓碑 → 删掉本地同 id 的例外(例外是硬删除,墓碑是唯一的删除通知)。
+ * - 拉到事件的墓碑 → 级联把本地的例外与关联清掉(母事件没了,它们没有存在的意义);
+ * - 例外行与事件同一套(v0.3 例外墓碑补做):行可能是墓碑(payload.isDeleted),
+ *   应用一律整行 upsert —— 墓碑也留行,删除才能被再同步出去。
  *
  * payload 解码失败**只跳过那一行**:服务端不解释 payload,坏行拦不住,
  * 能做的是别让一条坏行拖死整批(PLAN-v0.3 S3 的约定)。
@@ -65,6 +66,7 @@ class RoomSyncStore @Inject constructor(
                 id = exception.id,
                 payload = SyncPayloads.exception(exception),
                 updatedAt = exception.updatedAt,
+                deleted = exception.isDeleted,
             )
         }
     }
@@ -103,10 +105,15 @@ class RoomSyncStore @Inject constructor(
         val localUpdatedAt = local?.updatedAt ?: Long.MIN_VALUE
         if (row.updatedAt < localUpdatedAt) return false // 本地更新,等推送去比
 
-        eventDao.upsert(payload.toEntity(row.id, row.updatedAt))
+        // 墓碑与否以**行上的 deleted 标志**为准,不信 payload 里的 isDeleted:
+        // 引擎的"镜像孤儿"路径推墓碑时复用镜像里的旧载荷(那里面 isDeleted 还是 false),
+        // 只认 payload 会把删除读成"复活"(v0.3 例外墓碑补做时审查抓到的回归)
+        eventDao.upsert(payload.toEntity(row.id, row.updatedAt).copy(isDeleted = row.deleted))
         if (row.deleted) {
-            // 母事件没了:它的例外与关联一并清掉(与本地删除事件的级联行为一致)
-            exceptionDao.deleteForMaster(row.id)
+            // 母事件没了:它的例外与关联一并清掉(与本地删除事件的级联行为一致)。
+            // 例外打墓碑而不是硬删 —— 与本地 deleteExceptionsFor 同一语义,
+            // 时间戳取行的 updatedAt:同一条墓碑反复应用结果不变(幂等)
+            exceptionDao.tombstoneForMaster(row.id, row.updatedAt)
             tagDao.clearEventTags(row.id)
         } else {
             tagDao.setEventTags(row.id, payload.tagIds.filter { tagDao.getById(it) != null })
@@ -120,7 +127,7 @@ class RoomSyncStore @Inject constructor(
         val localUpdatedAt = local?.updatedAt ?: Long.MIN_VALUE
         if (row.updatedAt < localUpdatedAt) return false
 
-        tagDao.upsert(payload.toEntity(row.id, row.updatedAt))
+        tagDao.upsert(payload.toEntity(row.id, row.updatedAt).copy(isDeleted = row.deleted))
         if (row.deleted) tagDao.clearTagRefs(row.id)
         return true
     }
@@ -131,12 +138,16 @@ class RoomSyncStore @Inject constructor(
         val localUpdatedAt = local?.updatedAt ?: Long.MIN_VALUE
         if (row.updatedAt < localUpdatedAt) return false
 
-        if (row.deleted) {
-            // 例外是硬删除:墓碑就是删除通知。母事件整条删除走 applyEvent 的级联,这里只删单条
-            local?.let { exceptionDao.deleteById(it.id) }
-        } else {
-            exceptionDao.upsert(payload.toEntity(row.id, row.updatedAt))
-        }
+        // 与事件同一套:整行 upsert,墓碑也是行;墓碑与否以行上的 deleted 标志为准
+        // (镜像孤儿墓碑复用旧载荷,只信 payload 会把删除读成"复活")。
+        // 例外 id 是确定性的(母事件+原本发生日),两台设备对同一例外算出同一个 id。
+        // 理论兜底:万一 (master,date) 命中的本地行 id 与远端不同(只有手改备份能造出来),
+        // 按本地 id 写 —— 否则 @Upsert 撞唯一索引后静默不落库,却计入 applied 写进镜像
+        val entity = payload.toEntity(row.id, row.updatedAt).copy(
+            isDeleted = row.deleted,
+            id = local?.id ?: row.id,
+        )
+        exceptionDao.upsert(entity)
         return true
     }
 }
@@ -192,4 +203,5 @@ private fun ExceptionPayload.toEntity(id: String, updatedAt: Long) = EventExcept
     overrideReminderLeadMinutes = overrideReminderLeadMinutes,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isDeleted = isDeleted,
 )
